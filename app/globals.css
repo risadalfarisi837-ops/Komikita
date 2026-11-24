@@ -1,0 +1,83 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&display=swap");
+@import "tailwindcss";
+
+:root {
+  --bg: #1B1A20;
+  --card: #2A2931;
+  --nav: #212027;
+  --accent: #FF6B6B;
+  --muted: #8F8D9B;
+}
+body { font-family: "Plus Jakarta Sans", system-ui, sans-serif; letter-spacing: -0.2px; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+
+/* Safe area support untuk navbar nempel ke bawah layar */
+:root {
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+html, body {
+  background-color: #1B1A20;
+}
+
+.animate-marquee-text {
+  animation: marquee-text 4s linear infinite;
+}
+
+@keyframes marquee-text {
+  0%, 20% { transform: translateX(0); }
+  80%, 100% { transform: translateX(var(--scroll-dist, -50px)); }
+}
+
+/* ── Badge Level Animations (from Animeku) ── */
+@keyframes shimmerPremium {
+  0%   { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+@keyframes devPulse {
+  0%, 100% { transform: scale(1);    box-shadow: 0 0 8px rgba(220,38,38,0.6); }
+  50%       { transform: scale(1.06); box-shadow: 0 0 16px rgba(239,68,68,1); }
+}
+@keyframes pulseGlowCyan {
+  0%   { box-shadow: 0 0 4px rgba(6,182,212,0.4); }
+  100% { box-shadow: 0 0 14px rgba(6,182,212,0.9); }
+}
+@keyframes pulseGlowPink {
+  0%   { box-shadow: 0 0 4px rgba(236,72,153,0.4); }
+  100% { box-shadow: 0 0 16px rgba(236,72,153,0.9); }
+}
+@keyframes mythicPulse {
+  0%   { transform: scale(1);    box-shadow: 0 0 8px rgba(239,68,68,0.5); }
+  100% { transform: scale(1.05); box-shadow: 0 0 18px rgba(239,68,68,1); }
+}
+
+.badge-lvl-stone   { background: rgba(168,162,158,0.15) !important; color: #a8a29e !important; border: 1px solid rgba(168,162,158,0.3) !important; }
+.badge-lvl-bronze  { background: rgba(180,83,9,0.15)    !important; color: #d97706 !important; border: 1px solid rgba(180,83,9,0.3) !important; }
+.badge-lvl-silver  { background: rgba(226,232,240,0.15) !important; color: #e2e8f0 !important; border: 1px solid rgba(226,232,240,0.3) !important; }
+.badge-lvl-gold    { background: rgba(251,191,36,0.15)  !important; color: #facc15 !important; border: 1px solid rgba(251,191,36,0.4) !important; }
+.badge-lvl-emerald { background: rgba(16,185,129,0.15)  !important; color: #10b981 !important; border: 1px solid rgba(16,185,129,0.4) !important; }
+.badge-lvl-diamond { background: rgba(6,182,212,0.25)   !important; color: #22d3ee !important; border: 1px solid #06b6d4 !important; animation: pulseGlowCyan 2s infinite alternate !important; }
+.badge-lvl-master  { background: rgba(236,72,153,0.25)  !important; color: #f472b6 !important; border: 1px solid #ec4899 !important; animation: pulseGlowPink 1.5s infinite alternate !important; }
+.badge-lvl-mythic  { background: linear-gradient(90deg,#ef4444,#eab308,#ef4444) !important; background-size: 200% 100% !important; color: #fff !important; border: none !important; animation: shimmerPremium 2s infinite linear, mythicPulse 1s infinite alternate !important; }
+
+.badge-dev-anim     { background: linear-gradient(90deg,#dc2626,#7f1d1d,#dc2626); background-size: 200% 100%; color: #fff; border: 1px solid #fca5a5; animation: devPulse 2s infinite ease-in-out, shimmerPremium 3s infinite linear; box-shadow: 0 0 10px rgba(220,38,38,0.8); text-shadow: 0 0 4px rgba(255,255,255,0.5); }
+.badge-premium-anim { background: linear-gradient(90deg,#2563eb,#06b6d4,#2563eb); background-size: 200% 100%; color: #fff; border: none; animation: shimmerPremium 2.5s infinite linear; box-shadow: 0 0 8px rgba(59,130,246,0.5); }
+
+/* ── Wallpaper komentar (gacha) ───────────────────────────── */
+/* Hanya transform/opacity yang dianimasikan (jalan di GPU, tidak menggambar ulang kartu) */
+@keyframes wpShimmer { from { transform: translateX(-120%); } to { transform: translateX(420%); } }
+@keyframes wpPulse { 0%,100% { opacity: 0; } 50% { opacity: 1; } }
+.wp-shimmer {
+  position: absolute; top: 0; bottom: 0; left: 0; width: 35%; z-index: 1; pointer-events: none;
+  background: linear-gradient(110deg, transparent, rgba(255,255,255,.18) 50%, transparent);
+  animation: wpShimmer 3.2s linear infinite; will-change: transform;
+}
+.wp-pulse::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  box-shadow: inset 0 0 22px rgba(251,191,36,.75); opacity: 0; animation: wpPulse 2.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) { .wp-shimmer, .wp-pulse::after { animation: none; } }
+
+/* Halaman yang dikecilkan lewat PageScale: lebar maksimum bawaan halaman dilepas supaya tetap penuh */
+.ui-scale .max-w-md { max-width: none; }
