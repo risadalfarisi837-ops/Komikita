@@ -19,14 +19,14 @@ import { WALLPAPER_CATALOG } from '@/lib/wallpapers';
 import { EFFECT_CATALOG } from '@/lib/effects';
 
 const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyAptqYUJWJ-bfadEA5Oa3d5c8YBl8qGzd0",
-  authDomain: "komiku-d8788.firebaseapp.com",
-  databaseURL: "https://komiku-d8788-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "komiku-d8788",
-  storageBucket: "komiku-d8788.firebasestorage.app",
-  messagingSenderId: "186745171350",
-  appId: "1:186745171350:web:92cd160ed67e25de8801b7",
-  measurementId: "G-5FS22L934V"
+  apiKey: "AIzaSyDOVdnkjnjTfNMMIBT68WPOMGPH6MGbakI",
+  authDomain: "komikita-11c46.firebaseapp.com",
+  databaseURL: "https://komikita-11c46-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "komikita-11c46",
+  storageBucket: "komikita-11c46.firebasestorage.app",
+  messagingSenderId: "1001217731870",
+  appId: "1:1001217731870:web:2343f4c4aa06496cfcad0f",
+  measurementId: "G-LE9NQH23YR"
 };
 
 declare global {
