@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { PawPrint, Trophy } from 'lucide-react';
 import { findLencana, TRACK_COLOR } from '@/lib/lencana';
-import { numericId } from '@/lib/utils';
+import { numericId, formatShortId } from '@/lib/utils';
 import { RANKS } from '@/lib/season';
 import { getFirebase } from '@/lib/leaderboard';
 import { useFavorites, useHistory } from '@/lib/store';
@@ -31,7 +31,7 @@ const TIERS = [
 ];
 const tierOf = (lv: number) => TIERS.find((t) => lv >= t.min && lv <= t.max) || TIERS[0];
 
-const FIELDS = ['displayName', 'photoURL', 'level', 'role', 'joinedAt', 'menitMenonton', 'activeBorder', 'activeWallpaper', 'premiumUntil', 'lencana'];
+const FIELDS = ['displayName', 'photoURL', 'level', 'role', 'joinedAt', 'menitMenonton', 'activeBorder', 'activeWallpaper', 'premiumUntil', 'lencana', 'shortId'];
 
 function timeAgo(ts: number) {
   const m = Math.floor((Date.now() - ts) / 60000);
@@ -158,7 +158,7 @@ function UserContent() {
   const joined = Number(prof.joinedAt) || 0;
   const months = joined ? Math.max(0, Math.floor((Date.now() - joined) / (30.44 * 86400000))) : null;
   const minutes = Number(prof.menitMenonton) || 0;
-  const shortUid = numericId(uid);
+  const shortUid = formatShortId((prof as any)?.shortId, uid);
   const name = prof.displayName || 'User';
   const lk = findLencana(prof.lencana);
   const lkBg = (lk && ((RANKS as any[]).find((r) => r.name === lk.name)?.bg || TRACK_COLOR[lk.track])) || '#334155';

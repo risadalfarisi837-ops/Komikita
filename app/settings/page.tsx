@@ -10,7 +10,8 @@ import {
 import { useFavorites, useHistory } from '@/lib/store';
 import type { FavoriteItem, HistoryItem } from '@/lib/store';
 import { useSettings } from '@/lib/settings';
-import { numericId } from '@/lib/utils';
+import { numericId, formatShortId } from '@/lib/utils';
+import { ensureShortId } from '@/lib/shortid';
 import { getFirebase, loginWithGoogle } from '@/lib/firebase-client';
 import pkg from '@/package.json';
 
@@ -123,7 +124,7 @@ export default function SettingsPage() {
 
   const [mounted, setMounted] = useState(false);
   const [ready, setReady] = useState(false);
-  const [user, setUser] = useState<{ uid: string; name: string; photo: string } | null>(null);
+  const [user, setUser] = useState<{ uid: string; name: string; photo: string; shortId?: number } | null>(null);
   const [role, setRole] = useState('Member');
   const [cacheKb, setCacheKb] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
@@ -162,7 +163,8 @@ export default function SettingsPage() {
           if (dead) return;
           const d = snap.exists() ? snap.val() : {};
           setRole(d.role || 'Member');
-          if (d.displayName) setUser({ uid: fu.uid, name: d.displayName, photo: fu.photoURL || '' });
+          setUser((prev) => prev && ({ ...prev, name: d.displayName || prev.name, shortId: d.shortId }));
+          ensureShortId(db, fu.uid).then((id) => { if (id) setUser((prev) => prev && ({ ...prev, shortId: id })); });
         } catch { /* biarkan role default */ }
       });
     }).catch(() => setReady(true));
@@ -196,7 +198,7 @@ export default function SettingsPage() {
 
   const copyUid = async () => {
     if (!user) return;
-    try { await navigator.clipboard.writeText(numericId(user.uid)); say('ID akun disalin.'); }
+    try { await navigator.clipboard.writeText(formatShortId(user.shortId, user.uid)); say('ID akun disalin.'); }
     catch { say('Tidak bisa menyalin ID.'); }
   };
 
@@ -326,7 +328,7 @@ export default function SettingsPage() {
               sub={loggingIn ? 'Membuka Google...' : 'Masuk dengan Google'}
             />
           )}
-          {user && <Row border icon={<Hash size={22} color={ICON} />} title="ID akun" right={<span style={{ fontFamily: 'monospace', letterSpacing: 2 }}>{numericId(user.uid)}</span>} onClick={copyUid} />}
+          {user && <Row border icon={<Hash size={22} color={ICON} />} title="ID akun" right={<span style={{ fontFamily: 'monospace', letterSpacing: 2 }}>{formatShortId(user.shortId, user.uid)}</span>} onClick={copyUid} />}
           {!isPremium && <Row border icon={<Crown size={22} color={ICON} />} title="Jadi Premium" sub="Bebas iklan, unduh massal" chevron onClick={() => say('Fitur Premium segera hadir.')} />}
         </Group>
 
