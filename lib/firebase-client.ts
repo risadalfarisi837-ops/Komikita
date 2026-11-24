@@ -2,7 +2,7 @@
 // Aman dipakai bersama halaman Profil: skrip dimuat sekali dan app hanya diinisialisasi sekali.
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyDOVdnkjnjTfNMMIBT68WPOMGPH6MGbakI",
-  authDomain: "komikita-11c46.firebaseapp.com",
+  authDomain: "komikita-seven.vercel.app",
   databaseURL: "https://komikita-11c46-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "komikita-11c46",
   storageBucket: "komikita-11c46.firebasestorage.app",

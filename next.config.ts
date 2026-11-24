@@ -47,6 +47,9 @@ const nextConfig: NextConfig = {
       }
     ],
   },
+  async rewrites() {
+    return [{ source: '/__/auth/:path*', destination: 'https://komikita-11c46.firebaseapp.com/__/auth/:path*' }];
+  },
   output: 'standalone',
   transpilePackages: ['motion'],
   webpack: (config, {dev}) => {
