@@ -661,7 +661,6 @@ export default function FishingGame(props: Props) {
           { k: 'peringkat', icon: '🏆', label: 'Peringkat', act: go('/ranking') },
           { k: 'surat', icon: '📮', label: 'Kotak Surat', act: soon },
           { k: 'skill', icon: '🌳', label: 'Skill', act: soon },
-          ...(dev ? [{ k: 'dev', icon: '🛠️', label: 'Dev', act: () => setDevOpen(true) }] : []),
         ];
         return (
           <>
@@ -958,6 +957,15 @@ export default function FishingGame(props: Props) {
       })()}
 
       {/* Mode Developer: penanda auto aktif (tetap tampil saat mancing; ketuk untuk stop) + panel */}
+      {dev && (
+        <button
+          onClick={() => setDevOpen(true)}
+          aria-label="Dev Mancing"
+          style={{ position: 'absolute', zIndex: 24, right: `calc(env(safe-area-inset-right, 0px) + ${px(18)}px)`, bottom: `calc(env(safe-area-inset-bottom, 0px) + ${px(128)}px)`, width: px(46), height: px(46), borderRadius: '50%', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: px(21), color: '#fff', background: 'rgba(20,26,40,0.92)', border: `${px(3)}px solid ${auto ? '#22c55e' : '#818cf8'}`, boxShadow: auto ? '0 0 12px #22c55e' : '0 0 10px rgba(129,140,248,0.7)' }}
+        >
+          🛠️
+        </button>
+      )}
       {dev && auto && (
         <button
           onClick={() => engineRef.current?.setAuto(false)}
