@@ -123,7 +123,7 @@ export class FishingEngine {
       seen.add(p.id);
       const cur = this.remotes.get(p.id);
       if (cur) cur.p = p;
-      else this.remotes.set(p.id, { p, rx: p.x, ry: p.y, step: 0, moving: p.moving, pal: palForId(p.id) });
+      else this.remotes.set(p.id, { p, rx: p.x ?? 0, ry: p.y ?? 0, step: 0, moving: !!p.moving, pal: palForId(p.id) });
     }
     for (const id of Array.from(this.remotes.keys())) if (!seen.has(id)) this.remotes.delete(id);
   }
