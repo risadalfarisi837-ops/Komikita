@@ -901,90 +901,71 @@ export default function FishingGame(props: Props) {
 
       {/* ransel penuh */}
       {bagOpen && (() => {
-        const CREAM = '#fbf1dc';
-        const hb: CSSProperties = { border: 0, borderRadius: px(10), fontFamily: HUD, fontWeight: 700, fontSize: px(12), padding: `${px(5)}px ${px(12)}px`, cursor: 'pointer', color: '#fff' };
+        const NAVY = '#3d4b6e';
+        const stroke = `-1px 0 ${NAVY}, 1px 0 ${NAVY}, 0 -1px ${NAVY}, 0 1px ${NAVY}`;
+        const wb = (extra: CSSProperties = {}): CSSProperties => ({ border: 0, borderRadius: px(12), background: '#fff', color: '#4a3a24', fontFamily: HUD, fontWeight: 700, fontSize: px(13), padding: `${px(6)}px ${px(14)}px`, cursor: 'pointer', boxShadow: '0 2px 0 rgba(0,0,0,0.18)', ...extra });
+        const bc = (r: keyof typeof RARITY) => (r === 'common' ? '#c6d0e0' : r === 'uncommon' ? '#5fd66f' : r === 'rare' ? '#4aa3ff' : r === 'epic' ? '#b48cff' : '#f5c451');
+        const cell = (b: BagItem, h: number, nameSz: number, wSz: number, onClick: () => void, on: boolean) => {
+          const sp = SPECIES_BY_ID[b.s];
+          return (
+            <button key={b.id} onClick={onClick} style={{ position: 'relative', height: px(h), borderRadius: px(12), background: 'linear-gradient(180deg,#8e9cc4,#7685b0)', border: `${px(3)}px solid ${on ? '#ffb02e' : bc(sp.rarity)}`, boxSizing: 'border-box', padding: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', overflow: 'hidden', boxShadow: '0 2px 0 rgba(30,40,70,0.25)' }}>
+              <span style={{ fontSize: px(nameSz), fontWeight: 700, color: '#fff', marginTop: px(3), textShadow: stroke, lineHeight: 1.05, maxWidth: '94%', textAlign: 'center', fontFamily: HUD }}>{sp.name.split(' ').slice(0, 2).join(' ')}</span>
+              <FishIcon id={sp.id} scale={(h / 66) * 0.78 * u} />
+              <span style={{ fontSize: px(wSz), fontWeight: 700, color: '#fff', marginBottom: px(3), textShadow: stroke, fontFamily: HUD }}>{wl(b.w)}</span>
+              {isShowoff(sp, b.w) && <span style={{ position: 'absolute', right: px(3), bottom: px(h * 0.3), color: '#ffcf3a', fontSize: px(14), textShadow: `0 1px 0 ${NAVY}` }}>★</span>}
+            </button>
+          );
+        };
         const cells: (BagItem | null)[] = Array.from({ length: BAG_MAX }, (_, i) => shownBag[i] || null);
+        const dsel = bag.find((x) => x.id === sel);
+        const small = bag.filter((x) => !isShowoff(SPECIES_BY_ID[x.s], x.w));
         return (
-          <div style={{ ...ov, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: px(10) }} onClick={() => setBagOpen(false)}>
-            <div style={{ width: '100%', maxWidth: px(640), height: '100%', maxHeight: px(344), display: 'flex', flexDirection: 'column', background: CREAM, borderRadius: px(18), border: `${px(3)}px solid #3a8f8c`, overflow: 'hidden', fontFamily: HUD }} onClick={(e) => e.stopPropagation()}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: px(8), background: '#3a9d98', padding: `${px(6)}px ${px(10)}px` }}>
-                <span style={{ background: '#2a7c78', color: '#fff', fontWeight: 700, fontSize: px(15), borderRadius: 99, padding: `${px(2)}px ${px(14)}px` }}>Tas {bag.length}/{BAG_MAX}</span>
-                <span style={{ marginLeft: 'auto' }} />
-                <button onClick={() => setBagSort(bagSort === 'baru' ? 'nilai' : 'baru')} style={{ ...hb, background: '#2a7c78' }}>{bagSort === 'baru' ? 'Terbaru' : 'Termahal'}</button>
-                <button onClick={() => setBagOpen(false)} aria-label="Tutup" style={{ width: px(28), height: px(28), borderRadius: px(8), border: 0, background: '#e5484d', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}><Svg d="M6 6l12 12M18 6L6 18" size={px(16)} /></button>
-              </div>
-              <div style={{ padding: `${px(4)}px ${px(10)}px`, fontSize: px(11.5), fontWeight: 600, color: '#6b5a3c' }}>Nilai isi tas 💎{formatNum(total)} · jual di Lapak Bang Jaka</div>
-              <div style={{ display: 'flex', gap: px(8), flex: 1, minHeight: 0, padding: `0 ${px(10)}px ${px(6)}px` }}>
-                <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(' + px(64) + 'px, 1fr))', gap: px(6), alignContent: 'start', paddingTop: px(4) }}>
-                  {cells.map((b, i) => {
-                    if (!b) return <div key={'e' + i} style={{ height: px(66), borderRadius: px(10), background: '#d9dfe8', opacity: 0.55 }} />;
-                    const sp = SPECIES_BY_ID[b.s];
-                    const xl = isXL(sp, b.w);
-                    const on = selItem?.id === b.id;
-                    const bc = sp.rarity === 'common' ? '#b8c2d0' : RARITY[sp.rarity].color;
-                    return (
-                      <button key={b.id} onClick={() => setSel(b.id)} style={{ position: 'relative', height: px(66), borderRadius: px(10), background: 'linear-gradient(180deg,#a9b7cb,#8d9db5)', border: `${px(2.5)}px solid ${on ? '#f5a623' : bc}`, boxSizing: 'border-box', padding: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', overflow: 'hidden' }}>
-                        {xl && <span style={{ position: 'absolute', top: px(2), right: px(2), width: px(14), height: px(14), borderRadius: '50%', background: '#f5b82e', color: '#fff', fontSize: px(9), lineHeight: `${px(14)}px`, textAlign: 'center' }}>★</span>}
-                        <span style={{ fontSize: px(9.5), fontWeight: 700, color: '#fff', marginTop: px(3), textShadow: '0 1px 2px rgba(40,50,70,0.5)', maxWidth: '88%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sp.name}</span>
-                        <FishIcon id={sp.id} scale={0.8 * u} />
-                        <span style={{ fontSize: px(10), fontWeight: 700, color: '#fff', marginBottom: px(3), textShadow: '0 1px 2px rgba(40,50,70,0.5)' }}>{wl(b.w)}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-                {selItem && (() => {
-                  const sp = SPECIES_BY_ID[selItem.s];
-                  const rar = RARITY[sp.rarity];
-                  const btn: CSSProperties = { borderRadius: px(10), border: 0, fontFamily: HUD, fontWeight: 700, fontSize: px(13), padding: `${px(7)}px 0`, cursor: 'pointer' };
-                  return (
-                    <div style={{ width: px(160), borderRadius: px(14), border: `${px(2)}px solid ${rar.color}`, background: '#fff9ec', padding: px(8), textAlign: 'center', display: 'flex', flexDirection: 'column' }}>
-                      <div style={{ display: 'flex', justifyContent: 'center', background: '#a9b7cb', borderRadius: px(10) }}><FishIcon id={sp.id} scale={1.9 * u} /></div>
-                      <div style={{ fontSize: px(14), fontWeight: 700, color: '#3b2f1a', marginTop: px(4) }}>{sp.name}</div>
-                      <div style={{ fontSize: px(11), fontWeight: 700, color: '#8a6d0f' }}>{rar.label} · {formatWeight(selItem.w)}</div>
-                      <div style={{ display: 'grid', gap: px(5), marginTop: 'auto' }}>
-                        {isShowoff(sp, selItem.w) && <button onClick={() => share(selItem)} style={{ ...btn, background: 'linear-gradient(90deg,#c36bff,#f5c451)', color: '#1a1020' }}>Pamerkan</button>}
-                        <button onClick={() => { setHeld(held && held.id === selItem.id ? null : selItem); setBagOpen(false); }} style={{ ...btn, background: '#38a3d8', color: '#fff' }}>{held && held.id === selItem.id ? 'Lepas ikan' : '🙌 Pegang'}</button>
-                        <button onClick={() => sell([selItem.id])} style={{ ...btn, background: '#f5a623', color: '#2a1d00' }}>Jual 💎{formatNum(fishPrice(sp, selItem.w, rod.money))}</button>
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: px(6), padding: `${px(5)}px ${px(10)}px`, background: '#f1e3c2' }}>
-                <span style={{ fontSize: px(11), fontWeight: 700, color: '#6b5a3c' }}>Hotbar</span>
-                <span style={{ width: px(34), height: px(30), borderRadius: px(7), border: `${px(2)}px solid #f5a623`, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><RodIcon size={px(20)} color={RARITY[rod.rarity].color} /></span>
-                {sorted.length > 0 && <button onClick={sellAll} style={{ marginLeft: 'auto', borderRadius: px(10), border: 0, background: '#34a853', color: '#fff', fontFamily: HUD, fontWeight: 700, fontSize: px(12.5), padding: `${px(6)}px ${px(14)}px`, cursor: 'pointer' }}>Jual semua 💎{formatNum(total)}</button>}
+          <div style={{ ...ov, display: 'flex', flexDirection: 'column', background: '#fff5e1', fontFamily: HUD }} onClick={() => { if (sel) setSel(''); else setBagOpen(false); }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: px(10), background: 'linear-gradient(180deg,#2f9fb5,#237f95)', padding: `${px(7)}px ${px(12)}px`, boxShadow: '0 3px 0 #1c6578' }} onClick={(e) => e.stopPropagation()}>
+              <BagIcon size={px(24)} />
+              <span style={{ color: '#fff', fontWeight: 700, fontSize: px(18) }}>Tas</span>
+              <span style={{ background: '#e8f1f8', color: '#2a4a5a', fontWeight: 700, fontSize: px(15), borderRadius: 99, padding: `${px(1)}px ${px(14)}px` }}>{bag.length}/{BAG_MAX}</span>
+              <span style={{ marginLeft: 'auto' }} />
+              <button onClick={async () => { if (!small.length) { say('Tidak ada ikan biasa'); return; } if (window.confirm('Buang (jual) ' + small.length + ' ikan biasa? Ikan XL/Epik/Legendary aman.')) await sell(small.map((x) => x.id)); }} style={wb()}>🗑️ Buang</button>
+              <button onClick={() => setBagSort(bagSort === 'baru' ? 'nilai' : 'baru')} style={wb()}>⇅ {bagSort === 'baru' ? 'Terbaru' : 'Termahal'}</button>
+              <button onClick={() => setBagOpen(false)} aria-label="Tutup" style={{ width: px(36), height: px(34), borderRadius: px(9), border: 0, background: '#e5484d', boxShadow: '0 3px 0 #a62a2f', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}><Svg d="M6 6l12 12M18 6L6 18" size={px(18)} /></button>
+            </div>
+            <div style={{ padding: `${px(5)}px ${px(12)}px`, fontSize: px(13), fontWeight: 700, color: '#8a6d4a', borderBottom: `${px(2)}px dashed #e3cfa4` }} onClick={(e) => e.stopPropagation()}>Nilai isi tas <b style={{ color: '#1d78c8' }}>💎{formatNum(total)}</b> · jual di Lapak Bang Jaka 🐟</div>
+            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: `${px(8)}px ${px(12)}px`, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(' + px(70) + 'px, 1fr))', gap: px(7), alignContent: 'start' }} onClick={(e) => e.stopPropagation()}>
+              {cells.map((b, i) => b ? cell(b, 72, 9.5, 11, () => setSel(b.id), dsel?.id === b.id) : <div key={'e' + i} style={{ height: px(72), borderRadius: px(12), background: '#aeb4c2', border: `${px(3)}px solid #bfc4d0`, boxSizing: 'border-box' }} />)}
+            </div>
+            <div style={{ borderTop: `${px(2)}px dashed #e3cfa4`, padding: `${px(5)}px ${px(12)}px ${px(8)}px` }} onClick={(e) => e.stopPropagation()}>
+              <div style={{ fontSize: px(16), fontWeight: 700, color: '#6b4a24', marginBottom: px(3) }}>Hotbar</div>
+              <div style={{ display: 'flex', gap: px(7), justifyContent: 'center' }}>
+                <button onClick={() => { setBagOpen(false); setShopOpen(true); }} style={{ position: 'relative', width: px(66), height: px(66), borderRadius: px(12), background: 'linear-gradient(180deg,#8e9cc4,#7685b0)', border: `${px(3)}px solid #ffb02e`, boxSizing: 'border-box', padding: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: px(1) }}>
+                  <RodIcon size={px(28)} color={RARITY[rod.rarity].color} />
+                  <span style={{ fontSize: px(11), fontWeight: 700, color: '#fff', textShadow: stroke }}>Joran</span>
+                </button>
+                {recent.map((b) => cell(b, 66, 9, 11, () => setSel(b.id), dsel?.id === b.id)).map((el) => <div key={el.key} style={{ width: px(66) }}>{el}</div>)}
               </div>
             </div>
+            {dsel && (() => {
+              const sp = SPECIES_BY_ID[dsel.s];
+              const rar = RARITY[sp.rarity];
+              const btn: CSSProperties = { borderRadius: px(10), border: 0, fontFamily: HUD, fontWeight: 700, fontSize: px(14), padding: `${px(8)}px 0`, cursor: 'pointer' };
+              return (
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(20,24,40,0.45)' }} onClick={(e) => { e.stopPropagation(); setSel(''); }}>
+                  <div style={{ width: px(230), borderRadius: px(16), border: `${px(3)}px solid ${rar.color}`, background: '#fff9ec', padding: px(10), textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+                    <div style={{ display: 'flex', justifyContent: 'center', background: '#8e9cc4', borderRadius: px(12) }}><FishIcon id={sp.id} scale={2 * u} /></div>
+                    <div style={{ fontSize: px(16), fontWeight: 700, color: '#3b2f1a', marginTop: px(5) }}>{sp.name}</div>
+                    <div style={{ fontSize: px(12), fontWeight: 700, color: '#8a6d0f' }}>{rar.label} · {formatWeight(dsel.w)}</div>
+                    <div style={{ display: 'grid', gap: px(6), marginTop: px(8) }}>
+                      {isShowoff(sp, dsel.w) && <button onClick={() => share(dsel)} style={{ ...btn, background: 'linear-gradient(90deg,#c36bff,#f5c451)', color: '#1a1020' }}>Pamerkan</button>}
+                      <button onClick={() => { setHeld(held && held.id === dsel.id ? null : dsel); setSel(''); setBagOpen(false); }} style={{ ...btn, background: '#38a3d8', color: '#fff' }}>{held && held.id === dsel.id ? 'Lepas ikan' : '🙌 Pegang'}</button>
+                      <button onClick={() => { sell([dsel.id]); setSel(''); }} style={{ ...btn, background: '#f5a623', color: '#2a1d00' }}>Jual 💎{formatNum(fishPrice(sp, dsel.w, rod.money))}</button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         );
       })()}
-
-      {/* Mode Developer: penanda auto aktif (tetap tampil saat mancing; ketuk untuk stop) + panel */}
-      {dev && <DevFab px={px} rot={rot} getWrap={() => wrapRef.current} auto={auto} count={dstats.catches} open={devOpen} onTap={() => setDevOpen((o) => !o)} />}
-      {dev && auto && (
-        <button
-          onClick={() => engineRef.current?.setAuto(false)}
-          aria-label="Stop auto fishing"
-          style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', bottom: `calc(env(safe-area-inset-bottom, 0px) + ${px(10)}px)`, zIndex: 24, display: 'flex', alignItems: 'center', gap: px(8), border: `${px(2)}px solid #22c55e`, borderRadius: 99, background: 'rgba(8,24,14,0.88)', color: '#fff', fontFamily: HUD, fontWeight: 700, fontSize: px(13), padding: `${px(5)}px ${px(14)}px`, cursor: 'pointer' }}
-        >
-          <span style={{ width: px(9), height: px(9), borderRadius: '50%', background: '#22c55e' }} className="komikita-pulse" />
-          AUTO · {dstats.catches} ikan · ketuk untuk stop
-        </button>
-      )}
-      {dev && devOpen && (
-        <DevTools
-          px={px} rot={rot} getWrap={() => wrapRef.current} engine={engineRef.current}
-          auto={auto} onAuto={(on) => engineRef.current?.setAuto(on)}
-          sellMode={sellMode} setSellMode={setSellMode}
-          speed={speed} setSpeed={setSpeed}
-          instant={instant} setInstant={setInstant}
-          force={force} setForce={setForce}
-          forceSize={forceSize} setForceSize={setForceSize}
-          stats={dstats} resetStats={() => setDstats({ ...EMPTY_STATS, since: auto ? Date.now() : 0 })}
-          onClose={() => setDevOpen(false)}
-        />
-      )}
 
       {/* menu pengaturan */}
       {menuOpen && (

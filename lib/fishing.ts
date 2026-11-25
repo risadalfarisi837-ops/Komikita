@@ -26,6 +26,7 @@ export interface Species {
   pattern: Pattern;
   accent: string;
   glow?: boolean;
+  gs?: number; // skala ikan raksasa saat dipamerkan
   eventOnly?: boolean;
   giant?: boolean; // ikan raksasa: tampil sangat besar saat dipegang
 }
@@ -46,6 +47,9 @@ export const SPECIES: Species[] = [
   { id: 'bulan', name: 'Ikan Bulan Emas', rarity: 'legendary', min: 200, max: 900, price: 1200, shape: 'round', body: '#ffd24a', belly: '#fff1b8', fin: '#ffb300', pattern: 'spots', accent: '#fff8d6', glow: true },
   { id: 'paus', name: 'Paus Kristal', rarity: 'legendary', min: 500, max: 1500, price: 1800, shape: 'big', body: '#58c7ff', belly: '#e0f7ff', fin: '#2f9bdc', pattern: 'spots', accent: '#ffffff', glow: true },
   { id: 'hiu', name: 'Hiu Raksasa', rarity: 'legendary', min: 400, max: 1800, price: 2600, shape: 'shark', body: '#6b7f94', belly: '#eef3f7', fin: '#52657a', pattern: 'none', accent: '#3d4d5f', glow: true, eventOnly: true },
+  { id: 'pariraksasa', name: 'Pari Manta Raksasa', rarity: 'legendary', min: 20000, max: 50000, price: 9000, shape: 'flat', body: '#2d3a52', belly: '#e6ecf5', fin: '#1d2638', pattern: 'spots', accent: '#9fc4ff', glow: true, eventOnly: true, giant: true, gs: 3.8 },
+  { id: 'pausbiru', name: 'Paus Biru Samudra', rarity: 'legendary', min: 40000, max: 100000, price: 16000, shape: 'big', body: '#3f6fa6', belly: '#cfe3f5', fin: '#2c4f7c', pattern: 'none', accent: '#9fd0ff', glow: true, eventOnly: true, giant: true, gs: 5.2 },
+  { id: 'hiuputih', name: 'Hiu Putih Raksasa', rarity: 'legendary', min: 80000, max: 160000, price: 26000, shape: 'shark', body: '#9fb0c2', belly: '#ffffff', fin: '#6f8196', pattern: 'none', accent: '#6f8196', glow: true, eventOnly: true, giant: true, gs: 7 },
   { id: 'leviathan', name: 'Leviathan Pulau', rarity: 'legendary', min: 150000, max: 400000, price: 40000, shape: 'big', body: '#1f6f8b', belly: '#bfeaf5', fin: '#134a63', pattern: 'spots', accent: '#7df9ff', glow: true, eventOnly: true, giant: true },
 ];
 
@@ -100,7 +104,11 @@ export function rollShark(rnd: () => number = Math.random): { species: Species; 
 }
 
 export function rollGiant(rnd: () => number = Math.random): { species: Species; weight: number } {
-  const species = SPECIES_BY_ID.leviathan;
+  const table: [string, number][] = [['pariraksasa', 36], ['pausbiru', 30], ['hiuputih', 24], ['leviathan', 10]];
+  let x = rnd() * 100;
+  let id = 'pariraksasa';
+  for (const [k, w] of table) { if (x < w) { id = k; break; } x -= w; }
+  const species = SPECIES_BY_ID[id];
   const raw = species.min + (species.max - species.min) * Math.pow(rnd(), 1.2);
   return { species, weight: Math.round(raw * 100) / 100 };
 }

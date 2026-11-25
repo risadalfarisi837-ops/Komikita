@@ -870,7 +870,7 @@ const GIANT_SCALE = 10.5; // ikan raksasa: selebar pulau
 export function drawShowFish(ctx: CanvasRenderingContext2D, x: number, y: number, sp: Species, weight: number) {
   const t = performance.now() / 1000;
   const ratio = sizeRatio(sp, weight);
-  const scale = sp.giant ? GIANT_SCALE + ratio : Math.min(1.7, 0.5 + 0.8 * ratio + (sp.rarity === 'legendary' ? 0.3 : sp.rarity === 'epic' ? 0.15 : 0));
+  const scale = sp.giant ? (sp.gs || GIANT_SCALE) + ratio : Math.min(1.7, 0.5 + 0.8 * ratio + (sp.rarity === 'legendary' ? 0.3 : sp.rarity === 'epic' ? 0.15 : 0));
   const fw = FISH_W * scale;
   const fh = FISH_H * scale;
   const cx = Math.round(x);
