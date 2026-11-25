@@ -22,6 +22,7 @@ const ICON = 'w-12 h-12';
 const MENU: Tile[] = [
   { title: 'Misi', sub: 'Harian & mingguan', href: '/misi', from: '#065f46', to: '#10b981', border: '#6ee7b7', icon: <Target className={ICON} /> },
   { title: 'Pet', sub: 'Koleksi pet', href: '/komikstore/pet', from: '#fcd34d', to: '#f59e0b', border: '#fde68a', dark: true, icon: <PawPrint className={ICON} fill="#451a03" color="#451a03" /> },
+  { title: 'Mancing', sub: 'Tangkap & jual ikan', href: '/komikstore/mancing', from: '#155e75', to: '#0ea5e9', border: '#7dd3fc', icon: <Fish className={ICON} /> },
   { title: 'Avatar Border', sub: 'Shop decoration', href: '/komikstore/avatar-border', from: '#4a044e', to: '#7e22ce', border: '#c084fc', icon: <Smile className={ICON} /> },
   { title: 'Profile Effects', sub: 'Efek profil', href: '/komikstore/profile-effects', from: '#7c2d12', to: '#dc2626', border: '#fb7185', icon: <Sparkles className={ICON} /> },
   { title: 'Gacha Background', sub: 'Latar profil', href: '/komikstore/gacha-background', from: '#0c4a6e', to: '#6d28d9', border: '#67e8f9', icon: <Mountain className={ICON} /> },
