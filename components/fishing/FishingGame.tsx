@@ -235,6 +235,7 @@ export default function FishingGame(props: Props) {
   const [chat, setChat] = useState<{ who: string; msg: string; t: number }[]>([]);
   const [chatOpen, setChatOpen] = useState(false);
   const [buffOpen, setBuffOpen] = useState(true);
+  const [bagSort, setBagSort] = useState<'baru' | 'nilai'>('baru');
   const [menu2, setMenu2] = useState(false);
   const toastT = useRef<ReturnType<typeof setTimeout> | null>(null);
   const px = (n: number) => Math.round(n * u);
@@ -426,7 +427,8 @@ export default function FishingGame(props: Props) {
   const recent = useMemo(() => [...bag].reverse().slice(0, 8), [bag]);
   const sorted = useMemo(() => [...bag].sort((a, b) => fishPrice(SPECIES_BY_ID[b.s], b.w, rod.money) - fishPrice(SPECIES_BY_ID[a.s], a.w, rod.money)), [bag, rod.money]);
   const total = bag.reduce((s, b) => s + fishPrice(SPECIES_BY_ID[b.s], b.w, rod.money), 0);
-  const selItem = bag.find((b) => b.id === sel) || sorted[0];
+  const shownBag = bagSort === 'baru' ? [...bag].reverse() : sorted;
+  const selItem = bag.find((b) => b.id === sel) || shownBag[0];
   const off = now.getTimezoneOffset();
   const tz = off === -420 ? 'WIB' : off === -480 ? 'WITA' : off === -540 ? 'WIT' : 'GMT' + (off <= 0 ? '+' : '-') + Math.abs(off / 60);
   const dateStr = new Intl.DateTimeFormat('id-ID', { weekday: 'short', day: 'numeric', month: 'short' }).format(now);
@@ -449,7 +451,7 @@ export default function FishingGame(props: Props) {
     };
   };
   const xlTag = (): CSSProperties => ({ position: 'absolute', top: px(-5), right: px(-4), background: '#f08a24', color: '#fff', fontSize: px(8.5), fontWeight: 700, borderRadius: px(4), padding: `0 ${px(3.5)}px`, zIndex: 1, border: `${px(1)}px solid rgba(255,255,255,0.55)` });
-  const wLabel = (): CSSProperties => ({ position: 'absolute', bottom: px(1), left: 0, right: 0, textAlign: 'center', fontFamily: '"Pixelify Sans", ui-monospace, monospace', fontSize: px(9.5), fontWeight: 700, color: '#fff', textShadow: '-1px 0 #000, 1px 0 #000, 0 -1px #000, 0 1px #000, 0 2px 2px rgba(0,0,0,0.6)' });
+  const wLabel = (): CSSProperties => ({ position: 'absolute', bottom: px(1), left: 0, right: 0, textAlign: 'center', fontFamily: '"Pixelify Sans", ui-monospace, monospace', fontSize: px(9.5), fontWeight: 700, color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.45)' });
   const wl = (w: number) => formatWeight(w).replace(' ', '');
   const ringBtn = (ring: string): CSSProperties => ({
     width: px(33), height: px(33), borderRadius: '50%', boxSizing: 'border-box', background: PANEL, border: `${px(2)}px solid #1b1818`,
@@ -571,7 +573,7 @@ export default function FishingGame(props: Props) {
               <svg width={px(20)} height={px(20)} viewBox="0 0 24 24" style={{ transform: `rotate(${rotate}deg)` }}><path d="M12 3l7 16-7-4-7 4z" fill="#fff" /></svg>
             </div>
             <div>
-              <div style={{ fontSize: px(15), fontWeight: 700, color: '#1f8a45', lineHeight: 1.1 }}>Ada Gerombolan Ikan!</div>
+              <div style={{ fontSize: px(15), fontWeight: 700, color: guide.kind === 'hiu' ? '#c2410c' : '#1f8a45', lineHeight: 1.1 }}>{guide.kind === 'hiu' ? '🦈 Hiu Legendary!' : 'Ada Gerombolan Ikan!'}</div>
               <div style={{ fontSize: px(12.5), fontWeight: 600 }}>{guide.dist} m · 🍀+200% · {mmss(guide.left)}</div>
             </div>
           </div>
@@ -699,58 +701,65 @@ export default function FishingGame(props: Props) {
       })()}
 
       {/* ransel penuh */}
-      {bagOpen && (
-        <div style={{ ...ov, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: px(10) }} onClick={() => setBagOpen(false)}>
-          <div style={{ width: '100%', maxWidth: px(720), height: '100%', maxHeight: px(340), display: 'flex', flexDirection: 'column', background: '#141a28', borderRadius: px(20), border: '1px solid rgba(255,255,255,0.12)', padding: px(12) }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: px(10), marginBottom: px(8) }}>
-              <BagIcon size={px(26)} />
-              <span style={{ fontSize: px(20), fontWeight: 700 }}>Ransel {bag.length}/{BAG_MAX}</span>
-              <span style={{ marginLeft: 'auto', fontSize: px(13), fontWeight: 600, color: 'rgba(255,255,255,0.6)' }}>Total 💎{formatNum(total)}</span>
-              <button onClick={() => setBagOpen(false)} aria-label="Tutup" style={{ ...circleBtn, width: px(34), height: px(34), border: 0, background: 'rgba(255,255,255,0.1)' }}><Svg d="M6 6l12 12M18 6L6 18" size={px(18)} /></button>
-            </div>
-            <div style={{ display: 'flex', gap: px(10), flex: 1, minHeight: 0 }}>
-              <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexWrap: 'wrap', gap: px(8), alignContent: 'flex-start', paddingTop: px(6) }}>
-                {sorted.length === 0 && <div style={{ width: '100%', textAlign: 'center', padding: px(40), color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>Ransel kosong. Ayo mancing!</div>}
-                {sorted.map((b) => {
-                  const sp = SPECIES_BY_ID[b.s];
-                  const xl = isXL(sp, b.w);
-                  const on = selItem?.id === b.id;
-                  return (
-                    <button key={b.id} onClick={() => setSel(b.id)} style={{ ...slot(on, rarityBorder(sp.rarity, xl)), width: px(56), height: px(60), boxShadow: isShowoff(sp, b.w) ? `0 0 ${px(10)}px ${RARITY[sp.rarity].color}88` : 'none' }}>
-                      {xl && <span style={xlTag()}>XL</span>}
-                      <FishIcon id={sp.id} scale={0.85 * u} />
-                      <span style={wLabel()}>{wl(b.w)}</span>
-                    </button>
-                  );
-                })}
+      {bagOpen && (() => {
+        const CREAM = '#fbf1dc';
+        const hb: CSSProperties = { border: 0, borderRadius: px(10), fontFamily: HUD, fontWeight: 700, fontSize: px(12), padding: `${px(5)}px ${px(12)}px`, cursor: 'pointer', color: '#fff' };
+        const cells: (BagItem | null)[] = Array.from({ length: BAG_MAX }, (_, i) => shownBag[i] || null);
+        return (
+          <div style={{ ...ov, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: px(10) }} onClick={() => setBagOpen(false)}>
+            <div style={{ width: '100%', maxWidth: px(640), height: '100%', maxHeight: px(344), display: 'flex', flexDirection: 'column', background: CREAM, borderRadius: px(18), border: `${px(3)}px solid #3a8f8c`, overflow: 'hidden', fontFamily: HUD }} onClick={(e) => e.stopPropagation()}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: px(8), background: '#3a9d98', padding: `${px(6)}px ${px(10)}px` }}>
+                <span style={{ background: '#2a7c78', color: '#fff', fontWeight: 700, fontSize: px(15), borderRadius: 99, padding: `${px(2)}px ${px(14)}px` }}>Tas {bag.length}/{BAG_MAX}</span>
+                <span style={{ marginLeft: 'auto' }} />
+                <button onClick={() => setBagSort(bagSort === 'baru' ? 'nilai' : 'baru')} style={{ ...hb, background: '#2a7c78' }}>{bagSort === 'baru' ? 'Terbaru' : 'Termahal'}</button>
+                <button onClick={() => setBagOpen(false)} aria-label="Tutup" style={{ width: px(28), height: px(28), borderRadius: px(8), border: 0, background: '#e5484d', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}><Svg d="M6 6l12 12M18 6L6 18" size={px(16)} /></button>
               </div>
-              {selItem && (() => {
-                const sp = SPECIES_BY_ID[selItem.s];
-                const rar = RARITY[sp.rarity];
-                const xl = isXL(sp, selItem.w);
-                const btn: CSSProperties = { borderRadius: px(12), border: 0, fontFamily: HUD, fontWeight: 700, fontSize: px(14), padding: `${px(8)}px 0`, cursor: 'pointer' };
-                return (
-                  <div style={{ width: px(210), borderRadius: px(16), border: `${px(2)}px solid ${rar.color}`, background: `radial-gradient(circle at 50% 30%, ${rar.color}44, #10182a 70%)`, padding: px(10), textAlign: 'center', display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ display: 'flex', justifyContent: 'center', position: 'relative' }}>
-                      <FishIcon id={sp.id} scale={2.4 * u} />
-                      {xl && <span style={{ position: 'absolute', top: 0, right: px(10), background: '#f59e3d', color: '#fff', fontWeight: 700, fontSize: px(12), borderRadius: px(8), padding: `0 ${px(7)}px` }}>XL</span>}
+              <div style={{ padding: `${px(4)}px ${px(10)}px`, fontSize: px(11.5), fontWeight: 600, color: '#6b5a3c' }}>Nilai isi tas 💎{formatNum(total)} · jual di Lapak Bang Jaka</div>
+              <div style={{ display: 'flex', gap: px(8), flex: 1, minHeight: 0, padding: `0 ${px(10)}px ${px(6)}px` }}>
+                <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(' + px(64) + 'px, 1fr))', gap: px(6), alignContent: 'start', paddingTop: px(4) }}>
+                  {cells.map((b, i) => {
+                    if (!b) return <div key={'e' + i} style={{ height: px(66), borderRadius: px(10), background: '#d9dfe8', opacity: 0.55 }} />;
+                    const sp = SPECIES_BY_ID[b.s];
+                    const xl = isXL(sp, b.w);
+                    const on = selItem?.id === b.id;
+                    const bc = sp.rarity === 'common' ? '#b8c2d0' : RARITY[sp.rarity].color;
+                    return (
+                      <button key={b.id} onClick={() => setSel(b.id)} style={{ position: 'relative', height: px(66), borderRadius: px(10), background: 'linear-gradient(180deg,#a9b7cb,#8d9db5)', border: `${px(2.5)}px solid ${on ? '#f5a623' : bc}`, boxSizing: 'border-box', padding: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', overflow: 'hidden' }}>
+                        {xl && <span style={{ position: 'absolute', top: px(2), right: px(2), width: px(14), height: px(14), borderRadius: '50%', background: '#f5b82e', color: '#fff', fontSize: px(9), lineHeight: `${px(14)}px`, textAlign: 'center' }}>★</span>}
+                        <span style={{ fontSize: px(9.5), fontWeight: 700, color: '#fff', marginTop: px(3), textShadow: '0 1px 2px rgba(40,50,70,0.5)', maxWidth: '88%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sp.name}</span>
+                        <FishIcon id={sp.id} scale={0.8 * u} />
+                        <span style={{ fontSize: px(10), fontWeight: 700, color: '#fff', marginBottom: px(3), textShadow: '0 1px 2px rgba(40,50,70,0.5)' }}>{wl(b.w)}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {selItem && (() => {
+                  const sp = SPECIES_BY_ID[selItem.s];
+                  const rar = RARITY[sp.rarity];
+                  const btn: CSSProperties = { borderRadius: px(10), border: 0, fontFamily: HUD, fontWeight: 700, fontSize: px(13), padding: `${px(7)}px 0`, cursor: 'pointer' };
+                  return (
+                    <div style={{ width: px(160), borderRadius: px(14), border: `${px(2)}px solid ${rar.color}`, background: '#fff9ec', padding: px(8), textAlign: 'center', display: 'flex', flexDirection: 'column' }}>
+                      <div style={{ display: 'flex', justifyContent: 'center', background: '#a9b7cb', borderRadius: px(10) }}><FishIcon id={sp.id} scale={1.9 * u} /></div>
+                      <div style={{ fontSize: px(14), fontWeight: 700, color: '#3b2f1a', marginTop: px(4) }}>{sp.name}</div>
+                      <div style={{ fontSize: px(11), fontWeight: 700, color: '#8a6d0f' }}>{rar.label} · {formatWeight(selItem.w)}</div>
+                      <div style={{ display: 'grid', gap: px(5), marginTop: 'auto' }}>
+                        {isShowoff(sp, selItem.w) && <button onClick={() => share(selItem)} style={{ ...btn, background: 'linear-gradient(90deg,#c36bff,#f5c451)', color: '#1a1020' }}>Pamerkan</button>}
+                        <button onClick={() => { setHeld(held && held.id === selItem.id ? null : selItem); setBagOpen(false); }} style={{ ...btn, background: '#38a3d8', color: '#fff' }}>{held && held.id === selItem.id ? 'Lepas ikan' : '🙌 Pegang'}</button>
+                        <button onClick={() => sell([selItem.id])} style={{ ...btn, background: '#f5a623', color: '#2a1d00' }}>Jual 💎{formatNum(fishPrice(sp, selItem.w, rod.money))}</button>
+                      </div>
                     </div>
-                    <div style={{ fontSize: px(17), fontWeight: 700 }}>{sp.name}</div>
-                    <div style={{ fontSize: px(12), fontWeight: 700, color: rar.color }}>{rar.label}</div>
-                    <div style={{ fontSize: px(22), fontWeight: 700, margin: `${px(2)}px 0 ${px(6)}px` }}>{formatWeight(selItem.w)}</div>
-                    <div style={{ display: 'grid', gap: px(6), marginTop: 'auto' }}>
-                      {isShowoff(sp, selItem.w) && <button onClick={() => share(selItem)} style={{ ...btn, background: 'linear-gradient(90deg,#c36bff,#f5c451)', color: '#1a1020' }}>Pamerkan</button>}
-                      <button onClick={() => { setHeld(held && held.id === selItem.id ? null : selItem); setBagOpen(false); }} style={{ ...btn, background: 'linear-gradient(90deg,#38bdf8,#818cf8)', color: '#06131f' }}>{held && held.id === selItem.id ? 'Lepas ikan' : '🙌 Pegang'}</button>
-                      <button onClick={() => sell([selItem.id])} style={{ ...btn, background: '#f5c451', color: '#2a1d00' }}>Jual 💎{formatNum(fishPrice(sp, selItem.w, rod.money))}</button>
-                    </div>
-                  </div>
-                );
-              })()}
+                  );
+                })()}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: px(6), padding: `${px(5)}px ${px(10)}px`, background: '#f1e3c2' }}>
+                <span style={{ fontSize: px(11), fontWeight: 700, color: '#6b5a3c' }}>Hotbar</span>
+                <span style={{ width: px(34), height: px(30), borderRadius: px(7), border: `${px(2)}px solid #f5a623`, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><RodIcon size={px(20)} color={RARITY[rod.rarity].color} /></span>
+                {sorted.length > 0 && <button onClick={sellAll} style={{ marginLeft: 'auto', borderRadius: px(10), border: 0, background: '#34a853', color: '#fff', fontFamily: HUD, fontWeight: 700, fontSize: px(12.5), padding: `${px(6)}px ${px(14)}px`, cursor: 'pointer' }}>Jual semua 💎{formatNum(total)}</button>}
+              </div>
             </div>
-            {sorted.length > 0 && <button onClick={sellAll} style={{ marginTop: px(8), borderRadius: px(14), border: 0, background: '#34d27a', color: '#04210f', fontFamily: HUD, fontWeight: 700, fontSize: px(15), padding: `${px(9)}px 0`, cursor: 'pointer' }}>Jual semua 💎{formatNum(total)}</button>}
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* menu pengaturan */}
       {menuOpen && (

@@ -1,7 +1,7 @@
 // Data & aturan game Mancing (murni logika, tanpa tampilan).
 
 export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
-export type Shape = 'oval' | 'round' | 'long' | 'flat' | 'big';
+export type Shape = 'oval' | 'round' | 'long' | 'flat' | 'big' | 'shark';
 export type Pattern = 'none' | 'stripes' | 'spots' | 'band';
 
 export const RARITY: Record<Rarity, { label: string; color: string; weight: number; xp: number; diff: number }> = {
@@ -26,6 +26,7 @@ export interface Species {
   pattern: Pattern;
   accent: string;
   glow?: boolean;
+  eventOnly?: boolean;
 }
 
 export const SPECIES: Species[] = [
@@ -43,6 +44,7 @@ export const SPECIES: Species[] = [
   { id: 'marlin', name: 'Marlin Senja', rarity: 'epic', min: 60, max: 180, price: 480, shape: 'long', body: '#3a8fa8', belly: '#d6f0f6', fin: '#ff9a62', pattern: 'band', accent: '#ff9a62' },
   { id: 'bulan', name: 'Ikan Bulan Emas', rarity: 'legendary', min: 200, max: 900, price: 1200, shape: 'round', body: '#ffd24a', belly: '#fff1b8', fin: '#ffb300', pattern: 'spots', accent: '#fff8d6', glow: true },
   { id: 'paus', name: 'Paus Kristal', rarity: 'legendary', min: 500, max: 1500, price: 1800, shape: 'big', body: '#58c7ff', belly: '#e0f7ff', fin: '#2f9bdc', pattern: 'spots', accent: '#ffffff', glow: true },
+  { id: 'hiu', name: 'Hiu Raksasa', rarity: 'legendary', min: 400, max: 1800, price: 2600, shape: 'shark', body: '#6b7f94', belly: '#eef3f7', fin: '#52657a', pattern: 'none', accent: '#3d4d5f', glow: true, eventOnly: true },
 ];
 
 export const SPECIES_BY_ID: Record<string, Species> = Object.fromEntries(SPECIES.map((s) => [s.id, s]));
@@ -89,6 +91,12 @@ export function titleFor(level: number): string {
 }
 
 // ---- Tangkapan ----
+export function rollShark(rnd: () => number = Math.random): { species: Species; weight: number } {
+  const species = SPECIES_BY_ID.hiu;
+  const raw = species.min + (species.max - species.min) * Math.pow(rnd(), 1.4);
+  return { species, weight: Math.round(raw * 100) / 100 };
+}
+
 export function rollFish(level: number, luck: number = 0, rnd: () => number = Math.random): { species: Species; weight: number } {
   const b = Math.min(Math.max(level, 1), MAX_LEVEL) / MAX_LEVEL; // 0..1
   const lk = Math.max(0, Math.min(3, luck)); // bonus joran (+ event Gerombolan Ikan sampai +2)
@@ -107,7 +115,7 @@ export function rollFish(level: number, luck: number = 0, rnd: () => number = Ma
     if (roll < w[r]) { rarity = r; break; }
     roll -= w[r];
   }
-  const pool = SPECIES.filter((s) => s.rarity === rarity);
+  const pool = SPECIES.filter((s) => s.rarity === rarity && !s.eventOnly);
   const species = pool[Math.min(pool.length - 1, Math.floor(rnd() * pool.length))];
   const raw = species.min + (species.max - species.min) * Math.pow(rnd(), 1.7);
   const weight = raw < 1 ? Math.round(raw * 1000) / 1000 : Math.round(raw * 100) / 100;

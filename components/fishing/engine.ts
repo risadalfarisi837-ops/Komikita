@@ -1,5 +1,5 @@
 // Mesin game Mancing (tanpa React): gerak, lempar joran, tunggu gigitan, mini-game menarik ikan, dan render.
-import { RARITY, rollFish } from '@/lib/fishing';
+import { RARITY, rollFish, rollShark } from '@/lib/fishing';
 import type { Species } from '@/lib/fishing';
 import {
   TILE, generateWorld, drawPlayer, drawPalm, drawRock, drawLamp, drawBobber, drawRipple, drawLine,
@@ -10,9 +10,9 @@ import type { Dir, World } from './art';
 export type Phase = 'idle' | 'cast' | 'wait' | 'bite' | 'reel' | 'catching' | 'result';
 export interface Catch { species: Species; weight: number }
 export interface Profile { name: string; title: string; level: number; rodName: string; rodId?: string }
-export interface ShoalStatus { dist: number; ang: number; left: number }
+export interface ShoalStatus { dist: number; ang: number; left: number; kind: 'ikan' | 'hiu' }
 export interface EngineStatus { shoal: ShoalStatus | null; inShoal: boolean }
-interface Shoal { x: number; y: number; r: number; until: number }
+interface Shoal { x: number; y: number; r: number; until: number; kind: 'ikan' | 'hiu' }
 const TIPS = [
   'Tahan tombol supaya zona hijau ngikutin ikan.',
   'Ada gerombolan ikan? Mancing di situ, peluang ikan langka naik drastis!',
@@ -46,6 +46,7 @@ export class FishingEngine {
   private shoal: Shoal | null = null;
   private nextShoal = 12;
   private castInShoal = false;
+  private castKind: 'ikan' | 'hiu' = 'ikan';
   private waterSpots: [number, number][] | null = null;
 
   private canvas: HTMLCanvasElement;
@@ -179,10 +180,11 @@ export class FishingEngine {
     if (!sh) return { shoal: null, inShoal: false };
     const dx = sh.x - this.px;
     const dy = sh.y - this.py;
-    return { shoal: { dist: Math.max(1, Math.round(Math.hypot(dx, dy) / TILE)), ang: Math.atan2(dy, dx), left: Math.max(0, sh.until - this.time) }, inShoal: this.castInShoal && this.phase !== 'idle' };
+    return { shoal: { dist: Math.max(1, Math.round(Math.hypot(dx, dy) / TILE)), ang: Math.atan2(dy, dx), left: Math.max(0, sh.until - this.time), kind: sh.kind }, inShoal: this.castInShoal && this.phase !== 'idle' };
   }
   // untuk pengujian
   forceShoal() { this.spawnShoal(true); }
+  forceShark() { this.spawnShoal(true, 'hiu'); }
   castTo(dir: Dir) { this.dir = dir; this.tryCast(); }
   step(dt: number) { this.update(dt); this.render(); }
   debug() { return { phase: this.phase, reel: this.reel, fish: this.fish, px: this.px, py: this.py, dir: this.dir, S: this.S }; }
@@ -232,7 +234,7 @@ export class FishingEngine {
     return { tx, ty, wx: (tx + 0.5) * TILE, wy: (ty + 0.5) * TILE };
   }
 
-  private spawnShoal(force = false) {
+  private spawnShoal(force = false, kind?: 'ikan' | 'hiu') {
     const w = this.world;
     if (!this.waterSpots) {
       const spots: [number, number][] = [];
@@ -258,7 +260,30 @@ export class FishingEngine {
     const far = spots.filter(([x, y]) => { const d = Math.hypot(x - ptx, y - pty); return d >= 9 && d <= 40; });
     const pool = far.length ? far : spots;
     const [tx, ty] = pool[Math.floor(Math.random() * pool.length)];
-    this.shoal = { x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE, r: 3.4 * TILE, until: this.time + (force ? 90 : 60) };
+    const k: 'ikan' | 'hiu' = kind || (!force && Math.random() < 0.3 ? 'hiu' : 'ikan');
+    this.shoal = { x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE, r: (k === 'hiu' ? 4 : 3.4) * TILE, until: this.time + (k === 'hiu' ? 80 : force ? 90 : 60), kind: k };
+    if (k === 'hiu') this.ev.onToast?.('Hiu Legendary muncul! Cari bayangannya');
+  }
+
+  private drawSharkEvent(ctx: CanvasRenderingContext2D, sh: Shoal, t: number) {
+    const a = t * 0.45;
+    const sx = sh.x + Math.cos(a) * sh.r * 0.5;
+    const sy = sh.y + Math.sin(a) * sh.r * 0.28;
+    const hd = Math.atan2(Math.cos(a) * 0.28, -Math.sin(a) * 0.5);
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.rotate(hd);
+    ctx.fillStyle = 'rgba(6,28,60,0.42)';
+    ctx.beginPath(); ctx.ellipse(0, 0, 17, 5.5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-14, 0); ctx.lineTo(-24, -7); ctx.lineTo(-22, 0); ctx.lineTo(-24, 7); ctx.closePath(); ctx.fill();
+    ctx.restore();
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.ellipse(sx, sy + 1, 9, 3, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = '#5f7083';
+    ctx.beginPath(); ctx.moveTo(sx - 5, sy + 1); ctx.lineTo(sx + 1, sy - 12); ctx.lineTo(sx + 6, sy + 1); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#8fa3b8';
+    ctx.fillRect(Math.round(sx), Math.round(sy - 8), 1, 6);
   }
 
   private tryCast() {
@@ -269,7 +294,8 @@ export class FishingEngine {
     this.castT = 0;
     const sh = this.shoal;
     this.castInShoal = !!sh && Math.hypot(t.wx - sh.x, t.wy - sh.y) <= sh.r;
-    if (this.castInShoal) this.ev.onToast?.('Kena gerombolan ikan! Peluang langka naik');
+    this.castKind = sh ? sh.kind : 'ikan';
+    if (this.castInShoal) this.ev.onToast?.(this.castKind === 'hiu' ? 'Hiu raksasa menyambar umpanmu!' : 'Kena gerombolan ikan! Peluang langka naik');
     this.setPhase('cast');
   }
 
@@ -359,7 +385,7 @@ export class FishingEngine {
       this.waitT -= dt;
       if (Math.random() < dt * 0.7) this.ripples.push({ x: this.target.wx + (Math.random() - 0.5) * 6, y: this.target.wy + (Math.random() - 0.5) * 3, t: 0.55 });
       if (this.waitT <= 0) {
-        this.fish = rollFish(this.level, this.luck + (this.castInShoal ? 2 : 0));
+        this.fish = this.castInShoal && this.castKind === 'hiu' && Math.random() < 0.6 ? rollShark() : rollFish(this.level, this.luck + (this.castInShoal ? 2 : 0));
         this.biteT = 1.25;
         this.ripples.push({ x: this.target.wx, y: this.target.wy, t: 0 });
         this.splash(this.target.wx, this.target.wy, 6);
@@ -507,7 +533,8 @@ export class FishingEngine {
       ctx.beginPath();
       ctx.ellipse(sh.x, sh.y, 8 + k * sh.r * 0.85, 4 + k * sh.r * 0.45, 0, 0, Math.PI * 2);
       ctx.stroke();
-      for (let i = 0; i < 11; i++) {
+      if (sh.kind === 'hiu') this.drawSharkEvent(ctx, sh, t);
+      for (let i = 0; i < (sh.kind === 'hiu' ? 3 : 11); i++) {
         const dir = i % 2 ? 1 : -1;
         const a = t * 0.7 * dir + i * 0.57;
         const rr = 7 + ((i * 37) % 19) * 1.3;

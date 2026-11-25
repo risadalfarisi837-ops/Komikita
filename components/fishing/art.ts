@@ -656,6 +656,7 @@ const SHAPES: Record<string, ShapeDef> = {
   long: { rx: 15, ry: 4, tail: 7, tailH: 5, dorsal: 3 },
   big: { rx: 14, ry: 9, tail: 8, tailH: 7, dorsal: 5 },
   flat: { rx: 13, ry: 9, tail: 0, tailH: 0, dorsal: 0 },
+  shark: { rx: 17, ry: 6, tail: 8, tailH: 8, dorsal: 8 },
 };
 
 export function fishSprite(sp: Species): HTMLCanvasElement {
