@@ -2,8 +2,11 @@
 
 import { useEffect, useState } from 'react';
 
-// Mode game: masuk halaman → layar otomatis landscape (+ layar penuh kalau perlu).
+// Mode game: masuk halaman → layar otomatis landscape.
 // Keluar halaman → layar dikembalikan ke mode HP (portrait), lalu rotasi bebas lagi.
+// Sengaja TANPA layar penuh, supaya pesan sistem Android "Tarik dari atas..." tidak muncul.
+// Catatan: kunci landscape hanya diizinkan Android di aplikasi terpasang (APK / PWA).
+// Di tab Chrome biasa kuncinya ditolak, jadi cuma muncul petunjuk untuk memutar HP sendiri.
 
 type Orient = ScreenOrientation & { lock?: (o: string) => Promise<void>; unlock?: () => void };
 
@@ -16,22 +19,14 @@ async function enterGameMode(): Promise<boolean> {
   seq++;
   const o = getOrient();
   if (!o?.lock) return false;
-  // aplikasi terpasang (APK/PWA) biasanya boleh kunci landscape tanpa layar penuh
-  try { await o.lock('landscape'); return true; } catch { /* coba lewat layar penuh */ }
-  // browser biasa: perlu layar penuh dulu (butuh sentuhan pengguna)
-  try {
-    if (!document.fullscreenElement) await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
-    await o.lock('landscape');
-    return true;
-  } catch {
-    return false;
-  }
+  try { await o.lock('landscape'); return true; } catch { return false; }
 }
 
 async function leaveGameMode() {
   const my = ++seq;
   const o = getOrient();
   try { await o?.lock?.('portrait'); } catch { /* tidak diizinkan, cukup di-unlock */ }
+  // kalau pemain memakai tombol "Layar penuh landscape" di menu game, keluarkan juga
   try { if (document.fullscreenElement) await document.exitFullscreen(); } catch { /* abaikan */ }
   setTimeout(() => {
     if (my !== seq) return;
@@ -40,43 +35,34 @@ async function leaveGameMode() {
 }
 
 export default function GameMode() {
-  const [needTap, setNeedTap] = useState(false);
-  const [portrait, setPortrait] = useState(false);
-  const [touch, setTouch] = useState(false);
+  const [hint, setHint] = useState(false);
 
   useEffect(() => {
     let alive = true;
-    enterGameMode().then((ok) => { if (alive) setNeedTap(!ok); });
-    return () => { alive = false; leaveGameMode(); };
+    let t: ReturnType<typeof setTimeout> | undefined;
+    enterGameMode().then((ok) => {
+      if (!alive || ok) return;
+      const portrait = window.innerHeight > window.innerWidth;
+      const touch = window.matchMedia('(pointer: coarse)').matches;
+      if (portrait && touch) {
+        setHint(true);
+        t = setTimeout(() => setHint(false), 6000);
+      }
+    });
+    return () => { alive = false; if (t) clearTimeout(t); leaveGameMode(); };
   }, []);
 
-  useEffect(() => {
-    const upd = () => {
-      setPortrait(window.innerHeight > window.innerWidth);
-      setTouch(window.matchMedia('(pointer: coarse)').matches);
-    };
-    upd();
-    window.addEventListener('resize', upd);
-    window.addEventListener('orientationchange', upd);
-    return () => {
-      window.removeEventListener('resize', upd);
-      window.removeEventListener('orientationchange', upd);
-    };
-  }, []);
-
-  // hanya muncul di HP yang masih portrait dan gagal dikunci otomatis
-  if (!needTap || !portrait || !touch) return null;
+  if (!hint) return null;
 
   return (
-    <button
-      onClick={async () => { if (await enterGameMode()) setNeedTap(false); }}
+    <div
       style={{
-        position: 'fixed', left: '50%', bottom: 24, transform: 'translateX(-50%)', zIndex: 200,
-        padding: '12px 20px', borderRadius: 999, border: '2px solid #ffd36a', background: 'rgba(24,22,22,0.94)',
-        color: '#fff', fontWeight: 700, fontSize: 15, boxShadow: '0 4px 16px rgba(0,0,0,0.5)', maxWidth: '90vw',
+        position: 'fixed', left: '50%', top: 16, transform: 'translateX(-50%)', zIndex: 200, pointerEvents: 'none',
+        padding: '10px 18px', borderRadius: 999, background: 'rgba(15,23,42,0.94)', border: '2px solid #ffd36a',
+        color: '#fff', fontWeight: 700, fontSize: 14, maxWidth: '90vw', textAlign: 'center',
       }}
     >
-      🎮 Ketuk untuk mode game (landscape)
-    </button>
+      🎮 Putar HP ke landscape untuk main
+    </div>
   );
 }

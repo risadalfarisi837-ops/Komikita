@@ -7,6 +7,7 @@ import BottomNav from '@/components/BottomNav';
 import RegisterSW from '@/components/RegisterSW';
 import PageScale from '@/components/PageScale';
 import GiftWatcher from '@/components/GiftWatcher';
+import NoPageZoom from '@/components/NoPageZoom';
 
 export const metadata: Metadata = {
   title: 'Komikita',
@@ -36,6 +37,7 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
           <BottomNav />
           <RegisterSW />
           <GiftWatcher />
+          <NoPageZoom />
         </div>
       </body>
     </html>

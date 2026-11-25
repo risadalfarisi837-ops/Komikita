@@ -263,7 +263,6 @@ export default function FishingGame(props: Props) {
   const [buffOpen, setBuffOpen] = useState(true);
   const [bagSort, setBagSort] = useState<'baru' | 'nilai'>('baru');
   const [menu2, setMenu2] = useState(false);
-  const [zoomUi, setZoomUi] = useState(1);
   const toastT = useRef<ReturnType<typeof setTimeout> | null>(null);
   const px = (n: number) => Math.round(n * u);
 
@@ -320,9 +319,8 @@ export default function FishingGame(props: Props) {
       const sz = parseFloat(localStorage.getItem('komikita-fish-zoom') || '');
       if (Number.isFinite(sz)) engine.setZoom(sz);
     } catch { /* abaikan */ }
-    setZoomUi(engine.getZoom());
     const saveZoom = () => { try { localStorage.setItem('komikita-fish-zoom', String(engine.getZoom())); } catch { /* abaikan */ } };
-    const applyZoom = (z: number) => { engine.setZoom(z); setZoomUi(engine.getZoom()); };
+    const applyZoom = (z: number) => engine.setZoom(z);
 
     // cubit dua jari di area kosong layar = zoom; roda mouse juga bisa
     const pts = new Map<number, { x: number; y: number }>();
@@ -657,25 +655,6 @@ export default function FishingGame(props: Props) {
         </div>
       )}
       {toast && <div style={{ position: 'absolute', left: '50%', top: px(112), transform: 'translateX(-50%)', zIndex: 20, background: 'rgba(15,23,42,0.92)', borderRadius: 99, padding: `${px(7)}px ${px(16)}px`, fontSize: px(14), fontWeight: 600, pointerEvents: 'none' }}>{toast}</div>}
-
-      {/* zoom: tombol +/- (cubit dua jari di layar juga bisa) */}
-      <div style={{ position: 'absolute', left: `calc(env(safe-area-inset-left, 0px) + ${px(9)}px)`, bottom: `calc(env(safe-area-inset-bottom, 0px) + ${px(27 + 105 + 10)}px)`, display: fishing ? 'none' : 'flex', flexDirection: 'column', gap: px(6), zIndex: 5 }}>
-        {([['+', 1.25, 'Perbesar'], ['−', 1 / 1.25, 'Perkecil']] as [string, number, string][]).map(([label, f, aria]) => (
-          <button
-            key={aria}
-            aria-label={aria}
-            disabled={f > 1 ? zoomUi >= FishingEngine.ZOOM_MAX - 0.01 : zoomUi <= FishingEngine.ZOOM_MIN + 0.01}
-            onClick={() => {
-              const en = engineRef.current;
-              if (!en) return;
-              en.setZoom(en.getZoom() * f);
-              setZoomUi(en.getZoom());
-              try { localStorage.setItem('komikita-fish-zoom', String(en.getZoom())); } catch { /* abaikan */ }
-            }}
-            style={{ ...circleBtn, width: px(36), height: px(36), fontSize: px(22), fontWeight: 700, fontFamily: HUD, lineHeight: 1, opacity: (f > 1 ? zoomUi >= FishingEngine.ZOOM_MAX - 0.01 : zoomUi <= FishingEngine.ZOOM_MIN + 0.01) ? 0.4 : 1 }}
-          >{label}</button>
-        ))}
-      </div>
 
       {/* joystick */}
       {!fishing && <div
