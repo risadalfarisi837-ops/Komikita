@@ -5,7 +5,7 @@ import type { Species } from '@/lib/fishing';
 export const TILE = 16;
 export type Dir = 'down' | 'up' | 'left' | 'right';
 export type Tile = 'deep' | 'shallow' | 'sand' | 'grass' | 'plank' | 'dirt';
-export type PropKind = 'palm' | 'rock' | 'lamp' | 'fountain' | 'bench' | 'table' | 'stool' | 'sign' | 'bush' | 'npc' | 'shop';
+export type PropKind = 'palm' | 'rock' | 'lamp' | 'fountain' | 'bench' | 'table' | 'stool' | 'sign' | 'bush' | 'npc' | 'shop' | 'stall' | 'flowers' | 'barrel' | 'crate' | 'net' | 'umbrella' | 'boat' | 'giantfish';
 export interface Prop { kind: PropKind; x: number; y: number; v: number; w?: number; h?: number; name?: string; role?: string }
 export interface World {
   w: number;
@@ -55,7 +55,7 @@ function R(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: nu
 
 // ---------- dunia ----------
 export const MAP_W = 36;
-export const MAP_H = 28;
+export const MAP_H = 40; // lebih tinggi: ada dek pamer dan ikan raksasa di selatan pulau
 const WATER_COLORS = ['#6fd0ea', '#5cc2e4', '#4cb1dc', '#3c9fd3', '#2f88c5', '#2872b4'];
 
 export function generateWorld(seed = 11): World {
@@ -216,6 +216,101 @@ export function generateWorld(seed = 11): World {
   for (const c of [[sx + 6, sy - 3], [sx + 7, sy - 1], [sx + 5, sy - 6], [sx - 11, sy + 1], [sx - 3, sy - 7], [sx + 4, sy - 7], [sx - 15, sy - 1], [sx - 10, sy - 6]] as [number, number][]) {
     putBlock('bush', [c], 1, 1);
   }
+
+  // ---------- warung, hiasan, dek pamer, dan ikan raksasa ----------
+  const spotOk = (bx: number, by: number, w: number, h: number) => {
+    for (let yy = by; yy < by + h; yy++) {
+      for (let xx = bx; xx < bx + w; xx++) {
+        if (xx < 3 || yy < 3 || xx >= W - 1 || yy >= H - 1 || !walkable(xx, yy) || dw[yy][xx] < 2 || near(xx, yy, start.x, start.y, 2)) return false;
+      }
+    }
+    return true;
+  };
+  const stalls: Prop[] = [];
+  const bestSpot = (tx: number, ty: number, w: number, h: number, minFar: number): [number, number] | null => {
+    let best: [number, number] | null = null;
+    let bd = 1e9;
+    for (let by = 3; by < H - 3; by++) {
+      for (let bx = 3; bx < W - 3; bx++) {
+        if (!spotOk(bx, by, w, h)) continue;
+        const cxx = bx + w / 2;
+        const cyy = by + h / 2;
+        let far = true;
+        for (const o of [...stalls, ...props.filter((q) => q.kind === 'shop' || q.kind === 'fountain')]) {
+          if (Math.hypot(cxx - (o.x + (o.w || 1) / 2), cyy - (o.y + (o.h || 1) / 2)) < minFar) { far = false; break; }
+        }
+        if (!far) continue;
+        const d = Math.hypot(cxx - tx, cyy - ty);
+        if (d < bd) { bd = d; best = [bx, by]; }
+      }
+    }
+    return best;
+  };
+  const stallDefs = [
+    { name: 'Warung Ikan Bakar', role: 'Makanan', t: [sx - 9, sy - 5], variant: 0 },
+    { name: 'Toko Umpan', role: 'Cacing · Udang', t: [sx - 3, sy - 7], variant: 1 },
+    { name: 'Toko Hiasan', role: 'Lentera · Kerang', t: [sx - 6, sy + 4], variant: 2 },
+    { name: 'Kedai Kelapa', role: 'Minuman', t: [sx - 14, sy - 1], variant: 3 },
+  ];
+  for (const d of stallDefs) {
+    const at = bestSpot(d.t[0], d.t[1], 3, 2, 6);
+    if (!at) continue;
+    const pr: Prop = { kind: 'stall', x: at[0], y: at[1], v: d.variant + rnd() * 0.9, w: 3, h: 2, name: d.name, role: d.role };
+    props.push(pr);
+    stalls.push(pr);
+    for (let yy = at[1]; yy < at[1] + 2; yy++) for (let xx = at[0]; xx < at[0] + 3; xx++) occ[yy][xx] = true;
+    // tong dan peti di samping warung
+    if (spotOk(at[0] + 3, at[1] + 1, 1, 1)) place('barrel', at[0] + 3, at[1] + 1);
+    if (spotOk(at[0] - 1, at[1] + 1, 1, 1)) place('crate', at[0] - 1, at[1] + 1);
+  }
+  // jaring jemuran dekat dermaga
+  for (const c of [[pierX - 5, py - 3], [pierX - 5, py + 4], [pierX - 7, py - 3], [pierX - 7, py + 4]] as [number, number][]) {
+    if (spotOk(c[0], c[1], 2, 1)) { putBlock('net', [c], 2, 1); break; }
+  }
+  // payung pantai di pasir (berjarak)
+  let umb = 0;
+  const umbs: [number, number][] = [];
+  for (let k = 0; k < 400 && umb < 5; k++) {
+    const ux = 3 + Math.floor(rnd() * (W - 8));
+    const uy = 3 + Math.floor(rnd() * (H - 8));
+    if (tiles[uy][ux] !== 'sand' || dw[uy][ux] < 2 || dw[uy][ux] > 3 || !spotOk(ux, uy, 1, 1)) continue;
+    if (umbs.some(([a, b]) => Math.hypot(a - ux, b - uy) < 7)) continue;
+    umbs.push([ux, uy]);
+    place('umbrella', ux, uy);
+    umb++;
+  }
+  // bunga di rumput (bisa dilewati)
+  let fl = 0;
+  for (let k = 0; k < 900 && fl < 34; k++) {
+    const fx = 3 + Math.floor(rnd() * (W - 8));
+    const fy = 3 + Math.floor(rnd() * (H - 8));
+    if (tiles[fy][fx] !== 'grass' || occ[fy][fx] || dw[fy][fx] < 3) continue;
+    props.push({ kind: 'flowers', x: fx, y: fy, v: rnd() });
+    fl++;
+  }
+  // perahu kecil di air dangkal dekat pantai
+  const boats: [number, number][] = [];
+  for (let by = H - 14; by > 6 && boats.length < 2; by--) {
+    for (let bx = 4; bx < W - 6 && boats.length < 2; bx++) {
+      if (tiles[by][bx] === 'shallow' && tiles[by][bx + 1] === 'shallow' && tiles[by][bx + 2] === 'shallow' && dl[by][bx] <= 2 && !pierTiles.some(([a, b]) => Math.abs(a - bx) < 4 && Math.abs(b - by) < 3) && !boats.some(([a, b]) => Math.hypot(a - bx, b - by) < 9)) {
+        boats.push([bx, by]);
+        props.push({ kind: 'boat', x: bx, y: by, v: rnd(), w: 2, h: 1 });
+      }
+    }
+  }
+  // dek pamer di selatan pulau + ikan raksasa di bawahnya
+  let deckX = Math.round(cx) - 1;
+  let deckY = H - 12;
+  while (deckY > 0 && !land[deckY][deckX]) deckY--;
+  for (let i = 1; i <= 5; i++) {
+    for (const xx of [deckX, deckX + 1]) {
+      const yy = deckY + i;
+      if (yy < H && !land[yy][xx]) { tiles[yy][xx] = 'plank'; pierTiles.push([xx, yy]); }
+    }
+  }
+  const fishW = 16;
+  const fishH = 6;
+  props.push({ kind: 'giantfish', x: Math.max(1, Math.round(cx) - 8), y: Math.min(H - fishH - 1, deckY + 7), v: rnd(), w: fishW, h: fishH, name: 'Ikan Raksasa Pulau', role: 'Pamer di sini!' });
 
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
@@ -1039,4 +1134,239 @@ export function drawShop(ctx: CanvasRenderingContext2D, p: Prop, t: number) {
   pixText(ctx, 'TOKO', X + 24, Y - 5, '#5a3a1c');
   // lentera kedip
   R(ctx, X + 1, Y + 20, 3, 4, Math.sin(t * 6) > 0 ? '#ffd86b' : '#ffc23d');
+}
+
+
+// ---------- warung & hiasan ----------
+const STALL_COL = [
+  { a: '#e8693a', b: '#fff1dd', c: '#b6491f' },   // warung ikan bakar
+  { a: '#2fb3b0', b: '#f2fbfa', c: '#1b827f' },   // toko umpan
+  { a: '#9a5fd1', b: '#ffe9a8', c: '#6f3da3' },   // toko hiasan
+  { a: '#4fb85a', b: '#f3ffe9', c: '#2f8a3b' },   // kedai kelapa
+];
+
+export function drawStall(ctx: CanvasRenderingContext2D, p: Prop, t: number) {
+  const X = p.x * TILE;
+  const Y = p.y * TILE; // area 48x32
+  const v = Math.floor(p.v) % 4;
+  const col = STALL_COL[v];
+  ell(ctx, X + 24, Y + 30, 23, 3, 'rgba(0,20,10,0.28)');
+  // tiang dan dinding belakang
+  R(ctx, X + 3, Y + 10, 42, 16, '#b98450');
+  for (let i = 0; i < 4; i++) R(ctx, X + 3, Y + 12 + i * 4, 42, 1, '#946437');
+  R(ctx, X + 2, Y + 8, 2, 20, '#6f4624');
+  R(ctx, X + 44, Y + 8, 2, 20, '#6f4624');
+  // penjual
+  drawPlayer(ctx, X + 24, Y + 23, 'down', false, 0, false, 0, PAL_BAYU);
+  // barang khas tiap warung (di belakang meja)
+  if (v === 0) {
+    R(ctx, X + 8, Y + 19, 12, 5, '#2b2b2b'); R(ctx, X + 9, Y + 19, 10, 1, '#ff8a3a');
+    for (let i = 0; i < 3; i++) R(ctx, X + 9 + i * 4, Y + 17, 2, 2, '#e9a36b');
+    for (let i = 0; i < 3; i++) { const k = (t * 1.3 + i * 0.7) % 1; R(ctx, X + 11 + i * 3 + Math.round(Math.sin(k * 6) * 1), Y + 15 - Math.round(k * 9), 2, 2, `rgba(220,220,220,${(0.7 - k * 0.6).toFixed(2)})`); }
+  } else if (v === 1) {
+    R(ctx, X + 7, Y + 17, 5, 6, '#8fd3f0'); R(ctx, X + 7, Y + 16, 5, 1, '#d6f0fb'); R(ctx, X + 8, Y + 20, 3, 2, '#e9856b');
+    R(ctx, X + 14, Y + 18, 5, 5, '#f4b3c8'); R(ctx, X + 15, Y + 21, 3, 1, '#c95d86');
+    R(ctx, X + 36, Y + 18, 6, 5, '#c9a26a'); R(ctx, X + 36, Y + 17, 6, 1, '#6b4a2a');
+  } else if (v === 2) {
+    for (let i = 0; i < 4; i++) {
+      const sw = Math.round(Math.sin(t * 2 + i) * 1);
+      R(ctx, X + 8 + i * 9 + sw, Y + 11, 1, 3, '#5e3b1a');
+      R(ctx, X + 6 + i * 9 + sw, Y + 14, 5, 5, i % 2 ? '#ffd24a' : '#ff6a4a');
+      R(ctx, X + 7 + i * 9 + sw, Y + 15, 3, 3, '#fff0a0');
+    }
+  } else {
+    for (let i = 0; i < 4; i++) { R(ctx, X + 8 + i * 4, Y + 19, 4, 4, '#6b4423'); R(ctx, X + 9 + i * 4, Y + 19, 2, 1, '#b6865a'); }
+    R(ctx, X + 11, Y + 15, 4, 4, '#6b4423'); R(ctx, X + 12, Y + 15, 2, 1, '#b6865a');
+    R(ctx, X + 36, Y + 17, 1, 6, '#e9d27a'); R(ctx, X + 38, Y + 17, 1, 6, '#e9d27a'); R(ctx, X + 40, Y + 17, 1, 6, '#e9d27a');
+  }
+  // meja
+  R(ctx, X + 2, Y + 22, 44, 7, '#8b5a2b');
+  R(ctx, X + 2, Y + 22, 44, 2, '#d9a066');
+  R(ctx, X + 2, Y + 28, 44, 1, '#5e3b1a');
+  // barang di atas meja
+  if (v === 0) { R(ctx, X + 30, Y + 20, 8, 3, '#cfd8dc'); R(ctx, X + 32, Y + 19, 4, 1, '#e9a36b'); }
+  if (v === 1) { R(ctx, X + 28, Y + 20, 7, 2, '#cfd8dc'); }
+  if (v === 2) { R(ctx, X + 30, Y + 20, 4, 2, '#f4c7a8'); R(ctx, X + 36, Y + 19, 4, 3, '#f7a8c4'); }
+  if (v === 3) { R(ctx, X + 30, Y + 19, 4, 3, '#f5ecd9'); R(ctx, X + 36, Y + 19, 4, 3, '#f5ecd9'); }
+  // tenda belang
+  for (let i = 0; i < 6; i++) {
+    const c = i % 2 ? col.b : col.a;
+    R(ctx, X + i * 8, Y + 2, 8, 8, c);
+    R(ctx, X + i * 8 + 1, Y + 10, 6, 2, c);
+    R(ctx, X + i * 8 + 2, Y + 12, 4, 1, c);
+  }
+  R(ctx, X + 1, Y, 46, 2, col.c);
+  R(ctx, X, Y + 2, 48, 1, col.a);
+  // lentera kecil
+  R(ctx, X + 1, Y + 13, 2, 3, Math.sin(t * 5 + p.v * 9) > 0 ? '#ffd86b' : '#ffc23d');
+}
+
+export function drawFlowers(ctx: CanvasRenderingContext2D, p: Prop) {
+  const X = p.x * TILE;
+  const Y = p.y * TILE;
+  const pal = [['#ff7aa8', '#ffd1e0'], ['#ffd84a', '#fff3b0'], ['#ffffff', '#e5e5f5'], ['#b58bff', '#e0ccff']][Math.floor(p.v * 4) % 4];
+  for (let i = 0; i < 5; i++) {
+    const fx = X + 2 + ((i * 7 + Math.floor(p.v * 13)) % 12);
+    const fy = Y + 5 + ((i * 5 + Math.floor(p.v * 7)) % 8);
+    R(ctx, fx, fy + 2, 1, 3, '#2f7a3a');
+    R(ctx, fx - 1, fy, 3, 1, pal[0]); R(ctx, fx, fy - 1, 1, 3, pal[0]); R(ctx, fx, fy, 1, 1, pal[1]);
+  }
+}
+
+export function drawBarrel(ctx: CanvasRenderingContext2D, p: Prop) {
+  const X = p.x * TILE;
+  const Y = p.y * TILE;
+  ell(ctx, X + 8, Y + 14, 6, 2, 'rgba(0,0,0,0.25)');
+  R(ctx, X + 3, Y + 4, 10, 10, '#9a6a3a');
+  R(ctx, X + 4, Y + 3, 8, 1, '#b98450');
+  R(ctx, X + 3, Y + 6, 10, 1, '#4a3320'); R(ctx, X + 3, Y + 11, 10, 1, '#4a3320');
+  R(ctx, X + 5, Y + 4, 1, 10, '#b98450'); R(ctx, X + 9, Y + 4, 1, 10, '#7a512a');
+}
+
+export function drawCrate(ctx: CanvasRenderingContext2D, p: Prop) {
+  const X = p.x * TILE;
+  const Y = p.y * TILE;
+  ell(ctx, X + 8, Y + 14, 7, 2, 'rgba(0,0,0,0.25)');
+  R(ctx, X + 2, Y + 4, 12, 10, '#b98450');
+  R(ctx, X + 2, Y + 4, 12, 1, '#d9a066');
+  R(ctx, X + 2, Y + 13, 12, 1, '#6f4624');
+  R(ctx, X + 2, Y + 4, 1, 10, '#6f4624'); R(ctx, X + 13, Y + 4, 1, 10, '#6f4624');
+  for (let i = 0; i < 8; i++) { R(ctx, X + 3 + i, Y + 5 + i, 1, 1, '#8a5d30'); R(ctx, X + 12 - i, Y + 5 + i, 1, 1, '#8a5d30'); }
+  if (p.v > 0.5) R(ctx, X + 5, Y + 2, 6, 2, '#7ad4e8'); // ikan di atas peti
+}
+
+export function drawNet(ctx: CanvasRenderingContext2D, p: Prop, t: number) {
+  const X = p.x * TILE;
+  const Y = p.y * TILE; // 32x16
+  R(ctx, X + 1, Y + 1, 2, 15, '#6b4a2a'); R(ctx, X + 29, Y + 1, 2, 15, '#6b4a2a');
+  R(ctx, X, Y + 1, 32, 2, '#8a5d30');
+  const sway = Math.round(Math.sin(t * 1.4 + p.v * 5));
+  for (let i = 0; i < 13; i++) {
+    for (let j = 0; j < 9; j++) if ((i + j) % 2 === 0) R(ctx, X + 4 + i * 2, Y + 3 + j + (j > 5 ? sway : 0), 1, 1, '#d7c9a0');
+  }
+  R(ctx, X + 6, Y + 11, 2, 2, '#f08a4a'); R(ctx, X + 16, Y + 12, 2, 2, '#f08a4a'); R(ctx, X + 24, Y + 11, 2, 2, '#f08a4a');
+}
+
+export function drawUmbrella(ctx: CanvasRenderingContext2D, p: Prop) {
+  const X = p.x * TILE;
+  const Y = p.y * TILE;
+  const cols = [['#ff5a5a', '#ffffff'], ['#3aa8ff', '#ffffff'], ['#ffc83a', '#ffffff']][Math.floor(p.v * 3) % 3];
+  ell(ctx, X + 8, Y + 14, 8, 2, 'rgba(0,0,0,0.2)');
+  R(ctx, X + 7, Y + 2, 2, 12, '#6b4a2a');
+  for (let i = 0; i < 8; i++) R(ctx, X + i * 2, Y - 2 + Math.round(Math.abs(i - 3.5) * 0.6), 2, 5, i % 2 ? cols[1] : cols[0]);
+  R(ctx, X + 1, Y + 11, 6, 3, cols[0]); R(ctx, X + 1, Y + 12, 6, 1, cols[1]); // handuk
+}
+
+export function drawBoat(ctx: CanvasRenderingContext2D, p: Prop, t: number) {
+  const X = p.x * TILE;
+  const Y = p.y * TILE + Math.round(Math.sin(t * 1.3 + p.v * 8) * 1);
+  ell(ctx, X + 16, Y + 14, 14, 3, 'rgba(0,40,70,0.25)');
+  R(ctx, X + 3, Y + 6, 26, 6, '#a8693a');
+  R(ctx, X + 1, Y + 5, 4, 3, '#a8693a'); R(ctx, X + 27, Y + 5, 4, 3, '#a8693a');
+  R(ctx, X + 3, Y + 6, 26, 1, '#d9a066');
+  R(ctx, X + 4, Y + 9, 24, 1, '#f5ecd9');
+  R(ctx, X + 4, Y + 12, 24, 1, '#6f4624');
+  R(ctx, X + 15, Y - 5, 1, 11, '#6b4a2a');
+  R(ctx, X + 16, Y - 4, 7, 6, '#f5ecd9'); R(ctx, X + 16, Y + 1, 7, 1, '#e8d9b8');
+}
+
+// ---------- ikan raksasa (setengah lebar pulau) ----------
+let _giantFish: HTMLCanvasElement | null = null;
+const KOI_BLOBS: [number, number, number, number, string][] = [
+  [118, -14, 28, 11, '#fff4e4'], [172, -8, 17, 9, '#fff4e4'], [78, -9, 15, 7, '#fff4e4'],
+  [146, -24, 13, 6, '#2b2224'], [96, -20, 10, 5, '#2b2224'], [204, -22, 9, 5, '#2b2224'], [64, -4, 7, 4, '#2b2224'],
+];
+function giantFishBody(): HTMLCanvasElement {
+  if (_giantFish) return _giantFish;
+  const W = 256;
+  const H = 96;
+  const c = mk(W, H);
+  const g = c.getContext('2d')!;
+  const mid = 50;
+  const halfAt = (x: number) => {
+    const u = x / W;
+    if (u < 0.2) return 0;
+    const t = (u - 0.2) / 0.8;
+    const k = t < 0.58 ? (t - 0.58) / 0.58 : (t - 0.58) / 0.42;
+    return 40 * Math.sqrt(Math.max(0, 1 - k * k));
+  };
+  for (let x = 0; x < W; x++) {
+    const hh = Math.round(halfAt(x));
+    if (hh <= 0) continue;
+    for (let dy = -hh; dy <= hh; dy++) {
+      const f = (dy + hh) / (2 * hh);
+      let col = f < 0.18 ? '#d9441f' : f < 0.5 ? '#f47a2c' : f < 0.78 ? '#ffb347' : '#ffe9c4';
+      // bercak koi putih dan hitam (bentuk lonjong, bukan garis)
+      for (const [bx, by, brx, bry, bc] of KOI_BLOBS) {
+        const ex = (x - bx) / brx;
+        const ey = (dy - by) / bry;
+        if (ex * ex + ey * ey < 1 && f < 0.7) col = bc;
+      }
+      g.fillStyle = col;
+      g.fillRect(x, mid + dy, 1, 1);
+    }
+    // garis tepi
+    g.fillStyle = '#7a2a12';
+    g.fillRect(x, mid - hh - 1, 1, 1);
+    g.fillRect(x, mid + hh + 1, 1, 1);
+  }
+  // sisik
+  g.fillStyle = 'rgba(255,255,255,0.22)';
+  for (let row = -4; row <= 4; row++) {
+    for (let x = 70 + (row & 1) * 5; x < 220; x += 10) {
+      const hh = halfAt(x);
+      if (Math.abs(row * 8) < hh - 3) { g.fillRect(x, mid + row * 8, 4, 1); g.fillRect(x - 1, mid + row * 8 + 1, 1, 2); g.fillRect(x + 4, mid + row * 8 + 1, 1, 2); }
+    }
+  }
+  // sirip punggung
+  g.fillStyle = '#ff9a3c';
+  for (let x = 95; x < 175; x++) { const h = Math.round(18 * Math.sin(((x - 95) / 80) * Math.PI) * (1 - (x - 95) / 160)); g.fillRect(x, mid - halfAt(x) - 1 - h, 1, h + 1); }
+  g.fillStyle = '#ffd08a';
+  for (let x = 100; x < 165; x += 6) g.fillRect(x, mid - halfAt(x) - 8, 1, 7);
+  // sirip dada dan perut
+  g.fillStyle = '#ff9a3c';
+  for (let i = 0; i < 20; i++) g.fillRect(168 + i, mid + 6 + Math.round(i * 0.9), 1, 8 - Math.floor(i / 4));
+  for (let i = 0; i < 16; i++) g.fillRect(120 + i, mid + halfAt(120 + i) - 2, 1, 6 + Math.floor(i / 3));
+  // insang dan mulut
+  g.fillStyle = '#b8431a';
+  for (let dy = -22; dy <= 22; dy++) g.fillRect(190 + Math.round(Math.abs(dy) * 0.12), mid + dy, 1, 1);
+  g.fillRect(246, mid + 8, 8, 2); g.fillRect(250, mid + 9, 4, 2);
+  g.fillStyle = '#ffd24a'; g.fillRect(250, mid + 3, 3, 3); // kumis
+  // mata
+  g.fillStyle = '#fff'; g.fillRect(216, mid - 14, 14, 14);
+  g.fillRect(218, mid - 16, 10, 2); g.fillRect(218, mid, 10, 2);
+  g.fillStyle = '#ffcf3a'; g.fillRect(220, mid - 11, 8, 8);
+  g.fillStyle = '#1b1210'; g.fillRect(222, mid - 9, 5, 5);
+  g.fillStyle = '#fff'; g.fillRect(223, mid - 9, 2, 2);
+  _giantFish = c;
+  return c;
+}
+
+export function drawGiantFish(ctx: CanvasRenderingContext2D, p: Prop, t: number) {
+  const body = giantFishBody();
+  const X = p.x * TILE + Math.round(Math.sin(t * 0.35) * 6);
+  const Y = p.y * TILE + Math.round(Math.sin(t * 0.8) * 2);
+  // bayangan di air
+  ctx.fillStyle = 'rgba(0,30,70,0.28)';
+  ctx.beginPath(); ctx.ellipse(X + 128, Y + 70, 122, 20, 0, 0, Math.PI * 2); ctx.fill();
+  // ekor dengan ayunan
+  const sw = Math.sin(t * 2.2) * 8;
+  ctx.fillStyle = '#ff8a3a';
+  ctx.beginPath();
+  ctx.moveTo(X + 52, Y + 50);
+  ctx.lineTo(X + 4 - sw * 0.4, Y + 6 + sw);
+  ctx.lineTo(X + 26, Y + 40 + sw * 0.4);
+  ctx.lineTo(X + 2 + sw * 0.4, Y + 92 + sw);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#ffc77a';
+  ctx.beginPath();
+  ctx.moveTo(X + 48, Y + 50); ctx.lineTo(X + 12 - sw * 0.4, Y + 20 + sw); ctx.lineTo(X + 30, Y + 46 + sw * 0.3);
+  ctx.closePath(); ctx.fill();
+  ctx.drawImage(body, X, Y);
+  // gelembung dan riak
+  for (let i = 0; i < 4; i++) {
+    const k = (t * 0.5 + i * 0.27) % 1;
+    ctx.fillStyle = `rgba(255,255,255,${(0.6 - k * 0.55).toFixed(2)})`;
+    ctx.fillRect(X + 244 + i * 3, Y + 20 - Math.round(k * 28), 2, 2);
+  }
 }

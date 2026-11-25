@@ -4,6 +4,7 @@ import type { Rarity, Species } from '@/lib/fishing';
 import {
   TILE, generateWorld, drawPlayer, drawPalm, drawRock, drawLamp, drawBobber, drawRipple, drawLine,
   drawBubbleAlert, drawFish, drawShowFish, rodGeometry, PAL_PLAYER, drawFountain, drawBench, drawTable, drawStool, drawSign, drawBush, drawNpc,
+  drawStall, drawFlowers, drawBarrel, drawCrate, drawNet, drawUmbrella, drawBoat, drawGiantFish,
 } from './art';
 import type { Dir, World } from './art';
 
@@ -689,6 +690,14 @@ export class FishingEngine {
         case 'sign': ents.push({ y: byp + 14, f: () => drawSign(ctx, p) }); break;
         case 'bush': ents.push({ y: byp + 14, f: () => drawBush(ctx, p) }); break;
         case 'npc': ents.push({ y: byp + 15, f: () => drawNpc(ctx, p, t) }); break;
+        case 'stall': ents.push({ y: byp + ph2 - 2, f: () => drawStall(ctx, p, t) }); break;
+        case 'flowers': ents.push({ y: byp + 8, f: () => drawFlowers(ctx, p) }); break;
+        case 'barrel': ents.push({ y: byp + 14, f: () => drawBarrel(ctx, p) }); break;
+        case 'crate': ents.push({ y: byp + 14, f: () => drawCrate(ctx, p) }); break;
+        case 'net': ents.push({ y: byp + 15, f: () => drawNet(ctx, p, t) }); break;
+        case 'umbrella': ents.push({ y: byp + 14, f: () => drawUmbrella(ctx, p) }); break;
+        case 'boat': ents.push({ y: byp + 12, f: () => drawBoat(ctx, p, t) }); break;
+        case 'giantfish': ents.push({ y: byp + 20, f: () => drawGiantFish(ctx, p, t) }); break;
         default: ents.push({ y: byp + 15, f: () => drawLamp(ctx, p, t) });
       }
     }
@@ -774,6 +783,14 @@ export class FishingEngine {
     const sxp = this.px * S - ox;
     const syHead = (this.py - 21) * S - oy;
     const syFeet = this.py * S - oy;
+    // label warung dan ikan raksasa
+    for (const p of this.world.props) {
+      if (p.kind !== 'stall' && p.kind !== 'giantfish') continue;
+      const lx = (p.x * TILE + ((p.w || 1) * TILE) / 2) * S - ox;
+      const ly = (p.y * TILE + (p.kind === 'giantfish' ? 8 : -4)) * S - oy;
+      if (lx < -300 || lx > this.canvas.width + 300 || ly < -100 || ly > this.canvas.height + 100) continue;
+      this.pillText((p.name || '') + (p.role ? ' · ' + p.role : ''), lx, ly, sz * 0.92, 'rgba(18,16,14,0.82)', p.kind === 'giantfish' ? '#ffd9a0' : '#f3ead8', 8 * u, p.kind === 'giantfish' ? 'rgba(255,170,60,0.95)' : 'rgba(245,196,81,0.9)');
+    }
     // NPC
     for (const p of this.world.props) {
       if (p.kind !== 'npc') continue;
