@@ -1,6 +1,6 @@
 // Mesin game Mancing (tanpa React): gerak, lempar joran, tunggu gigitan, mini-game menarik ikan, dan render.
-import { RARITY, rollFish, rollShark } from '@/lib/fishing';
-import type { Species } from '@/lib/fishing';
+import { RARITY, SPECIES, rollFish, rollShark } from '@/lib/fishing';
+import type { Rarity, Species } from '@/lib/fishing';
 import {
   TILE, generateWorld, drawPlayer, drawPalm, drawRock, drawLamp, drawBobber, drawRipple, drawLine,
   drawBubbleAlert, drawFish, drawShowFish, rodGeometry, PAL_PLAYER, drawFountain, drawBench, drawTable, drawStool, drawSign, drawBush, drawNpc,
@@ -25,6 +25,7 @@ export interface EngineEvents {
   onCatch?: (c: Catch) => void;
   onToast?: (m: string) => void;
   onBite?: () => void;
+  onAuto?: (on: boolean) => void; // Mode Developer: auto fishing menyala / mati
 }
 
 const DIRV: Record<Dir, { x: number; y: number }> = { down: { x: 0, y: 1 }, up: { x: 0, y: -1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 } };
@@ -183,9 +184,12 @@ export class FishingEngine {
     this.last = performance.now();
     const loop = (now: number) => {
       if (!this.running) return;
-      const dt = Math.min(0.05, (now - this.last) / 1000);
+      const raw = Math.min(0.05, (now - this.last) / 1000);
       this.last = now;
-      this.update(dt);
+      if (raw > 0) this.fps += (1 / raw - this.fps) * 0.1;
+      // timeScale > 1 dipecah jadi langkah kecil supaya fisika gulungan tetap stabil
+      let rem = raw * this.timeScale;
+      while (rem > 1e-6) { const st = Math.min(rem, 0.033); this.update(st); rem -= st; }
       this.render();
       this.raf = requestAnimationFrame(loop);
     };
@@ -205,6 +209,64 @@ export class FishingEngine {
     const dy = sh.y - this.py;
     return { shoal: { dist: Math.max(1, Math.round(Math.hypot(dx, dy) / TILE)), ang: Math.atan2(dy, dx), left: Math.max(0, sh.until - this.time), kind: sh.kind }, inShoal: this.castInShoal && this.phase !== 'idle' };
   }
+  // ---------- Mode Developer (dipakai lewat panel Dev, hanya untuk role Developer) ----------
+  auto = false; // auto fishing: lempar, tarik, gulung, lalu ulang sendiri
+  timeScale = 1; // pengali kecepatan game (1 = normal)
+  instantBite = false; // ikan langsung menggigit setelah lempar
+  forceRarity: Rarity | null = null; // paksa rarity ikan berikutnya (uji tampilan / ekonomi)
+  fps = 0;
+  private autoT = 0;
+  private autoPh: Phase = 'idle';
+
+  setAuto(on: boolean) {
+    if (this.auto === on) return;
+    this.auto = on;
+    this.autoT = 0;
+    if (!on) this.holding = false;
+    this.ev.onAuto?.(on);
+  }
+  setTimeScale(n: number) { this.timeScale = clamp(n, 0.25, 6); }
+  setInstantBite(b: boolean) { this.instantBite = b; }
+  setForceRarity(r: Rarity | null) { this.forceRarity = r; }
+  devShoal(kind: 'ikan' | 'hiu') { this.spawnShoal(true, kind); }
+  devInfo() {
+    return { fps: Math.round(this.fps), phase: this.phase, level: this.level, luck: this.luck, timeScale: this.timeScale, shoal: !!this.shoal, tileX: Math.floor(this.px / TILE), tileY: Math.floor(this.py / TILE) };
+  }
+
+  // Pilih ikan acak dengan rarity tertentu (dipakai forceRarity)
+  private rollForced(r: Rarity): Catch {
+    const pool = SPECIES.filter((sp) => sp.rarity === r);
+    const species = pool[Math.floor(Math.random() * pool.length)];
+    const raw = species.min + (species.max - species.min) * Math.pow(Math.random(), 1.7);
+    const weight = raw < 1 ? Math.round(raw * 1000) / 1000 : Math.round(raw * 100) / 100;
+    return { species, weight };
+  }
+
+  // Dipanggil tiap langkah update. Meniru pemain: lempar -> tarik saat gigit -> tahan/lepas tombol supaya zona hijau ngikutin ikan.
+  private autoStep(dt: number) {
+    if (!this.auto) return;
+    const ph = this.phase;
+    if (ph !== this.autoPh) { this.autoPh = ph; this.autoT = 0; }
+    this.autoT += dt;
+    if (ph === 'idle') {
+      if (this.bagFull || this.moving || this.autoT < 0.45) return; // tas penuh: tunggu UI jual dulu
+      this.autoT = 0;
+      if (!this.findTarget()) { this.setAuto(false); this.ev.onToast?.('Auto berhenti: hadapkan karakter ke air dulu'); return; }
+      this.tryCast();
+    } else if (ph === 'bite') {
+      if (this.autoT >= 0.12) this.hook();
+    } else if (ph === 'reel') {
+      // Bang-bang controller: bandingkan posisi berhenti zona (kalau direm sekarang) dengan posisi ikan.
+      const r = this.reel;
+      const center = r.zone + r.zoneH / 2;
+      const rest = r.zoneV > 0 ? center + (r.zoneV * r.zoneV) / 380 : center - (r.zoneV * r.zoneV) / 460;
+      const aim = r.fishPos + (r.fishTarget - r.fishPos) * 0.15;
+      this.holding = rest < aim;
+    } else if (ph === 'result') {
+      if (this.autoT >= 0.5) this.resume();
+    }
+  }
+
   // untuk pengujian
   forceShoal() { this.spawnShoal(true); }
   forceShark() { this.spawnShoal(true, 'hiu'); }
@@ -368,6 +430,7 @@ export class FishingEngine {
 
   private update(dt: number) {
     this.time += dt;
+    this.autoStep(dt);
     const ph = this.phase;
 
     // gerak
@@ -399,7 +462,7 @@ export class FishingEngine {
     if (this.phase === 'cast') {
       this.castT += dt;
       if (this.castT >= 0.5 && this.target) {
-        this.waitT = (2 + Math.random() * 5) * (this.castInShoal ? 0.45 : 1);
+        this.waitT = this.instantBite ? 0.2 : (2 + Math.random() * 5) * (this.castInShoal ? 0.45 : 1);
         this.ripples.push({ x: this.target.wx, y: this.target.wy, t: 0 });
         this.splash(this.target.wx, this.target.wy, 8);
         this.setPhase('wait');
@@ -409,6 +472,7 @@ export class FishingEngine {
       if (Math.random() < dt * 0.7) this.ripples.push({ x: this.target.wx + (Math.random() - 0.5) * 6, y: this.target.wy + (Math.random() - 0.5) * 3, t: 0.55 });
       if (this.waitT <= 0) {
         this.fish = this.castInShoal && this.castKind === 'hiu' && Math.random() < Math.min(0.8, 0.15 + this.luck * 0.5 + this.level / 200) ? rollShark() : rollFish(this.level, this.luck + (this.castInShoal ? 2 : 0));
+        if (this.forceRarity) this.fish = this.rollForced(this.forceRarity);
         this.biteT = 1.25;
         this.ripples.push({ x: this.target.wx, y: this.target.wy, t: 0 });
         this.splash(this.target.wx, this.target.wy, 6);

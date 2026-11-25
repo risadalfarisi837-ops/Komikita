@@ -10,7 +10,9 @@ import {
   fishPrice, formatNum, formatWeight, isShowoff, isXL, levelFromXp, newId, sizeRatio, titleFor, xpFor,
 } from '@/lib/fishing';
 import { SPECIES as KSPECIES, sizeRatio as kSizeRatio } from '@/lib/fishing';
-import type { BagItem, Rod } from '@/lib/fishing';
+import type { BagItem, Rarity, Rod } from '@/lib/fishing';
+import DevTools, { EMPTY_STATS } from './DevTools';
+import type { DevStats, SellMode } from './DevTools';
 
 interface Props {
   name: string;
@@ -26,6 +28,7 @@ interface Props {
   onEquipRod: (id: string) => void;
   onGacha: () => Promise<{ rod: Rod; duplicate: boolean } | 'kurang' | 'gagal'>;
   onExit: () => void;
+  dev?: boolean; // role Developer: buka Dev Tools (auto fishing dll)
 }
 
 const HUD = '"Fredoka", "Baloo 2", system-ui, sans-serif';
@@ -263,6 +266,16 @@ export default function FishingGame(props: Props) {
   const [buffOpen, setBuffOpen] = useState(true);
   const [bagSort, setBagSort] = useState<'baru' | 'nilai'>('baru');
   const [menu2, setMenu2] = useState(false);
+  // ---- Mode Developer (auto fishing dll) ----
+  const [devOpen, setDevOpen] = useState(false);
+  const [auto, setAuto] = useState(false);
+  const autoRef = useRef(false);
+  const [sellMode, setSellMode] = useState<SellMode>('keep');
+  const [speed, setSpeed] = useState(1);
+  const [instant, setInstant] = useState(false);
+  const [force, setForce] = useState<Rarity | ''>('');
+  const [dstats, setDstats] = useState<DevStats>(EMPTY_STATS);
+  const sellBusy = useRef(false);
   // HP masih portrait (kunci landscape tidak diizinkan browser) → game diputar 90° sendiri,
   // tanpa layar penuh & tanpa pesan sistem. Tinggal putar HP. Kalau layar sudah landscape, tidak ada rotasi.
   const [vp, setVp] = useState({ w: 0, h: 0, touch: false });
@@ -310,6 +323,7 @@ export default function FishingGame(props: Props) {
       onPhase: (p) => { setPhase(p); if (p !== 'idle') setIntro(false); },
       onToast: (m) => { if (/kabur|lepas/i.test(m)) setFails((f) => f + 1); say(m); },
       onBite: () => { try { navigator.vibrate?.(60); } catch { /* abaikan */ } },
+      onAuto: (on) => { autoRef.current = on; setAuto(on); if (on) { setPopup(null); setDstats((d) => (d.since ? d : { ...d, since: Date.now() })); } },
       onCatch: (c: Catch) => {
         const item: BagItem = { id: newId(), s: c.species.id, w: c.weight };
         const curRod = RODS_BY_ID[propsRef.current.equippedRod] || RODS_BY_ID[DEFAULT_ROD];
@@ -324,7 +338,20 @@ export default function FishingGame(props: Props) {
         propsRef.current.onCatch(item, gain);
         setFails(0);
         setChat((l) => [...l.slice(-19), { who: propsRef.current.name || 'Tamu', msg: 'dapat ' + c.species.name + ' ' + formatWeight(c.weight) + ' 🎣', t: Date.now() }]);
-        setPopup({ item, gain, up: after > before ? after : 0, record });
+        if (autoRef.current) {
+          // auto fishing: tanpa popup (engine menutup hasil sendiri), cukup catat statistik & kabari yang penting
+          const sp = c.species;
+          const ridx = ['common', 'uncommon', 'rare', 'epic', 'legendary'].indexOf(sp.rarity);
+          const rank = ridx * 100000 + Math.min(99999, c.weight);
+          setDstats((d) => ({
+            ...d, catches: d.catches + 1, xp: d.xp + gain, rare: d.rare + (ridx >= 2 ? 1 : 0), last: Date.now(),
+            ...(rank > d.bestRank ? { best: sp.name + ' ' + formatWeight(c.weight), bestRank: rank } : {}),
+          }));
+          if (after > before) say('Level naik ke ' + after + '!');
+          else if (ridx >= 3) say((ridx === 4 ? '🌟 ' : '✨ ') + sp.name + ' ' + formatWeight(c.weight));
+        } else {
+          setPopup({ item, gain, up: after > before ? after : 0, record });
+        }
       },
     });
     engineRef.current = engine;
@@ -383,6 +410,7 @@ export default function FishingGame(props: Props) {
       if (e.repeat) return;
       if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); engine.action(true); return; }
       if (e.code === 'Escape') { engine.cancel(); return; }
+      if (e.code === 'KeyP' && propsRef.current.dev) { engine.setAuto(!engine.auto); return; }
       if (e.key === '+' || e.key === '=') { applyZoom(engine.getZoom() * 1.2); saveZoom(); return; }
       if (e.key === '-' || e.key === '_') { applyZoom(engine.getZoom() / 1.2); saveZoom(); return; }
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
@@ -424,6 +452,37 @@ export default function FishingGame(props: Props) {
     const sp = held ? SPECIES_BY_ID[held.s] : null;
     engineRef.current?.setHeld(held && sp ? { species: sp, weight: held.w } : null);
   }, [held]);
+
+  // ---- Mode Developer: sinkron pengaturan ke engine, jaga layar tetap nyala, auto-jual ----
+  const dev = !!props.dev;
+  useEffect(() => {
+    const e = engineRef.current;
+    if (!e) return;
+    e.setTimeScale(dev ? speed : 1);
+    e.setInstantBite(dev && instant);
+    e.setForceRarity(dev && force ? force : null);
+    if (!dev) e.setAuto(false);
+  }, [dev, speed, instant, force]);
+
+  useEffect(() => {
+    if (!auto) return;
+    let lock: { release: () => Promise<void> } | null = null;
+    const wl = (navigator as Navigator & { wakeLock?: { request: (t: 'screen') => Promise<{ release: () => Promise<void> }> } }).wakeLock;
+    wl?.request('screen').then((l) => { lock = l; }).catch(() => { /* tidak didukung / ditolak */ });
+    return () => { lock?.release().catch(() => {}); };
+  }, [auto]);
+
+  useEffect(() => {
+    if (!dev || !auto || sellMode === 'off' || sellBusy.current) return;
+    if (bag.length < Math.max(5, BAG_MAX - 3)) return;
+    const ids = bag.filter((b) => { const sp = SPECIES_BY_ID[b.s]; return sellMode === 'all' || !sp || !isShowoff(sp, b.w); }).map((b) => b.id);
+    if (!ids.length) { engineRef.current?.setAuto(false); say('Tas penuh isi ikan pamer, auto berhenti'); return; }
+    sellBusy.current = true;
+    propsRef.current.onSell(ids)
+      .then((got) => { if (got > 0) { setDstats((d) => ({ ...d, sold: d.sold + got })); say('Auto-jual +' + formatNum(got) + ' Crystal'); } })
+      .catch(() => { /* onSell sudah menampilkan pesan gagal */ })
+      .finally(() => { sellBusy.current = false; });
+  }, [dev, auto, sellMode, bag, say]);
 
   // joystick
   const joyRef = useRef<HTMLDivElement>(null);
@@ -602,6 +661,7 @@ export default function FishingGame(props: Props) {
           { k: 'peringkat', icon: '🏆', label: 'Peringkat', act: go('/ranking') },
           { k: 'surat', icon: '📮', label: 'Kotak Surat', act: soon },
           { k: 'skill', icon: '🌳', label: 'Skill', act: soon },
+          ...(dev ? [{ k: 'dev', icon: '🛠️', label: 'Dev', act: () => setDevOpen(true) }] : []),
         ];
         return (
           <>
@@ -896,6 +956,30 @@ export default function FishingGame(props: Props) {
           </div>
         );
       })()}
+
+      {/* Mode Developer: penanda auto aktif (tetap tampil saat mancing; ketuk untuk stop) + panel */}
+      {dev && auto && (
+        <button
+          onClick={() => engineRef.current?.setAuto(false)}
+          aria-label="Stop auto fishing"
+          style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', bottom: `calc(env(safe-area-inset-bottom, 0px) + ${px(10)}px)`, zIndex: 24, display: 'flex', alignItems: 'center', gap: px(8), border: `${px(2)}px solid #22c55e`, borderRadius: 99, background: 'rgba(8,24,14,0.88)', color: '#fff', fontFamily: HUD, fontWeight: 700, fontSize: px(13), padding: `${px(5)}px ${px(14)}px`, cursor: 'pointer' }}
+        >
+          <span style={{ width: px(9), height: px(9), borderRadius: '50%', background: '#22c55e' }} className="komikita-pulse" />
+          AUTO · {dstats.catches} ikan · ketuk untuk stop
+        </button>
+      )}
+      {dev && devOpen && (
+        <DevTools
+          px={px} overlay={ov} engine={engineRef.current}
+          auto={auto} onAuto={(on) => engineRef.current?.setAuto(on)}
+          sellMode={sellMode} setSellMode={setSellMode}
+          speed={speed} setSpeed={setSpeed}
+          instant={instant} setInstant={setInstant}
+          force={force} setForce={setForce}
+          stats={dstats} resetStats={() => setDstats({ ...EMPTY_STATS, since: auto ? Date.now() : 0 })}
+          onClose={() => setDevOpen(false)}
+        />
+      )}
 
       {/* menu pengaturan */}
       {menuOpen && (

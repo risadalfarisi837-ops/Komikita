@@ -18,6 +18,7 @@ export default function MancingPage() {
   const [xp, setXp] = useState(0);
   const [bag, setBagState] = useState<BagItem[]>([]);
   const [err, setErr] = useState('');
+  const [isDev, setIsDev] = useState(false); // role Developer -> Dev Tools mancing
   const [rods, setRodsState] = useState<string[]>([DEFAULT_ROD]);
   const [equippedRod, setEquippedState] = useState<string>(DEFAULT_ROD);
   const fb = useRef<any>(null);
@@ -40,7 +41,7 @@ export default function MancingPage() {
       fb.current = f;
       off = f.auth.onAuthStateChanged(async (u: any) => {
         if (stop) return;
-        if (!u) { uid.current = ''; setName(''); setPhoto(''); setReady(true); return; }
+        if (!u) { uid.current = ''; setName(''); setPhoto(''); setIsDev(false); setReady(true); return; }
         uid.current = u.uid;
         setName(u.displayName || '');
         setPhoto(u.photoURL || '');
@@ -50,6 +51,7 @@ export default function MancingPage() {
           if (typeof v.displayName === 'string' && v.displayName) setName(v.displayName);
           if (typeof v.photoURL === 'string' && v.photoURL) setPhoto(v.photoURL);
           setCrystal(typeof v.koin === 'number' ? v.koin : 0);
+          setIsDev(v.role === 'Developer');
           const fx = typeof v.fishing?.xp === 'number' ? v.fishing.xp : 0;
           xpRef.current = fx;
           setXp(fx);
@@ -169,7 +171,7 @@ export default function MancingPage() {
     <>
       <FishingGame
         name={name} photo={photo} crystal={crystal} xp={xp} bag={bag}
-        rods={rods} equippedRod={equippedRod}
+        rods={rods} equippedRod={equippedRod} dev={isDev}
         onCatch={onCatch} onSell={onSell} onBuyRod={onBuyRod} onEquipRod={onEquipRod} onGacha={onGacha}
         onExit={() => router.push('/komikstore')}
       />
