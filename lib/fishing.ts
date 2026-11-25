@@ -117,7 +117,8 @@ export function rollFish(level: number, luck: number = 0, rnd: () => number = Ma
   }
   const pool = SPECIES.filter((s) => s.rarity === rarity && !s.eventOnly);
   const species = pool[Math.min(pool.length - 1, Math.floor(rnd() * pool.length))];
-  const raw = species.min + (species.max - species.min) * Math.pow(rnd(), 1.7);
+  // Hoki juga menentukan ukuran: makin tinggi luck, makin sering dapat yang besar (luck 0 = sama seperti dulu)
+  const raw = species.min + (species.max - species.min) * Math.pow(rnd(), Math.max(0.6, 1.7 - 0.5 * lk));
   const weight = raw < 1 ? Math.round(raw * 1000) / 1000 : Math.round(raw * 100) / 100;
   return { species, weight };
 }
@@ -136,6 +137,27 @@ export function xpFor(s: Species, weight: number, xpBonus: number = 0): number {
 // Posisi berat dalam rentang spesies (0 = terkecil, 1 = terbesar)
 export function sizeRatio(s: Species, weight: number): number {
   return s.max > s.min ? Math.min(1, Math.max(0, (weight - s.min) / (s.max - s.min))) : 0.5;
+}
+// ---- Ukuran: kecil / sedang / besar ----
+// Batasnya sama dengan label kualitas di kartu tangkapan (Sedang mulai 40%, Besar mulai 70% dari rentang spesies).
+export type SizeTier = 'kecil' | 'sedang' | 'besar';
+export const SIZE_LABEL: Record<SizeTier, string> = { kecil: 'Kecil', sedang: 'Sedang', besar: 'Besar' };
+const TIER_RANGE: Record<SizeTier, [number, number]> = { kecil: [0, 0.4], sedang: [0.4, 0.7], besar: [0.7, 1] };
+export function sizeTier(s: Species, weight: number): SizeTier {
+  const r = sizeRatio(s, weight);
+  return r >= 0.7 ? 'besar' : r >= 0.4 ? 'sedang' : 'kecil';
+}
+// Ganti berat tangkapan supaya jatuh di kelas ukuran tertentu (spesies tetap sama).
+export function withSize(c: { species: Species; weight: number }, tier: SizeTier, rnd: () => number = Math.random): { species: Species; weight: number } {
+  const [a, b] = TIER_RANGE[tier];
+  const s = c.species;
+  const round = (raw: number) => (raw < 1 ? Math.round(raw * 1000) / 1000 : Math.round(raw * 100) / 100);
+  // Pembulatan bisa menggeser ikan berentang sempit (mis. Teri) ke kelas tetangga, jadi coba lagi beberapa kali.
+  for (let i = 0; i < 8; i++) {
+    const weight = round(s.min + (s.max - s.min) * (a + (b - a) * rnd()));
+    if (sizeTier(s, weight) === tier) return { species: s, weight };
+  }
+  return { species: s, weight: Math.round((s.min + (s.max - s.min) * (a + b) / 2) * 1e6) / 1e6 };
 }
 // Tangkapan "XL": berat di 20% teratas rentang spesiesnya
 export function isXL(s: Species, weight: number): boolean {

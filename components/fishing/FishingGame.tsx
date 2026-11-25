@@ -7,10 +7,10 @@ import type { Catch, EngineStatus, Phase } from './engine';
 import { FISH_H, FISH_W, drawFish } from './art';
 import {
   BAG_MAX, DEFAULT_ROD, GACHA_DUPLICATE_REFUND, GACHA_PRICE, RARITY, RODS, RODS_BY_ID, SPECIES, SPECIES_BY_ID,
-  fishPrice, formatNum, formatWeight, isShowoff, isXL, levelFromXp, newId, rodEase, sizeRatio, titleFor, xpFor,
+  fishPrice, formatNum, formatWeight, isShowoff, isXL, levelFromXp, newId, rodEase, sizeRatio, sizeTier, titleFor, xpFor,
 } from '@/lib/fishing';
 import { SPECIES as KSPECIES, sizeRatio as kSizeRatio } from '@/lib/fishing';
-import type { BagItem, Rarity, Rod } from '@/lib/fishing';
+import type { BagItem, Rarity, Rod, SizeTier } from '@/lib/fishing';
 import DevTools, { DevFab, EMPTY_STATS } from './DevTools';
 import type { DevStats, SellMode } from './DevTools';
 
@@ -274,6 +274,7 @@ export default function FishingGame(props: Props) {
   const [speed, setSpeed] = useState(1);
   const [instant, setInstant] = useState(false);
   const [force, setForce] = useState<Rarity | ''>('');
+  const [forceSize, setForceSize] = useState<SizeTier | ''>('');
   const [dstats, setDstats] = useState<DevStats>(EMPTY_STATS);
   const sellBusy = useRef(false);
   // HP masih portrait (kunci landscape tidak diizinkan browser) → game diputar 90° sendiri,
@@ -345,6 +346,7 @@ export default function FishingGame(props: Props) {
           const rank = ridx * 100000 + Math.min(99999, c.weight);
           setDstats((d) => ({
             ...d, catches: d.catches + 1, xp: d.xp + gain, rare: d.rare + (ridx >= 2 ? 1 : 0), last: Date.now(),
+            ...(sizeTier(sp, c.weight) === 'besar' ? { big: d.big + 1 } : sizeTier(sp, c.weight) === 'sedang' ? { mid: d.mid + 1 } : { small: d.small + 1 }),
             ...(rank > d.bestRank ? { best: sp.name + ' ' + formatWeight(c.weight), bestRank: rank } : {}),
           }));
           if (after > before) say('Level naik ke ' + after + '!');
@@ -462,8 +464,9 @@ export default function FishingGame(props: Props) {
     e.setTimeScale(dev ? speed : 1);
     e.setInstantBite(dev && instant);
     e.setForceRarity(dev && force ? force : null);
+    e.setForceSize(dev && forceSize ? forceSize : null);
     if (!dev) e.setAuto(false);
-  }, [dev, speed, instant, force]);
+  }, [dev, speed, instant, force, forceSize]);
 
   useEffect(() => {
     if (!auto) return;
@@ -977,6 +980,7 @@ export default function FishingGame(props: Props) {
           speed={speed} setSpeed={setSpeed}
           instant={instant} setInstant={setInstant}
           force={force} setForce={setForce}
+          forceSize={forceSize} setForceSize={setForceSize}
           stats={dstats} resetStats={() => setDstats({ ...EMPTY_STATS, since: auto ? Date.now() : 0 })}
           onClose={() => setDevOpen(false)}
         />

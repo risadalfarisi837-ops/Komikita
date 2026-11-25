@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, PointerEvent as RPointerEvent, ReactNode } from 'react';
 import type { FishingEngine } from './engine';
 import { RARITY, formatNum } from '@/lib/fishing';
-import type { Rarity } from '@/lib/fishing';
+import type { Rarity, SizeTier } from '@/lib/fishing';
 
 export type SellMode = 'off' | 'keep' | 'all';
 
@@ -19,9 +19,12 @@ export interface DevStats {
   last: number;    // waktu tangkapan terakhir (ms)
   best: string;    // tangkapan terbaik (rarity tertinggi, lalu berat)
   bestRank: number;
+  small: number;   // tangkapan kelas kecil
+  mid: number;     // tangkapan kelas sedang
+  big: number;     // tangkapan kelas besar
 }
 
-export const EMPTY_STATS: DevStats = { catches: 0, rare: 0, xp: 0, sold: 0, since: 0, last: 0, best: '-', bestRank: -1 };
+export const EMPTY_STATS: DevStats = { catches: 0, rare: 0, xp: 0, sold: 0, since: 0, last: 0, best: '-', bestRank: -1, small: 0, mid: 0, big: 0 };
 
 const HUD = '"Fredoka", "Baloo 2", system-ui, sans-serif';
 const RARITIES: Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
@@ -116,6 +119,8 @@ interface Props {
   setInstant: (b: boolean) => void;
   force: Rarity | '';
   setForce: (r: Rarity | '') => void;
+  forceSize: SizeTier | '';
+  setForceSize: (t: SizeTier | '') => void;
   stats: DevStats;
   resetStats: () => void;
   onClose: () => void;
@@ -222,15 +227,23 @@ export default function DevTools(p: Props) {
           {tab === 'uji' && (
             <>
               <div style={{ marginTop: px(10) }}>{toggle(p.instant, p.setInstant, '⚡ Gigitan instan', 'Ikan langsung menggigit setelah lempar')}</div>
-              {H('Paksa rarity ikan berikutnya')}
+              {H('Rarity ikan (Hoki = acak sesuai luck)')}
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: px(5) }}>
-                <button style={small(p.force === '')} onClick={() => p.setForce('')}>Normal</button>
+                <button style={small(p.force === '')} onClick={() => p.setForce('')}>🍀 Hoki</button>
                 {RARITIES.map((r) => (
                   <button key={r} onClick={() => p.setForce(r)} style={{ ...small(false), background: p.force === r ? RARITY[r].color : 'rgba(255,255,255,0.09)', color: p.force === r ? '#111' : RARITY[r].color }}>
                     {RARITY[r].label}
                   </button>
                 ))}
               </div>
+              {H('Ukuran ikan (Hoki = acak sesuai luck)')}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: px(5) }}>
+                <button style={small(p.forceSize === '')} onClick={() => p.setForceSize('')}>🍀 Hoki</button>
+                {([['kecil', 'Kecil'], ['sedang', 'Sedang'], ['besar', 'Besar']] as const).map(([v, l]) => (
+                  <button key={v} onClick={() => p.setForceSize(v)} style={small(p.forceSize === v)}>{l}</button>
+                ))}
+              </div>
+              <div style={{ fontSize: px(10.5), color: '#8a96b8', marginTop: px(5), lineHeight: 1.35 }}>Berlaku juga saat auto fishing. Rarity dan ukuran bisa dipilih terpisah.</div>
               {H('Panggil event')}
               <div style={{ display: 'flex', gap: px(6) }}>
                 <button style={{ ...small(false), flex: 1 }} onClick={() => p.engine?.devShoal('ikan')}>🐟 Gerombolan</button>
@@ -247,6 +260,7 @@ export default function DevTools(p: Props) {
                 {card('⭐', 'Langka+', formatNum(p.stats.rare))}
                 {card('✨', 'XP', formatNum(p.stats.xp))}
                 {card('💎', 'Crystal', formatNum(p.stats.sold))}
+                {card('📏', 'Kecil · Sedang · Besar', p.stats.small + ' · ' + p.stats.mid + ' · ' + p.stats.big, true)}
                 {card('🏆', 'Terbaik', p.stats.best, true)}
               </div>
               <button style={{ ...small(false), marginTop: px(8) }} onClick={p.resetStats}>↺ Reset statistik</button>

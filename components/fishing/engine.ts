@@ -1,6 +1,6 @@
 // Mesin game Mancing (tanpa React): gerak, lempar joran, tunggu gigitan, mini-game menarik ikan, dan render.
-import { RARITY, SPECIES, rollFish, rollShark } from '@/lib/fishing';
-import type { Rarity, Species } from '@/lib/fishing';
+import { RARITY, SPECIES, rollFish, rollShark, withSize } from '@/lib/fishing';
+import type { Rarity, SizeTier, Species } from '@/lib/fishing';
 import {
   TILE, generateWorld, drawPlayer, drawPalm, drawRock, drawLamp, drawBobber, drawRipple, drawLine,
   drawBubbleAlert, drawFish, drawShowFish, rodGeometry, PAL_PLAYER, drawFountain, drawBench, drawTable, drawStool, drawSign, drawBush, drawNpc,
@@ -218,6 +218,7 @@ export class FishingEngine {
   timeScale = 1; // pengali kecepatan game (1 = normal)
   instantBite = false; // ikan langsung menggigit setelah lempar
   forceRarity: Rarity | null = null; // paksa rarity ikan berikutnya (uji tampilan / ekonomi)
+  forceSize: SizeTier | null = null; // paksa ukuran (kecil / sedang / besar); null = tergantung hoki
   fps = 0;
   private autoT = 0;
   private autoPh: Phase = 'idle';
@@ -232,6 +233,7 @@ export class FishingEngine {
   setTimeScale(n: number) { this.timeScale = clamp(n, 0.25, 6); }
   setInstantBite(b: boolean) { this.instantBite = b; }
   setForceRarity(r: Rarity | null) { this.forceRarity = r; }
+  setForceSize(t: SizeTier | null) { this.forceSize = t; }
   devShoal(kind: 'ikan' | 'hiu') { this.spawnShoal(true, kind); }
   devInfo() {
     return { fps: Math.round(this.fps), phase: this.phase, level: this.level, luck: this.luck, timeScale: this.timeScale, shoal: !!this.shoal, tileX: Math.floor(this.px / TILE), tileY: Math.floor(this.py / TILE) };
@@ -476,8 +478,10 @@ export class FishingEngine {
       this.waitT -= dt;
       if (Math.random() < dt * 0.7) this.ripples.push({ x: this.target.wx + (Math.random() - 0.5) * 6, y: this.target.wy + (Math.random() - 0.5) * 3, t: 0.55 });
       if (this.waitT <= 0) {
-        this.fish = this.castInShoal && this.castKind === 'hiu' && Math.random() < Math.min(0.8, 0.15 + this.luck * 0.5 + this.level / 200) ? rollShark() : rollFish(this.level, this.luck + (this.castInShoal ? 2 : 0));
-        if (this.forceRarity) this.fish = this.rollForced(this.forceRarity);
+        let rolled = this.castInShoal && this.castKind === 'hiu' && Math.random() < Math.min(0.8, 0.15 + this.luck * 0.5 + this.level / 200) ? rollShark() : rollFish(this.level, this.luck + (this.castInShoal ? 2 : 0));
+        if (this.forceRarity) rolled = this.rollForced(this.forceRarity);
+        if (this.forceSize) rolled = withSize(rolled, this.forceSize);
+        this.fish = rolled;
         this.biteT = 1.5 + 0.9 * this.ease;
         this.ripples.push({ x: this.target.wx, y: this.target.wy, t: 0 });
         this.splash(this.target.wx, this.target.wy, 6);
