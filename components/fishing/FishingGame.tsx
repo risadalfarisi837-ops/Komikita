@@ -119,6 +119,14 @@ async function makeShareCard(item: BagItem, player: string, level: number): Prom
   return new Promise((res) => c.toBlob((b) => res(b), 'image/png'));
 }
 
+// Keluar dari game: layar dikembalikan tegak (portrait), keluar layar penuh, lalu rotasi bebas lagi
+async function leaveLandscape() {
+  const o = screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void>; unlock?: () => void };
+  try { await o.lock?.('portrait'); } catch { /* browser tidak mengizinkan, cukup di-unlock */ }
+  try { if (document.fullscreenElement) await document.exitFullscreen(); } catch { /* abaikan */ }
+  setTimeout(() => { try { o.unlock?.(); } catch { /* abaikan */ } }, 600);
+}
+
 export default function FishingGame(props: Props) {
   const { name, photo, crystal, xp, bag, rods, equippedRod } = props;
   const rod = RODS_BY_ID[equippedRod] || RODS_BY_ID[DEFAULT_ROD];
@@ -129,6 +137,8 @@ export default function FishingGame(props: Props) {
   propsRef.current = props;
 
   const [phase, setPhase] = useState<Phase>('idle');
+  // selama lempar/tunggu/tarik/gulung, semua tampilan tambahan disembunyikan; tinggal tombol aksi
+  const fishing = phase === 'cast' || phase === 'wait' || phase === 'bite' || phase === 'reel' || phase === 'catching';
   const [toast, setToast] = useState('');
   const [popup, setPopup] = useState<{ item: BagItem; gain: number; up: number; record: boolean } | null>(null);
   const [bagOpen, setBagOpen] = useState(false);
@@ -239,7 +249,11 @@ export default function FishingGame(props: Props) {
     engineRef.current?.setHeld(held && sp ? { species: sp, weight: held.w } : null);
   }, [held]);
 
-  useEffect(() => { landscape().catch(() => {}); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+  useEffect(() => {
+    landscape().catch(() => {});
+    return () => { leaveLandscape(); };
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, []);
 
   // joystick
   const joyRef = useRef<HTMLDivElement>(null);
@@ -258,6 +272,8 @@ export default function FishingGame(props: Props) {
   };
   const joyDown = (e: RPointerEvent<HTMLDivElement>) => { joyActive.current = true; e.currentTarget.setPointerCapture(e.pointerId); joyMove(e); };
   const joyUp = () => { joyActive.current = false; setKnob({ x: 0, y: 0 }); engineRef.current?.setMove(0, 0); };
+
+  useEffect(() => { if (fishing) joyUp(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [fishing]);
 
   const buyRod = async (id: string) => {
     setBuying(id);
@@ -350,7 +366,7 @@ export default function FishingGame(props: Props) {
       <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0 }} />
 
       {/* kartu pemain */}
-      <div style={{ position: 'absolute', left: px(8), top: px(8), display: 'flex', alignItems: 'center', gap: px(8), paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+      <div style={{ position: 'absolute', left: px(8), top: px(8), display: fishing ? 'none' : 'flex', alignItems: 'center', gap: px(8), paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         <div style={{ ...pillBox, display: 'flex', alignItems: 'center', gap: px(8), padding: px(6), paddingRight: px(14), borderColor: `${GOLD}77`, minWidth: px(190) }}>
           <div style={{ width: px(50), height: px(50), borderRadius: px(12), overflow: 'hidden', border: `${px(2.5)}px solid #5ee0e0`, background: '#35405c', flex: '0 0 auto' }}>
             {photo ? (
@@ -376,7 +392,7 @@ export default function FishingGame(props: Props) {
       </div>
 
       {/* kanan atas */}
-      <div style={{ position: 'absolute', right: px(8), top: px(8), display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: px(6), paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+      <div style={{ position: 'absolute', right: px(8), top: px(8), display: fishing ? 'none' : 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: px(6), paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: px(8) }}>
           <div style={{ ...pillBox, display: 'flex', alignItems: 'center', gap: px(7), height: px(36), padding: `0 ${px(5)}px 0 ${px(12)}px`, borderRadius: px(18) }}>
             <svg width={px(18)} height={px(18)} viewBox="0 0 24 24"><path d="M6 4h12l4 6-10 11L2 10z" fill="#39e07f" stroke="#12803e" strokeWidth="1.6" strokeLinejoin="round" /></svg>
@@ -405,7 +421,7 @@ export default function FishingGame(props: Props) {
       </div>
 
       {/* petunjuk */}
-      {(HINT[phase] || (intro && phase === 'idle')) && !popup && !bagOpen && (
+      {(HINT[phase] || (intro && phase === 'idle')) && !fishing && !popup && !bagOpen && (
         <div style={{ position: 'absolute', left: '50%', top: `calc(env(safe-area-inset-top, 0px) + ${px(70)}px)`, transform: 'translateX(-50%)', maxWidth: '60%', pointerEvents: 'none', background: 'rgba(32,22,10,0.85)', border: '1px solid rgba(255,214,140,0.35)', borderRadius: px(14), padding: `${px(6)}px ${px(14)}px`, fontSize: px(14), fontWeight: 600, color: '#ffe9bf', textAlign: 'center' }}>
           {HINT[phase] || 'Hadapkan ke air, lalu tekan Joran'}
         </div>
@@ -413,7 +429,7 @@ export default function FishingGame(props: Props) {
       {toast && <div style={{ position: 'absolute', left: '50%', top: px(112), transform: 'translateX(-50%)', zIndex: 20, background: 'rgba(15,23,42,0.92)', borderRadius: 99, padding: `${px(7)}px ${px(16)}px`, fontSize: px(14), fontWeight: 600, pointerEvents: 'none' }}>{toast}</div>}
 
       {/* joystick */}
-      <div
+      {!fishing && <div
         ref={joyRef}
         onPointerDown={joyDown}
         onPointerMove={(e) => joyActive.current && joyMove(e)}
@@ -422,10 +438,10 @@ export default function FishingGame(props: Props) {
         style={{ position: 'absolute', left: px(14), bottom: `calc(env(safe-area-inset-bottom, 0px) + ${px(16)}px)`, width: px(112), height: px(112), borderRadius: '50%', background: 'rgba(196,160,110,0.45)', border: `${px(2)}px solid rgba(255,235,200,0.45)`, display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'none' }}
       >
         <div style={{ width: px(46), height: px(46), borderRadius: '50%', background: 'rgba(245,225,190,0.55)', border: `${px(2)}px solid rgba(255,240,215,0.7)`, transform: `translate(${knob.x}px, ${knob.y}px)` }} />
-      </div>
+      </div>}
 
       {/* buff + hotbar ransel */}
-      {phase !== 'reel' && phase !== 'catching' && (
+      {!fishing && (
         <div style={{ position: 'absolute', left: '50%', bottom: `calc(env(safe-area-inset-bottom, 0px) + ${px(8)}px)`, transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: px(6) }}>
           <div style={{ display: 'flex', gap: px(5), alignItems: 'center' }}>
             {[
