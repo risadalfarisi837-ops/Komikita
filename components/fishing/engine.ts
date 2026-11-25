@@ -663,7 +663,8 @@ export class FishingEngine {
       if (nx < -200 || nx > this.canvas.width + 200 || nyHead < -200 || nyHead > this.canvas.height + 100) continue;
       const near = Math.hypot(this.px - (p.x * TILE + 8), this.py - (p.y * TILE + 15)) < TILE * 3.6;
       this.pillText((p.name || '') + ' · ' + (p.role || ''), nx, nyHead - 10 * u, sz * 0.92, 'rgba(18,16,14,0.82)', '#f3ead8', 8 * u, 'rgba(245,196,81,0.9)');
-      if (!near) {
+      const showTip = near && nyHead > 150 * u; // jangan tampilkan gelembung kalau ketutup HUD atas
+      if (!showTip) {
         const qy = nyHead - 38 * u;
         const qr = 9 * u;
         ctx.fillStyle = '#f5c451';
@@ -676,7 +677,7 @@ export class FishingEngine {
         ctx.textBaseline = 'middle';
         ctx.fillText('?', nx, qy + qr * 0.08);
       }
-      if (near) {
+      if (showTip) {
         const tip = TIPS[Math.max(0, Math.floor((Number.isFinite(this.time) ? this.time : 0) / 6)) % TIPS.length] || TIPS[0];
         ctx.font = '700 ' + sz * 0.95 + 'px "Pixelify Sans", ui-monospace, monospace';
         const maxW = 150 * u;

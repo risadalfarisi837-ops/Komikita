@@ -339,7 +339,7 @@ export default function FishingGame(props: Props) {
   }, [held]);
 
   useEffect(() => {
-    quietLandscape().catch(() => {});
+    landscape().catch(() => {});
     return () => { leaveLandscape(); };
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, []);
@@ -395,14 +395,6 @@ export default function FishingGame(props: Props) {
     if (risky && !window.confirm('Ada ikan XL/Epik/Legendary di ransel. Tetap jual semua?')) return;
     await sell(bag.map((b) => b.id));
     setBagOpen(false);
-  };
-  // otomatis saat masuk game: hanya kunci orientasi (tanpa layar penuh), jadi tidak memunculkan
-  // notifikasi hitam bawaan Android. Layar penuh tetap bisa lewat menu pengaturan.
-  const quietLandscape = async () => {
-    try {
-      const o = screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> };
-      await o.lock?.('landscape');
-    } catch { /* browser biasa menolak tanpa layar penuh; putar layar manual atau pakai menu */ }
   };
   const landscape = async () => {
     try {
