@@ -385,7 +385,7 @@ export class FishingEngine {
       this.waitT -= dt;
       if (Math.random() < dt * 0.7) this.ripples.push({ x: this.target.wx + (Math.random() - 0.5) * 6, y: this.target.wy + (Math.random() - 0.5) * 3, t: 0.55 });
       if (this.waitT <= 0) {
-        this.fish = this.castInShoal && this.castKind === 'hiu' && Math.random() < 0.6 ? rollShark() : rollFish(this.level, this.luck + (this.castInShoal ? 2 : 0));
+        this.fish = this.castInShoal && this.castKind === 'hiu' && Math.random() < Math.min(0.8, 0.15 + this.luck * 0.5 + this.level / 200) ? rollShark() : rollFish(this.level, this.luck + (this.castInShoal ? 2 : 0));
         this.biteT = 1.25;
         this.ripples.push({ x: this.target.wx, y: this.target.wy, t: 0 });
         this.splash(this.target.wx, this.target.wy, 6);
@@ -665,8 +665,8 @@ export class FishingEngine {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.lineJoin = 'round';
-    ctx.lineWidth = Math.max(2, size * 0.28);
-    ctx.strokeStyle = 'rgba(20,14,8,0.9)';
+    ctx.lineWidth = Math.max(1.5, size * 0.16);
+    ctx.strokeStyle = 'rgba(20,14,8,0.35)';
     ctx.strokeText(text, cx, cy);
     ctx.fillStyle = fg;
     ctx.fillText(text, cx, cy);
@@ -779,7 +779,6 @@ export class FishingEngine {
       ctx.lineJoin = 'round';
       ctx.beginPath(); ctx.moveTo(bx - br * 0.45, by); ctx.lineTo(bx - br * 0.1, by + br * 0.35); ctx.lineTo(bx + br * 0.5, by - br * 0.35); ctx.stroke();
     }
-    if (pr.rodName) this.outlined(pr.rodName, sxp, syFeet + 16 * u, sz * 0.95, '#fff6d8');
   }
 
   private drawMeter() {
@@ -789,22 +788,22 @@ export class FishingEngine {
     ctx.setTransform(d, 0, 0, d, 0, 0);
     const topOff = this.cssH < 500 ? 78 : 118;
     const avail = this.cssH - topOff - 150;
-    const mh = clamp(avail, 120, 280);
+    const mh = clamp(avail, 100, 190);
     const top = topOff + Math.max(0, (avail - mh) / 2);
-    const PW = 122;
+    const PW = 92;
     const panelX = this.cssW - 14 - PW;
-    const panelY = top - 54;
+    const panelY = top - 40;
     const pad = 4;
     const inner = mh - pad * 2;
     const ypx = (pos: number) => top + mh - pad - (pos / 100) * inner;
-    const bw = 14;
-    const bx = panelX + 10;
-    const mw = 76;
-    const mx = bx + bw + 8;
+    const bw = 10;
+    const bx = panelX + 8;
+    const mw = 54;
+    const mx = bx + bw + 6;
 
     // panel krem
     ctx.fillStyle = '#fbf1dc';
-    this.rrect(panelX, panelY, PW, mh + 54 + 12, 12);
+    this.rrect(panelX, panelY, PW, mh + 40 + 10, 12);
     ctx.fill();
     ctx.strokeStyle = '#d9c196';
     ctx.lineWidth = 2;
@@ -815,20 +814,20 @@ export class FishingEngine {
     const rar = sp ? RARITY[sp.rarity] : null;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = '700 17px "Pixelify Sans", ui-monospace, monospace';
+    ctx.font = '700 13px "Pixelify Sans", ui-monospace, monospace';
     ctx.fillStyle = '#3b2f1a';
-    ctx.fillText('???', panelX + PW / 2, panelY + 16);
+    ctx.fillText('???', panelX + PW / 2, panelY + 13);
     if (rar && sp) {
       const label = rar.label;
-      ctx.font = '700 12px "Pixelify Sans", ui-monospace, monospace';
-      const tw = ctx.measureText(label).width + 22;
+      ctx.font = '700 10px "Pixelify Sans", ui-monospace, monospace';
+      const tw = ctx.measureText(label).width + 16;
       const hot = sp.rarity !== 'common' && sp.rarity !== 'uncommon';
       ctx.fillStyle = sp.rarity === 'common' ? '#2a2a2a' : rar.color;
-      this.rrect(panelX + PW / 2 - tw / 2, panelY + 29, tw, 18, 5);
+      this.rrect(panelX + PW / 2 - tw / 2, panelY + 23, tw, 15, 5);
       ctx.fill();
       ctx.fillStyle = sp.rarity === 'common' ? '#f3f3f3' : '#1a1206';
-      ctx.fillText(label, panelX + PW / 2, panelY + 38.5);
-      if (hot) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.2; this.rrect(panelX + PW / 2 - tw / 2, panelY + 29, tw, 18, 5); ctx.stroke(); }
+      ctx.fillText(label, panelX + PW / 2, panelY + 30.5);
+      if (hot) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.2; this.rrect(panelX + PW / 2 - tw / 2, panelY + 23, tw, 15, 5); ctx.stroke(); }
     }
     ctx.textAlign = 'start';
     ctx.textBaseline = 'alphabetic';
@@ -872,7 +871,7 @@ export class FishingEngine {
       const anyCtx = ctx as CanvasRenderingContext2D & { filter?: string };
       const hasF = 'filter' in anyCtx;
       if (hasF) anyCtx.filter = 'brightness(0.12)';
-      drawFish(ctx, this.fish.species, mx + mw / 2, ypx(r.fishPos), 0.62, 0, false);
+      drawFish(ctx, this.fish.species, mx + mw / 2, ypx(r.fishPos), 0.48, 0, false);
       if (hasF) anyCtx.filter = 'none';
     }
     ctx.setTransform(1, 0, 0, 1, 0, 0);

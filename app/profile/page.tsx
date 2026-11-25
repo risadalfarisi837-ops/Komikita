@@ -948,12 +948,17 @@ export default function ProfilePage() {
 
   useEffect(() => {
     let unsub: any = null;
-    getFirebase().then(async ({ auth, db }) => {
+    let graced = false;
+    (async () => { for (let i = 0; i < 4; i++) { try { return await getFirebase(); } catch (e) { if (i === 3) throw e; await new Promise((r) => setTimeout(r, 800 * (i + 1))); } } })().then(async (fb: any) => {
+      const { auth, db } = fb;
       dbRef.current = db;
       try { await auth.getRedirectResult(); } catch (_) { /* abaikan error redirect */ }
       unsub = auth.onAuthStateChanged(async (fu: any) => {
+        if (!fu) {
+          if (!graced) { graced = true; await new Promise((r) => setTimeout(r, 1200)); if (auth.currentUser) return; }
+          setLoadingAuth(false); setUser(null); setUserData(null); return;
+        }
         setLoadingAuth(false);
-        if (!fu) { setUser(null); setUserData(null); return; }
         setUser({ uid: fu.uid, displayName: fu.displayName, photoURL: fu.photoURL });
         const snap = await db.ref(`users/${fu.uid}`).get();
         if (snap.exists()) {
