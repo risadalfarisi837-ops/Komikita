@@ -5,7 +5,7 @@ import type { Species } from '@/lib/fishing';
 export const TILE = 16;
 export type Dir = 'down' | 'up' | 'left' | 'right';
 export type Tile = 'deep' | 'shallow' | 'sand' | 'grass' | 'plank' | 'dirt';
-export type PropKind = 'palm' | 'rock' | 'lamp' | 'fountain' | 'bench' | 'table' | 'stool' | 'sign' | 'bush' | 'npc';
+export type PropKind = 'palm' | 'rock' | 'lamp' | 'fountain' | 'bench' | 'table' | 'stool' | 'sign' | 'bush' | 'npc' | 'shop';
 export interface Prop { kind: PropKind; x: number; y: number; v: number; w?: number; h?: number; name?: string; role?: string }
 export interface World {
   w: number;
@@ -201,6 +201,8 @@ export function generateWorld(seed = 11): World {
   };
   const sx = start.x;
   putBlock('fountain', [[sx - 1, sy - 9], [sx - 3, sy - 9], [sx + 1, sy - 8], [sx - 5, sy - 9], [sx - 2, sy - 10], [sx - 7, sy - 9]], 4, 3);
+  // toko di tengah pulau (4x3 petak), dipasang dulu supaya dapat tempat terbaik
+  putBlock('shop', [[13, 10], [12, 10], [14, 10], [13, 9], [12, 9], [14, 9], [13, 11], [11, 10], [15, 10], [12, 11], [14, 11], [10, 10], [16, 10]], 4, 3, { name: 'Toko Mancing', role: 'Umpan · Joran · Jual Ikan' });
   const tbl = putBlock('table', [[sx - 8, sy - 3], [sx - 7, sy - 4], [sx - 9, sy - 3], [sx - 8, sy - 5]], 2, 1);
   if (tbl) {
     putBlock('stool', [[tbl[0] - 1, tbl[1]]], 1, 1);
@@ -966,4 +968,74 @@ export function drawNpc(ctx: CanvasRenderingContext2D, p: Prop, t: number) {
   const y = p.y * TILE + 15;
   const bob = Math.sin(t * 2 + p.v * 6) > 0.92 ? 1 : 0;
   drawPlayer(ctx, x, y - bob * 0, 'down', false, 0, false, 0, PAL_BAYU);
+}
+
+
+// ---------- toko ----------
+const GLYPH: Record<string, string[]> = {
+  T: ['###', '.#.', '.#.', '.#.', '.#.'],
+  O: ['###', '#.#', '#.#', '#.#', '###'],
+  K: ['#.#', '#.#', '##.', '#.#', '#.#'],
+};
+function pixText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, col: string) {
+  let cx = x;
+  for (const ch of text) {
+    const g = GLYPH[ch];
+    if (g) g.forEach((row, ry) => { for (let rx = 0; rx < 3; rx++) if (row[rx] === '#') R(ctx, cx + rx, y + ry, 1, 1, col); });
+    cx += 4;
+  }
+}
+
+export function drawShop(ctx: CanvasRenderingContext2D, p: Prop, t: number) {
+  const X = p.x * TILE;
+  const Y = p.y * TILE; // area 64x48
+  ell(ctx, X + 32, Y + 46, 31, 3, 'rgba(0,20,10,0.28)');
+  // dinding belakang
+  R(ctx, X + 3, Y + 14, 58, 26, '#a9743f');
+  for (let i = 0; i < 6; i++) R(ctx, X + 3, Y + 16 + i * 4, 58, 1, '#8a5d30');
+  R(ctx, X + 3, Y + 14, 2, 28, '#7a5230');
+  R(ctx, X + 59, Y + 14, 2, 28, '#7a5230');
+  // rak kecil berisi botol umpan
+  R(ctx, X + 8, Y + 22, 14, 1, '#5e3b1a');
+  R(ctx, X + 10, Y + 18, 3, 4, '#8fd3f0');
+  R(ctx, X + 15, Y + 19, 3, 3, '#e9856b');
+  R(ctx, X + 42, Y + 22, 14, 1, '#5e3b1a');
+  R(ctx, X + 44, Y + 18, 3, 4, '#f5c451');
+  R(ctx, X + 49, Y + 19, 3, 3, '#7dd87a');
+  // penjual di balik meja
+  drawPlayer(ctx, X + 32, Y + 34, 'down', false, 0, false, 0, PAL_BAYU);
+  // meja
+  R(ctx, X + 4, Y + 33, 56, 9, '#8b5a2b');
+  R(ctx, X + 4, Y + 33, 56, 2, '#d9a066');
+  R(ctx, X + 4, Y + 41, 56, 1, '#5e3b1a');
+  for (const lx of [8, 20, 32, 44, 56]) R(ctx, X + lx, Y + 36, 1, 5, '#6f4624');
+  // barang di atas meja: stoples umpan, ikan di piring, koin
+  R(ctx, X + 8, Y + 29, 6, 4, '#8fd3f0');
+  R(ctx, X + 8, Y + 28, 6, 1, '#d6f0fb');
+  R(ctx, X + 9, Y + 30, 4, 2, '#e9856b');
+  R(ctx, X + 18, Y + 30, 7, 3, '#cfd8dc');
+  R(ctx, X + 24, Y + 29, 2, 2, '#cfd8dc');
+  R(ctx, X + 44, Y + 30, 3, 3, '#f5c451');
+  R(ctx, X + 48, Y + 31, 3, 2, '#f5c451');
+  // joran bersandar
+  R(ctx, X + 56, Y + 15, 1, 25, '#6b4a2a');
+  R(ctx, X + 55, Y + 15, 1, 3, '#d9d6cf');
+  // tenda belang merah-putih
+  for (let i = 0; i < 8; i++) {
+    const col = i % 2 ? '#f5ecd9' : '#d8453b';
+    R(ctx, X + i * 8, Y + 6, 8, 11, col);
+    R(ctx, X + i * 8 + 1, Y + 17, 6, 2, col);
+    R(ctx, X + i * 8 + 2, Y + 19, 4, 1, col);
+  }
+  R(ctx, X + 2, Y + 2, 60, 2, '#a83a31');
+  R(ctx, X, Y + 4, 64, 3, '#8a2f27');
+  R(ctx, X, Y + 6, 64, 1, '#e8756a');
+  // papan nama
+  R(ctx, X + 24, Y + 3, 1, 4, '#5a3a1c');
+  R(ctx, X + 39, Y + 3, 1, 4, '#5a3a1c');
+  R(ctx, X + 20, Y - 8, 24, 11, '#5a3a1c');
+  R(ctx, X + 21, Y - 7, 22, 9, '#e9c28a');
+  pixText(ctx, 'TOKO', X + 24, Y - 5, '#5a3a1c');
+  // lentera kedip
+  R(ctx, X + 1, Y + 20, 3, 4, Math.sin(t * 6) > 0 ? '#ffd86b' : '#ffc23d');
 }

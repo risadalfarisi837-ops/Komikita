@@ -214,3 +214,24 @@ export function rollGacha(rnd: () => number = Math.random): Rod {
   }
   return GACHA_POOL[GACHA_POOL.length - 1].rod;
 }
+
+
+// ---------- umpan ----------
+// Dipakai 1 setiap melempar joran; menambah peluang ikan langka (bonus luck) selama masih ada stok.
+export interface Bait { id: string; name: string; price: number; luck: number; emoji: string; desc: string }
+export const BAITS: Bait[] = [
+  { id: 'cacing', name: 'Cacing Tanah', price: 15, luck: 0.15, emoji: '🪱', desc: 'Umpan dasar' },
+  { id: 'udang', name: 'Udang Segar', price: 45, luck: 0.4, emoji: '🦐', desc: 'Disukai ikan sedang' },
+  { id: 'teri', name: 'Teri Wangi', price: 120, luck: 0.9, emoji: '🐟', desc: 'Baunya memanggil ikan langka' },
+  { id: 'emas', name: 'Umpan Emas', price: 350, luck: 1.8, emoji: '✨', desc: 'Peluang epik & legendary naik besar' },
+];
+export const BAITS_BY_ID: Record<string, Bait> = Object.fromEntries(BAITS.map((b) => [b.id, b]));
+export function sanitizeBaits(raw: unknown): Record<string, number> {
+  const out: Record<string, number> = {};
+  if (raw && typeof raw === 'object') {
+    for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+      if (BAITS_BY_ID[k] && typeof v === 'number' && Number.isFinite(v) && v > 0) out[k] = Math.min(9999, Math.floor(v));
+    }
+  }
+  return out;
+}

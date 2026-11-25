@@ -3,9 +3,9 @@ import { RARITY, rollFish } from '@/lib/fishing';
 import type { Species } from '@/lib/fishing';
 import {
   TILE, generateWorld, drawPlayer, drawPalm, drawRock, drawLamp, drawBobber, drawRipple, drawLine,
-  drawBubbleAlert, drawFish, drawShowFish, rodGeometry, PAL_PLAYER, drawFountain, drawBench, drawTable, drawStool, drawSign, drawBush, drawNpc,
+  drawBubbleAlert, drawFish, drawShowFish, rodGeometry, PAL_PLAYER, drawFountain, drawBench, drawTable, drawStool, drawSign, drawBush, drawNpc, drawShop,
 } from './art';
-import type { Dir, World } from './art';
+import type { Dir, Prop, World } from './art';
 
 export type Phase = 'idle' | 'cast' | 'wait' | 'bite' | 'reel' | 'catching' | 'result';
 export interface Catch { species: Species; weight: number }
@@ -25,6 +25,9 @@ export interface EngineEvents {
   onCatch?: (c: Catch) => void;
   onToast?: (m: string) => void;
   onBite?: () => void;
+  onCast?: () => void;           // joran dilempar (dipakai untuk mengurangi umpan)
+  onShop?: () => void;           // tombol aksi ditekan saat dekat toko
+  onNearShop?: (near: boolean) => void;
 }
 
 const DIRV: Record<Dir, { x: number; y: number }> = { down: { x: 0, y: 1 }, up: { x: 0, y: -1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 } };
@@ -41,6 +44,9 @@ export class FishingEngine {
   phase: Phase = 'idle';
   level = 1;
   luck = 0;
+  private castLuck = 0; // luck saat joran dilempar (termasuk umpan yang baru dipakai)
+  private shop: Prop | null = null;
+  private nearShop = false;
   bagFull = false;
   profile: Profile = { name: '', title: '', level: 1, rodName: '' };
   private shoal: Shoal | null = null;
@@ -90,6 +96,7 @@ export class FishingEngine {
     this.ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
     this.ev = ev;
     this.world = generateWorld();
+    this.shop = this.world.props.find((p) => p.kind === 'shop') || null;
     this.px = (this.world.start.x + 0.5) * TILE;
     this.py = (this.world.start.y + 1) * TILE - 3;
     this.dir = 'right';
@@ -108,8 +115,10 @@ export class FishingEngine {
   action(down: boolean) {
     if (this.phase === 'reel') { this.holding = down; return; }
     if (!down) return;
-    if (this.phase === 'idle') this.tryCast();
-    else if (this.phase === 'bite') this.hook();
+    if (this.phase === 'idle') {
+      if (this.nearShop) { this.ev.onShop?.(); return; }
+      this.tryCast();
+    } else if (this.phase === 'bite') this.hook();
   }
 
   cancel() {
@@ -270,7 +279,20 @@ export class FishingEngine {
     const sh = this.shoal;
     this.castInShoal = !!sh && Math.hypot(t.wx - sh.x, t.wy - sh.y) <= sh.r;
     if (this.castInShoal) this.ev.onToast?.('Kena gerombolan ikan! Peluang langka naik');
+    this.castLuck = this.luck;
     this.setPhase('cast');
+    this.ev.onCast?.();
+  }
+
+  private checkShop() {
+    let near = false;
+    const s = this.shop;
+    if (s && this.phase === 'idle') {
+      const cx = (s.x + (s.w || 1) / 2) * TILE;
+      const cy = (s.y + (s.h || 1)) * TILE + 2;
+      near = Math.hypot(this.px - cx, this.py - cy) < TILE * 3.2;
+    }
+    if (near !== this.nearShop) { this.nearShop = near; this.ev.onNearShop?.(near); }
   }
 
   private hook() {
@@ -339,6 +361,8 @@ export class FishingEngine {
       this.stepT = 0;
     }
 
+    this.checkShop();
+
     // event Gerombolan Ikan
     if (this.shoal) {
       if (this.time >= this.shoal.until) { this.shoal = null; this.castInShoal = false; this.nextShoal = this.time + 45 + Math.random() * 60; }
@@ -359,7 +383,7 @@ export class FishingEngine {
       this.waitT -= dt;
       if (Math.random() < dt * 0.7) this.ripples.push({ x: this.target.wx + (Math.random() - 0.5) * 6, y: this.target.wy + (Math.random() - 0.5) * 3, t: 0.55 });
       if (this.waitT <= 0) {
-        this.fish = rollFish(this.level, this.luck + (this.castInShoal ? 2 : 0));
+        this.fish = rollFish(this.level, this.castLuck + (this.castInShoal ? 2 : 0));
         this.biteT = 1.25;
         this.ripples.push({ x: this.target.wx, y: this.target.wy, t: 0 });
         this.splash(this.target.wx, this.target.wy, 6);
@@ -570,6 +594,7 @@ export class FishingEngine {
         case 'sign': ents.push({ y: byp + 14, f: () => drawSign(ctx, p) }); break;
         case 'bush': ents.push({ y: byp + 14, f: () => drawBush(ctx, p) }); break;
         case 'npc': ents.push({ y: byp + 15, f: () => drawNpc(ctx, p, t) }); break;
+        case 'shop': ents.push({ y: byp + ph2 - 2, f: () => drawShop(ctx, p, t) }); break;
         default: ents.push({ y: byp + 15, f: () => drawLamp(ctx, p, t) });
       }
     }
@@ -654,6 +679,16 @@ export class FishingEngine {
     const sxp = this.px * S - ox;
     const syHead = (this.py - 21) * S - oy;
     const syFeet = this.py * S - oy;
+    // Toko
+    if (this.shop) {
+      const sp = this.shop;
+      const sx = ((sp.x + (sp.w || 1) / 2) * TILE) * S - ox;
+      const sy = (sp.y * TILE - 14) * S - oy;
+      if (sx > -200 && sx < this.canvas.width + 200 && sy > -200 && sy < this.canvas.height + 100) {
+        this.pillText('Toko Mancing', sx, sy, sz, 'rgba(18,16,14,0.82)', '#ffe29a', 8 * u);
+        if (this.nearShop) this.pillText('Tekan Toko untuk belanja', sx, sy + 17 * u, sz * 0.85, 'rgba(34,140,80,0.92)', '#ffffff', 8 * u);
+      }
+    }
     // NPC
     for (const p of this.world.props) {
       if (p.kind !== 'npc') continue;
