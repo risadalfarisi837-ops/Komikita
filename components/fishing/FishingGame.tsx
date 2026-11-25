@@ -718,7 +718,7 @@ export default function FishingGame(props: Props) {
               <svg width={px(20)} height={px(20)} viewBox="0 0 24 24" style={{ transform: `rotate(${rotate}deg)` }}><path d="M12 3l7 16-7-4-7 4z" fill="#fff" /></svg>
             </div>
             <div>
-              <div style={{ fontSize: px(15), fontWeight: 700, color: guide.kind === 'hiu' ? '#c2410c' : '#1f8a45', lineHeight: 1.1 }}>{guide.kind === 'hiu' ? '🦈 Hiu Legendary!' : 'Ada Gerombolan Ikan!'}</div>
+              <div style={{ fontSize: px(15), fontWeight: 700, color: guide.kind === 'raksasa' ? '#7c3aed' : guide.kind === 'hiu' ? '#c2410c' : '#1f8a45', lineHeight: 1.1 }}>{guide.kind === 'raksasa' ? '🐋 Bayangan Raksasa!' : guide.kind === 'hiu' ? '🦈 Hiu Legendary!' : 'Ada Gerombolan Ikan!'}</div>
               <div style={{ fontSize: px(12.5), fontWeight: 600 }}>{guide.dist} m · 🍀+200% · {mmss(guide.left)}</div>
             </div>
           </div>

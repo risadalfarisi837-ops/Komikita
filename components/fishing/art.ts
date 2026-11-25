@@ -866,14 +866,15 @@ export function fishSprite(sp: Species): HTMLCanvasElement {
   return out;
 }
 
+const GIANT_SCALE = 6.2; // ikan raksasa: sekitar setengah lebar pulau
 export function drawShowFish(ctx: CanvasRenderingContext2D, x: number, y: number, sp: Species, weight: number) {
   const t = performance.now() / 1000;
   const ratio = sizeRatio(sp, weight);
-  const scale = Math.min(1.7, 0.5 + 0.8 * ratio + (sp.rarity === 'legendary' ? 0.3 : sp.rarity === 'epic' ? 0.15 : 0));
+  const scale = sp.giant ? GIANT_SCALE + ratio : Math.min(1.7, 0.5 + 0.8 * ratio + (sp.rarity === 'legendary' ? 0.3 : sp.rarity === 'epic' ? 0.15 : 0));
   const fw = FISH_W * scale;
   const fh = FISH_H * scale;
   const cx = Math.round(x);
-  const cy = Math.round(y) - 28 - fh / 2 + Math.sin(t * 3) * 1.2;
+  const cy = Math.round(y) - (sp.giant ? 20 + fh * 0.3 : 28 + fh / 2) + Math.sin(t * 3) * (sp.giant ? 2 : 1.2);
   const col = RARITY[sp.rarity].color;
   const fancy = sp.rarity !== 'common' || isXL(sp, weight);
   if (fancy) {
@@ -887,7 +888,7 @@ export function drawShowFish(ctx: CanvasRenderingContext2D, x: number, y: number
   }
   drawFish(ctx, sp, cx, cy, scale, Math.sin(t * 2.5) * 0.12, false);
   if (fancy) {
-    const n = sp.rarity === 'legendary' ? 5 : 3;
+    const n = sp.giant ? 12 : sp.rarity === 'legendary' ? 5 : 3;
     for (let i = 0; i < n; i++) {
       const a = t * 1.4 + (i * Math.PI * 2) / n;
       const sx = Math.round(cx + Math.cos(a) * (fw * 0.55));

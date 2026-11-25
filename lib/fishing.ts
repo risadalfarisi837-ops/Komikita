@@ -27,6 +27,7 @@ export interface Species {
   accent: string;
   glow?: boolean;
   eventOnly?: boolean;
+  giant?: boolean; // ikan raksasa: tampil sangat besar saat dipegang
 }
 
 export const SPECIES: Species[] = [
@@ -45,6 +46,7 @@ export const SPECIES: Species[] = [
   { id: 'bulan', name: 'Ikan Bulan Emas', rarity: 'legendary', min: 200, max: 900, price: 1200, shape: 'round', body: '#ffd24a', belly: '#fff1b8', fin: '#ffb300', pattern: 'spots', accent: '#fff8d6', glow: true },
   { id: 'paus', name: 'Paus Kristal', rarity: 'legendary', min: 500, max: 1500, price: 1800, shape: 'big', body: '#58c7ff', belly: '#e0f7ff', fin: '#2f9bdc', pattern: 'spots', accent: '#ffffff', glow: true },
   { id: 'hiu', name: 'Hiu Raksasa', rarity: 'legendary', min: 400, max: 1800, price: 2600, shape: 'shark', body: '#6b7f94', belly: '#eef3f7', fin: '#52657a', pattern: 'none', accent: '#3d4d5f', glow: true, eventOnly: true },
+  { id: 'leviathan', name: 'Leviathan Pulau', rarity: 'legendary', min: 40000, max: 90000, price: 15000, shape: 'big', body: '#1f6f8b', belly: '#bfeaf5', fin: '#134a63', pattern: 'spots', accent: '#7df9ff', glow: true, eventOnly: true, giant: true },
   { id: 'leviathan', name: 'Leviathan', rarity: 'legendary', min: 9000, max: 22000, price: 24000, shape: 'big', body: '#23407a', belly: '#6fb7ff', fin: '#7b5cff', pattern: 'spots', accent: '#7df9ff', glow: true, eventOnly: true },
 ];
 
@@ -98,6 +100,11 @@ export function rollShark(rnd: () => number = Math.random): { species: Species; 
   return { species, weight: Math.round(raw * 100) / 100 };
 }
 
+export function rollGiant(rnd: () => number = Math.random): { species: Species; weight: number } {
+  const species = SPECIES_BY_ID.leviathan;
+  const raw = species.min + (species.max - species.min) * Math.pow(rnd(), 1.2);
+  return { species, weight: Math.round(raw * 100) / 100 };
+}
 export function rollFish(level: number, luck: number = 0, rnd: () => number = Math.random): { species: Species; weight: number } {
   const b = Math.min(Math.max(level, 1), MAX_LEVEL) / MAX_LEVEL; // 0..1
   const lk = Math.max(0, Math.min(3, luck)); // bonus joran (+ event Gerombolan Ikan sampai +2)

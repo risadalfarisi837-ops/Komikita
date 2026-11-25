@@ -1,5 +1,5 @@
 // Mesin game Mancing (tanpa React): gerak, lempar joran, tunggu gigitan, mini-game menarik ikan, dan render.
-import { RARITY, SPECIES, SPECIES_BY_ID, rollFish, rollShark, withSize } from '@/lib/fishing';
+import { RARITY, SPECIES, SPECIES_BY_ID, rollFish, rollGiant, rollShark, withSize } from '@/lib/fishing';
 import type { NetPose, RemotePlayer } from '@/lib/fishingNet';
 import type { Rarity, SizeTier, Species } from '@/lib/fishing';
 import {
@@ -12,9 +12,9 @@ import type { Dir, Pal, World } from './art';
 export type Phase = 'idle' | 'cast' | 'wait' | 'bite' | 'reel' | 'catching' | 'result';
 export interface Catch { species: Species; weight: number }
 export interface Profile { name: string; title: string; level: number; rodName: string; rodId?: string }
-export interface ShoalStatus { dist: number; ang: number; left: number; kind: 'ikan' | 'hiu' }
+export interface ShoalStatus { dist: number; ang: number; left: number; kind: 'ikan' | 'hiu' | 'raksasa' }
 export interface EngineStatus { shoal: ShoalStatus | null; inShoal: boolean }
-interface Shoal { x: number; y: number; r: number; until: number; kind: 'ikan' | 'hiu' }
+interface Shoal { x: number; y: number; r: number; until: number; kind: 'ikan' | 'hiu' | 'raksasa' }
 const TIPS = [
   'Tahan tombol supaya zona hijau ngikutin ikan.',
   'Ada gerombolan ikan? Mancing di situ, peluang ikan langka naik drastis!',
@@ -49,7 +49,7 @@ export class FishingEngine {
   private shoal: Shoal | null = null;
   private nextShoal = 12;
   private castInShoal = false;
-  private castKind: 'ikan' | 'hiu' = 'ikan';
+  private castKind: 'ikan' | 'hiu' | 'raksasa' = 'ikan';
   private waterSpots: [number, number][] | null = null;
   private shoalForced = false; // gerombolan dari Dev Tools (bukan jadwal bersama)
   private shoalId = -1;
@@ -264,7 +264,7 @@ export class FishingEngine {
   setInstantBite(b: boolean) { this.instantBite = b; }
   setForceRarity(r: Rarity | null) { this.forceRarity = r; }
   setForceSize(t: SizeTier | null) { this.forceSize = t; }
-  devShoal(kind: 'ikan' | 'hiu') { this.spawnShoal(true, kind); }
+  devShoal(kind: 'ikan' | 'hiu' | 'raksasa') { this.spawnShoal(true, kind); }
   devInfo() {
     return { fps: Math.round(this.fps), phase: this.phase, level: this.level, luck: this.luck, timeScale: this.timeScale, shoal: !!this.shoal, tileX: Math.floor(this.px / TILE), tileY: Math.floor(this.py / TILE) };
   }
@@ -378,14 +378,14 @@ export class FishingEngine {
   }
 
   // jadwal gerombolan dihitung dari jam server, jadi SAMA untuk semua pemain
-  private sharedEvent(nowMs: number): { id: number; kind: 'ikan' | 'hiu'; tx: number; ty: number; end: number } | null {
+  private sharedEvent(nowMs: number): { id: number; kind: 'ikan' | 'hiu' | 'raksasa'; tx: number; ty: number; end: number } | null {
     const SLOT = 150000;
     const spots = this.ensureSpots();
     if (!spots.length) return null;
     const n = Math.floor(nowMs / SLOT);
     const rnd = mulberry32(((n * 2654435761) >>> 0) ^ 0x5bd1e995);
     if (rnd() > 0.85) return null;
-    const kind: 'ikan' | 'hiu' = rnd() < 0.3 ? 'hiu' : 'ikan';
+    const kind: 'ikan' | 'hiu' | 'raksasa' = rnd() < 0.3 ? 'hiu' : 'ikan';
     const start = n * SLOT + 5000 + rnd() * 55000;
     const end = start + (kind === 'hiu' ? 80000 : 60000);
     const [tx, ty] = spots[Math.floor(rnd() * spots.length)];
@@ -411,7 +411,7 @@ export class FishingEngine {
     }
   }
 
-  private spawnShoal(force = false, kind?: 'ikan' | 'hiu') {
+  private spawnShoal(force = false, kind?: 'ikan' | 'hiu' | 'raksasa') {
     const spots = this.ensureSpots();
     if (!spots.length) return;
     const ptx = this.px / TILE;
@@ -419,11 +419,17 @@ export class FishingEngine {
     const far = spots.filter(([x, y]) => { const d = Math.hypot(x - ptx, y - pty); return d >= 9 && d <= 40; });
     const pool = far.length ? far : spots;
     const [tx, ty] = pool[Math.floor(Math.random() * pool.length)];
-    const k: 'ikan' | 'hiu' = kind || (!force && Math.random() < 0.3 ? 'hiu' : 'ikan');
-    this.shoal = { x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE, r: (k === 'hiu' ? 4 : 3.4) * TILE, until: this.time + (k === 'hiu' ? 80 : force ? 90 : 60), kind: k };
+    const pickKind = (): 'ikan' | 'hiu' | 'raksasa' => {
+      if (force) return 'ikan';
+      const r = Math.random();
+      return r < 0.07 ? 'raksasa' : r < 0.3 ? 'hiu' : 'ikan';
+    };
+    const k: 'ikan' | 'hiu' | 'raksasa' = kind || pickKind();
+    this.shoal = { x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE, r: (k === 'raksasa' ? 6 : k === 'hiu' ? 4 : 3.4) * TILE, until: this.time + (k === 'raksasa' ? 100 : k === 'hiu' ? 80 : force ? 90 : 60), kind: k };
     this.shoalForced = true;
     this.shoalId = -2;
     if (k === 'hiu') this.ev.onToast?.('Hiu Legendary muncul! Cari bayangannya');
+    if (k === 'raksasa') this.ev.onToast?.('Bayangan RAKSASA muncul di laut! Cari dan lempar umpanmu');
   }
 
   private drawSharkEvent(ctx: CanvasRenderingContext2D, sh: Shoal, t: number) {
@@ -447,6 +453,32 @@ export class FishingEngine {
     ctx.fillRect(Math.round(sx), Math.round(sy - 8), 1, 6);
   }
 
+  private drawGiantEvent(ctx: CanvasRenderingContext2D, sh: Shoal, t: number) {
+    const a = t * 0.22;
+    const sx = sh.x + Math.cos(a) * sh.r * 0.42;
+    const sy = sh.y + Math.sin(a) * sh.r * 0.2;
+    const hd = Math.atan2(Math.cos(a) * 0.2, -Math.sin(a) * 0.42);
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.rotate(hd);
+    ctx.fillStyle = 'rgba(6,28,60,0.4)';
+    ctx.beginPath(); ctx.ellipse(0, 0, 58, 17, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-46, 0); ctx.lineTo(-84, -22); ctx.lineTo(-76, 0); ctx.lineTo(-84, 22); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(20,70,110,0.35)';
+    ctx.beginPath(); ctx.ellipse(8, -2, 34, 7, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    const k = (t * 0.6) % 1;
+    ctx.fillStyle = 'rgba(255,255,255,' + (0.75 * (1 - k)).toFixed(3) + ')';
+    for (let i = 0; i < 7; i++) {
+      const jx = sx + Math.sin(i * 2.1 + t) * (3 + k * 10);
+      const jy = sy - 4 - k * 26 + (i / 7) * 6;
+      ctx.fillRect(Math.round(jx), Math.round(jy), 2, 2);
+    }
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.ellipse(sx, sy + 1, 30, 9, 0, 0, Math.PI * 2); ctx.stroke();
+  }
+
   private tryCast() {
     if (this.bagFull) { this.ev.onToast?.('Tas penuh! Jual ikan dulu.'); return; }
     const t = this.findTarget();
@@ -456,7 +488,7 @@ export class FishingEngine {
     const sh = this.shoal;
     this.castInShoal = !!sh && Math.hypot(t.wx - sh.x, t.wy - sh.y) <= sh.r;
     this.castKind = sh ? sh.kind : 'ikan';
-    if (this.castInShoal) this.ev.onToast?.(this.castKind === 'hiu' ? 'Hiu raksasa menyambar umpanmu!' : 'Kena gerombolan ikan! Peluang langka naik');
+    if (this.castInShoal) this.ev.onToast?.(this.castKind === 'raksasa' ? 'Sesuatu yang SANGAT besar menyambar umpanmu!' : this.castKind === 'hiu' ? 'Hiu raksasa menyambar umpanmu!' : 'Kena gerombolan ikan! Peluang langka naik');
     this.setPhase('cast');
   }
 
@@ -558,7 +590,7 @@ export class FishingEngine {
       this.waitT -= dt;
       if (Math.random() < dt * 0.7) this.ripples.push({ x: this.target.wx + (Math.random() - 0.5) * 6, y: this.target.wy + (Math.random() - 0.5) * 3, t: 0.55 });
       if (this.waitT <= 0) {
-        let rolled = this.castInShoal && this.castKind === 'hiu' && Math.random() < Math.min(0.8, 0.15 + this.luck * 0.5 + this.level / 200) ? rollShark() : rollFish(this.level, this.luck + (this.castInShoal ? 2 : 0));
+        let rolled = this.castInShoal && this.castKind === 'raksasa' && Math.random() < Math.min(0.7, 0.25 + this.luck * 0.4 + this.level / 250) ? rollGiant() : this.castInShoal && this.castKind === 'hiu' && Math.random() < Math.min(0.8, 0.15 + this.luck * 0.5 + this.level / 200) ? rollShark() : rollFish(this.level, this.luck + (this.castInShoal ? 2 : 0));
         if (this.forceRarity) rolled = this.rollForced(this.forceRarity);
         if (this.forceSize) rolled = withSize(rolled, this.forceSize);
         this.fish = rolled;
@@ -711,7 +743,8 @@ export class FishingEngine {
       ctx.ellipse(sh.x, sh.y, 8 + k * sh.r * 0.85, 4 + k * sh.r * 0.45, 0, 0, Math.PI * 2);
       ctx.stroke();
       if (sh.kind === 'hiu') this.drawSharkEvent(ctx, sh, t);
-      for (let i = 0; i < (sh.kind === 'hiu' ? 3 : 11); i++) {
+      else if (sh.kind === 'raksasa') this.drawGiantEvent(ctx, sh, t);
+      for (let i = 0; i < (sh.kind === 'ikan' ? 11 : 3); i++) {
         const dir = i % 2 ? 1 : -1;
         const a = t * 0.7 * dir + i * 0.57;
         const rr = 7 + ((i * 37) % 19) * 1.3;
@@ -790,8 +823,9 @@ export class FishingEngine {
     ents.push({
       y: this.py,
       f: () => {
+        if (show && show.species.giant) drawShowFish(ctx, this.px, this.py, show.species, show.weight);
         drawPlayer(ctx, this.px, this.py, this.dir, this.moving, this.stepT, rod, shake, PAL_PLAYER, rodId, !rod && !show, !!show);
-        if (show) drawShowFish(ctx, this.px, this.py, show.species, show.weight);
+        if (show && !show.species.giant) drawShowFish(ctx, this.px, this.py, show.species, show.weight);
       },
     });
     for (const r of this.remotes.values()) {

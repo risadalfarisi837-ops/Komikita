@@ -248,6 +248,7 @@ export default function DevTools(p: Props) {
               <div style={{ display: 'flex', gap: px(6) }}>
                 <button style={{ ...small(false), flex: 1 }} onClick={() => p.engine?.devShoal('ikan')}>🐟 Gerombolan</button>
                 <button style={{ ...small(false), flex: 1 }} onClick={() => p.engine?.devShoal('hiu')}>🦈 Hiu</button>
+                <button style={{ ...small(false), flex: 1 }} onClick={() => p.engine?.devShoal('raksasa')}>🐋 Raksasa</button>
               </div>
             </>
           )}
