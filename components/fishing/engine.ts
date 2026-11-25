@@ -66,6 +66,8 @@ export class FishingEngine {
   private cssH = 640;
   private dpr = 1;
   private S = 4;
+  private baseS = 4; // skala dasar dari ukuran layar
+  private zoom = 1; // pengali zoom dari pemain (pinch / tombol +/-)
   private camX = 0;
   private camY = 0;
   private time = 0;
@@ -145,13 +147,34 @@ export class FishingEngine {
     this.canvas.style.width = cssW + 'px';
     this.canvas.style.height = cssH + 'px';
     const base = Math.min(cssW, cssH) * dpr;
-    this.S = Math.max(3, Math.round(base / 128));
+    this.baseS = Math.max(3, base / 128);
+    this.S = this.calcScale();
     const c = this.ctx;
     const g = c.createRadialGradient(this.canvas.width / 2, this.canvas.height / 2, Math.min(this.canvas.width, this.canvas.height) * 0.35, this.canvas.width / 2, this.canvas.height / 2, Math.max(this.canvas.width, this.canvas.height) * 0.75);
     g.addColorStop(0, 'rgba(0,10,30,0)');
     g.addColorStop(1, 'rgba(0,10,30,0.38)');
     this.vignette = g;
     this.snapCamera();
+  }
+
+  // ---------- zoom ----------
+  static readonly ZOOM_MIN = 0.6;
+  static readonly ZOOM_MAX = 2.6;
+
+  private calcScale() {
+    return Math.max(2, Math.round(this.baseS * this.zoom));
+  }
+
+  getZoom() { return this.zoom; }
+
+  setZoom(z: number) {
+    const nz = Math.min(FishingEngine.ZOOM_MAX, Math.max(FishingEngine.ZOOM_MIN, Number.isFinite(z) ? z : 1));
+    this.zoom = nz;
+    const ns = this.calcScale();
+    if (ns !== this.S) {
+      this.S = ns;
+      this.snapCamera();
+    }
   }
 
   start() {

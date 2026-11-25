@@ -196,14 +196,6 @@ async function makeShareCard(item: BagItem, player: string, level: number): Prom
   return new Promise((res) => c.toBlob((b) => res(b), 'image/png'));
 }
 
-// Keluar dari game: layar dikembalikan tegak (portrait), keluar layar penuh, lalu rotasi bebas lagi
-async function leaveLandscape() {
-  const o = screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void>; unlock?: () => void };
-  try { await o.lock?.('portrait'); } catch { /* browser tidak mengizinkan, cukup di-unlock */ }
-  try { if (document.fullscreenElement) await document.exitFullscreen(); } catch { /* abaikan */ }
-  setTimeout(() => { try { o.unlock?.(); } catch { /* abaikan */ } }, 600);
-}
-
 // >>> kartu-tangkapan (helper)
 const RARITY_EN: Record<keyof typeof RARITY, string> = { common: 'COMMON', uncommon: 'UNCOMMON', rare: 'RARE', epic: 'EPIC', legendary: 'LEGENDARY' };
 const LEN_FACTOR: Record<string, number> = { long: 5, oval: 4, round: 2.8, flat: 6, big: 4.2, shark: 6 };
@@ -271,6 +263,7 @@ export default function FishingGame(props: Props) {
   const [buffOpen, setBuffOpen] = useState(true);
   const [bagSort, setBagSort] = useState<'baru' | 'nilai'>('baru');
   const [menu2, setMenu2] = useState(false);
+  const [zoomUi, setZoomUi] = useState(1);
   const toastT = useRef<ReturnType<typeof setTimeout> | null>(null);
   const px = (n: number) => Math.round(n * u);
 
@@ -323,6 +316,47 @@ export default function FishingGame(props: Props) {
       },
     });
     engineRef.current = engine;
+    try {
+      const sz = parseFloat(localStorage.getItem('komikita-fish-zoom') || '');
+      if (Number.isFinite(sz)) engine.setZoom(sz);
+    } catch { /* abaikan */ }
+    setZoomUi(engine.getZoom());
+    const saveZoom = () => { try { localStorage.setItem('komikita-fish-zoom', String(engine.getZoom())); } catch { /* abaikan */ } };
+    const applyZoom = (z: number) => { engine.setZoom(z); setZoomUi(engine.getZoom()); };
+
+    // cubit dua jari di area kosong layar = zoom; roda mouse juga bisa
+    const pts = new Map<number, { x: number; y: number }>();
+    let pinch0 = 0;
+    let zoom0 = 1;
+    const pinchDist = () => {
+      const [a, b] = Array.from(pts.values());
+      return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0;
+    };
+    const pdown = (e: PointerEvent) => {
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      try { canvas.setPointerCapture(e.pointerId); } catch { /* abaikan */ }
+      if (pts.size === 2) { pinch0 = pinchDist() || 1; zoom0 = engine.getZoom(); }
+    };
+    const pmove = (e: PointerEvent) => {
+      if (!pts.has(e.pointerId)) return;
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pts.size === 2 && pinch0 > 0) applyZoom(zoom0 * (pinchDist() / pinch0));
+    };
+    const pup = (e: PointerEvent) => {
+      if (!pts.delete(e.pointerId)) return;
+      if (pts.size < 2) { if (pinch0 > 0) saveZoom(); pinch0 = 0; }
+    };
+    const wheel = (e: WheelEvent) => {
+      e.preventDefault();
+      applyZoom(engine.getZoom() * (e.deltaY < 0 ? 1.1 : 1 / 1.1));
+      saveZoom();
+    };
+    canvas.addEventListener('pointerdown', pdown);
+    canvas.addEventListener('pointermove', pmove);
+    canvas.addEventListener('pointerup', pup);
+    canvas.addEventListener('pointercancel', pup);
+    canvas.addEventListener('wheel', wheel, { passive: false });
+
     const fit = () => {
       const r = wrap.getBoundingClientRect();
       setU(Math.max(0.8, Math.min(1.7, r.height / 360)));
@@ -338,6 +372,8 @@ export default function FishingGame(props: Props) {
       if (e.repeat) return;
       if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); engine.action(true); return; }
       if (e.code === 'Escape') { engine.cancel(); return; }
+      if (e.key === '+' || e.key === '=') { applyZoom(engine.getZoom() * 1.2); saveZoom(); return; }
+      if (e.key === '-' || e.key === '_') { applyZoom(engine.getZoom() / 1.2); saveZoom(); return; }
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
       engine.key(e.code, true);
     };
@@ -351,6 +387,11 @@ export default function FishingGame(props: Props) {
       window.removeEventListener('keydown', kd);
       window.removeEventListener('keyup', ku);
       clearInterval(poll);
+      canvas.removeEventListener('pointerdown', pdown);
+      canvas.removeEventListener('pointermove', pmove);
+      canvas.removeEventListener('pointerup', pup);
+      canvas.removeEventListener('pointercancel', pup);
+      canvas.removeEventListener('wheel', wheel);
       ro.disconnect();
       engine.destroy();
       engineRef.current = null;
@@ -372,12 +413,6 @@ export default function FishingGame(props: Props) {
     const sp = held ? SPECIES_BY_ID[held.s] : null;
     engineRef.current?.setHeld(held && sp ? { species: sp, weight: held.w } : null);
   }, [held]);
-
-  useEffect(() => {
-    lockLandscape().catch(() => {});
-    return () => { leaveLandscape(); };
-    /* eslint-disable-next-line react-hooks/exhaustive-deps */
-  }, []);
 
   // joystick
   const joyRef = useRef<HTMLDivElement>(null);
@@ -430,11 +465,6 @@ export default function FishingGame(props: Props) {
     if (risky && !window.confirm('Ada ikan XL/Epik/Legendary di ransel. Tetap jual semua?')) return;
     await sell(bag.map((b) => b.id));
     setBagOpen(false);
-  };
-  // kunci landscape TANPA layar penuh (tidak memicu pesan sistem "Tarik dari atas...")
-  const lockLandscape = async () => {
-    const o = screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> };
-    await o.lock?.('landscape');
   };
   // tombol menu "Layar penuh landscape": fullscreen dulu (pesan sistem Android muncul sebentar)
   const landscape = async () => {
@@ -627,6 +657,25 @@ export default function FishingGame(props: Props) {
         </div>
       )}
       {toast && <div style={{ position: 'absolute', left: '50%', top: px(112), transform: 'translateX(-50%)', zIndex: 20, background: 'rgba(15,23,42,0.92)', borderRadius: 99, padding: `${px(7)}px ${px(16)}px`, fontSize: px(14), fontWeight: 600, pointerEvents: 'none' }}>{toast}</div>}
+
+      {/* zoom: tombol +/- (cubit dua jari di layar juga bisa) */}
+      <div style={{ position: 'absolute', left: `calc(env(safe-area-inset-left, 0px) + ${px(9)}px)`, bottom: `calc(env(safe-area-inset-bottom, 0px) + ${px(27 + 105 + 10)}px)`, display: fishing ? 'none' : 'flex', flexDirection: 'column', gap: px(6), zIndex: 5 }}>
+        {([['+', 1.25, 'Perbesar'], ['−', 1 / 1.25, 'Perkecil']] as [string, number, string][]).map(([label, f, aria]) => (
+          <button
+            key={aria}
+            aria-label={aria}
+            disabled={f > 1 ? zoomUi >= FishingEngine.ZOOM_MAX - 0.01 : zoomUi <= FishingEngine.ZOOM_MIN + 0.01}
+            onClick={() => {
+              const en = engineRef.current;
+              if (!en) return;
+              en.setZoom(en.getZoom() * f);
+              setZoomUi(en.getZoom());
+              try { localStorage.setItem('komikita-fish-zoom', String(en.getZoom())); } catch { /* abaikan */ }
+            }}
+            style={{ ...circleBtn, width: px(36), height: px(36), fontSize: px(22), fontWeight: 700, fontFamily: HUD, lineHeight: 1, opacity: (f > 1 ? zoomUi >= FishingEngine.ZOOM_MAX - 0.01 : zoomUi <= FishingEngine.ZOOM_MIN + 0.01) ? 0.4 : 1 }}
+          >{label}</button>
+        ))}
+      </div>
 
       {/* joystick */}
       {!fishing && <div
