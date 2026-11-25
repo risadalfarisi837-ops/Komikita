@@ -235,8 +235,15 @@ export default function FishingGame(props: Props) {
   const [chat, setChat] = useState<{ who: string; msg: string; t: number }[]>([]);
   const [chatOpen, setChatOpen] = useState(false);
   const [buffOpen, setBuffOpen] = useState(true);
+  const [menu2, setMenu2] = useState(false);
   const toastT = useRef<ReturnType<typeof setTimeout> | null>(null);
   const px = (n: number) => Math.round(n * u);
+
+  // petunjuk awal cukup tampil sebentar supaya tidak menutupi layar
+  useEffect(() => {
+    const t = setTimeout(() => setIntro(false), 5000);
+    return () => clearTimeout(t);
+  }, []);
 
   const say = useCallback((m: string) => {
     setToast(m);
@@ -332,7 +339,7 @@ export default function FishingGame(props: Props) {
   }, [held]);
 
   useEffect(() => {
-    landscape().catch(() => {});
+    quietLandscape().catch(() => {});
     return () => { leaveLandscape(); };
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, []);
@@ -388,6 +395,14 @@ export default function FishingGame(props: Props) {
     if (risky && !window.confirm('Ada ikan XL/Epik/Legendary di ransel. Tetap jual semua?')) return;
     await sell(bag.map((b) => b.id));
     setBagOpen(false);
+  };
+  // otomatis saat masuk game: hanya kunci orientasi (tanpa layar penuh), jadi tidak memunculkan
+  // notifikasi hitam bawaan Android. Layar penuh tetap bisa lewat menu pengaturan.
+  const quietLandscape = async () => {
+    try {
+      const o = screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> };
+      await o.lock?.('landscape');
+    } catch { /* browser biasa menolak tanpa layar penuh; putar layar manual atau pakai menu */ }
   };
   const landscape = async () => {
     try {
@@ -494,8 +509,38 @@ export default function FishingGame(props: Props) {
           <span style={{ position: 'absolute', top: px(-5), left: px(-3), display: 'flex', alignItems: 'center', gap: px(3), padding: `${px(1.5)}px ${px(7)}px`, borderRadius: 99, background: 'linear-gradient(180deg,#38d58b,#1fa56a)', border: `${px(1.5)}px solid #1b1818`, fontSize: px(12), fontWeight: 700, color: '#fff', lineHeight: 1.2 }}><PeopleIcon size={px(12)} />1</span>
         </div>
         <button onClick={() => setChatOpen((o) => !o)} aria-label="Chat" style={ringBtn('#ffd36a')}><ChatIcon size={px(18)} /></button>
-        <button onClick={() => setShopOpen(true)} aria-label="Menu: Toko & Gacha" style={ringBtn('#ffd36a')}><Svg d="M4 7h16M4 12h16M4 17h16" size={px(18)} /></button>
+        <button onClick={() => setMenu2((o) => !o)} aria-label="Menu" style={ringBtn('#ffd36a')}><Svg d="M4 7h16M4 12h16M4 17h16" size={px(18)} /></button>
       </div>
+
+      {/* menu utama (tombol tiga garis) */}
+      {menu2 && !fishing && (() => {
+        const soon = () => say('Fitur ini segera hadir');
+        const go = (path: string) => () => { window.location.assign(path); };
+        const items: { k: string; icon: string; label: string; act: () => void }[] = [
+          { k: 'misi', icon: '📜', label: 'Misi', act: go('/misi') },
+          { k: 'koleksi', icon: '📘', label: 'Koleksi', act: soon },
+          { k: 'joran', icon: '🎣', label: 'Joran', act: () => { setShopTab('toko'); setShopOpen(true); } },
+          { k: 'lemari', icon: '👕', label: 'Lemari', act: soon },
+          { k: 'akuarium', icon: '🐠', label: 'Akuarium', act: soon },
+          { k: 'toko', icon: '🛍️', label: 'Toko', act: () => { setShopTab('toko'); setShopOpen(true); } },
+          { k: 'peringkat', icon: '🏆', label: 'Peringkat', act: go('/ranking') },
+          { k: 'surat', icon: '📮', label: 'Kotak Surat', act: soon },
+          { k: 'skill', icon: '🌳', label: 'Skill', act: soon },
+        ];
+        return (
+          <>
+            <div onClick={() => setMenu2(false)} style={{ position: 'absolute', inset: 0, zIndex: 25 }} />
+            <div style={{ position: 'absolute', zIndex: 26, right: `calc(env(safe-area-inset-right, 0px) + ${px(7)}px)`, top: `calc(env(safe-area-inset-top, 0px) + ${px(46)}px)`, width: `min(${px(600)}px, calc(100% - ${px(120)}px))`, boxSizing: 'border-box', padding: px(8), display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: px(6), background: 'rgba(30,28,28,0.84)', backdropFilter: `blur(${px(10)}px)`, WebkitBackdropFilter: `blur(${px(10)}px)`, border: `${px(1.5)}px solid rgba(255,255,255,0.14)`, borderRadius: px(20), boxShadow: '0 6px 22px rgba(0,0,0,0.4)' }}>
+              {items.map((it) => (
+                <button key={it.k} onClick={() => { setMenu2(false); it.act(); }} style={{ height: px(70), boxSizing: 'border-box', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', gap: px(3), padding: `${px(8)}px ${px(2)}px 0`, borderRadius: px(14), border: `${px(1.5)}px solid rgba(255,255,255,0.12)`, background: 'linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))', color: '#fff', fontFamily: HUD, fontWeight: 700, fontSize: px(13.5), lineHeight: 1.1, cursor: 'pointer' }}>
+                  <span style={{ fontSize: px(24), lineHeight: 1 }}>{it.icon}</span>
+                  <span>{it.label}</span>
+                </button>
+              ))}
+            </div>
+          </>
+        );
+      })()}
 
       {/* chat */}
       {!fishing && (() => {
