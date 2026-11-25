@@ -9,6 +9,7 @@ import {
   BAG_MAX, DEFAULT_ROD, GACHA_DUPLICATE_REFUND, GACHA_PRICE, RARITY, RODS, RODS_BY_ID, SPECIES, SPECIES_BY_ID,
   fishPrice, formatNum, formatWeight, isShowoff, isXL, levelFromXp, newId, sizeRatio, titleFor, xpFor,
 } from '@/lib/fishing';
+import { SPECIES as KSPECIES, sizeRatio as kSizeRatio } from '@/lib/fishing';
 import type { BagItem, Rod } from '@/lib/fishing';
 
 interface Props {
@@ -161,38 +162,6 @@ const HINT: Record<Phase, string> = {
 
 const rarityBorder = (r: keyof typeof RARITY, _xl: boolean) => (r === 'common' ? 'rgba(190,196,212,0.65)' : RARITY[r].color);
 
-// ---------- helper kartu hasil tangkapan ----------
-const RARITY_EN: Record<keyof typeof RARITY, string> = { common: 'COMMON', uncommon: 'UNCOMMON', rare: 'RARE', epic: 'EPIC', legendary: 'LEGENDARY' };
-const LEN_FACTOR: Record<string, number> = { long: 5, oval: 4, round: 2.8, flat: 6, big: 4.2, shark: 6 };
-// panjang perkiraan (cm) dari berat & bentuk ikan
-function fishLengthCm(shape: string, kg: number): number {
-  return Math.max(2, Math.round((LEN_FACTOR[shape] || 4) * Math.cbrt(Math.max(0.001, kg) * 1000)));
-}
-function formatLength(cm: number): string {
-  return cm >= 100 ? (cm / 100).toFixed(1).replace('.', ',') + ' m' : cm + ' cm';
-}
-// kualitas tangkapan dari posisi berat dalam rentang spesiesnya
-function qualityOf(ratio: number): { label: string; bg: string; fg: string; star: boolean } {
-  if (ratio >= 0.9) return { label: 'Sempurna', bg: 'linear-gradient(180deg,#ffd45a,#f5a623)', fg: '#4a2c05', star: true };
-  if (ratio >= 0.7) return { label: 'Besar', bg: 'linear-gradient(180deg,#9be7a8,#4fc772)', fg: '#0b3a1a', star: false };
-  if (ratio >= 0.4) return { label: 'Sedang', bg: 'linear-gradient(180deg,#bfe0ff,#7fb8f0)', fg: '#0f2f55', star: false };
-  if (ratio >= 0.15) return { label: 'Kecil', bg: 'linear-gradient(180deg,#e4e7ee,#c3c9d6)', fg: '#37404f', star: false };
-  return { label: 'Mungil', bg: 'linear-gradient(180deg,#e4e7ee,#c3c9d6)', fg: '#37404f', star: false };
-}
-// "Peluang 1 dari N" untuk spesies ini (berdasar bobot rarity, tanpa ikan event)
-function oddsOf(spId: string): number {
-  const sp = SPECIES_BY_ID[spId];
-  if (!sp || sp.eventOnly) return 0;
-  const total = Object.values(RARITY).reduce((a, r) => a + r.weight, 0);
-  const sameRarity = SPECIES.filter((x) => x.rarity === sp.rarity && !x.eventOnly).length || 1;
-  const p = RARITY[sp.rarity].weight / total / sameRarity;
-  return Math.max(2, Math.round(1 / p));
-}
-const SPARKS: { x: number; y: number; s: number; d: number }[] = [
-  { x: 8, y: 22, s: 11, d: 0 }, { x: 88, y: 12, s: 9, d: 0.6 }, { x: 18, y: 66, s: 8, d: 1.1 },
-  { x: 82, y: 58, s: 12, d: 0.3 }, { x: 50, y: 4, s: 7, d: 0.9 },
-];
-
 // ---------- kartu pamer (gambar untuk dibagikan) ----------
 async function makeShareCard(item: BagItem, player: string, level: number): Promise<Blob | null> {
   const sp = SPECIES_BY_ID[item.s];
@@ -234,6 +203,39 @@ async function leaveLandscape() {
   try { if (document.fullscreenElement) await document.exitFullscreen(); } catch { /* abaikan */ }
   setTimeout(() => { try { o.unlock?.(); } catch { /* abaikan */ } }, 600);
 }
+
+// >>> kartu-tangkapan (helper)
+const RARITY_EN: Record<keyof typeof RARITY, string> = { common: 'COMMON', uncommon: 'UNCOMMON', rare: 'RARE', epic: 'EPIC', legendary: 'LEGENDARY' };
+const LEN_FACTOR: Record<string, number> = { long: 5, oval: 4, round: 2.8, flat: 6, big: 4.2, shark: 6 };
+// panjang perkiraan (cm) dari berat & bentuk ikan
+function fishLengthCm(shape: string, kg: number): number {
+  return Math.max(2, Math.round((LEN_FACTOR[shape] || 4) * Math.cbrt(Math.max(0.001, kg) * 1000)));
+}
+function formatLength(cm: number): string {
+  return cm >= 100 ? (cm / 100).toFixed(1).replace('.', ',') + ' m' : cm + ' cm';
+}
+// kualitas tangkapan dari posisi berat dalam rentang spesiesnya
+function qualityOf(ratio: number): { label: string; bg: string; fg: string; star: boolean } {
+  if (ratio >= 0.9) return { label: 'Sempurna', bg: 'linear-gradient(180deg,#ffd45a,#f5a623)', fg: '#4a2c05', star: true };
+  if (ratio >= 0.7) return { label: 'Besar', bg: 'linear-gradient(180deg,#9be7a8,#4fc772)', fg: '#0b3a1a', star: false };
+  if (ratio >= 0.4) return { label: 'Sedang', bg: 'linear-gradient(180deg,#bfe0ff,#7fb8f0)', fg: '#0f2f55', star: false };
+  if (ratio >= 0.15) return { label: 'Kecil', bg: 'linear-gradient(180deg,#e4e7ee,#c3c9d6)', fg: '#37404f', star: false };
+  return { label: 'Mungil', bg: 'linear-gradient(180deg,#e4e7ee,#c3c9d6)', fg: '#37404f', star: false };
+}
+// "Peluang 1 dari N" untuk spesies ini (berdasar bobot rarity, tanpa ikan event)
+function oddsOf(spId: string): number {
+  const sp = SPECIES_BY_ID[spId];
+  if (!sp || sp.eventOnly) return 0;
+  const total = Object.values(RARITY).reduce((a, r) => a + r.weight, 0);
+  const sameRarity = KSPECIES.filter((x) => x.rarity === sp.rarity && !x.eventOnly).length || 1;
+  const p = RARITY[sp.rarity].weight / total / sameRarity;
+  return Math.max(2, Math.round(1 / p));
+}
+const SPARKS: { x: number; y: number; s: number; d: number }[] = [
+  { x: 8, y: 22, s: 11, d: 0 }, { x: 88, y: 12, s: 9, d: 0.6 }, { x: 18, y: 66, s: 8, d: 1.1 },
+  { x: 82, y: 58, s: 12, d: 0.3 }, { x: 50, y: 4, s: 7, d: 0.9 },
+];
+// <<< kartu-tangkapan
 
 export default function FishingGame(props: Props) {
   const { name, photo, crystal, xp, bag, rods, equippedRod } = props;
@@ -372,7 +374,7 @@ export default function FishingGame(props: Props) {
   }, [held]);
 
   useEffect(() => {
-    landscape().catch(() => {});
+    lockLandscape().catch(() => {});
     return () => { leaveLandscape(); };
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, []);
@@ -429,11 +431,14 @@ export default function FishingGame(props: Props) {
     await sell(bag.map((b) => b.id));
     setBagOpen(false);
   };
+  // kunci landscape TANPA layar penuh (tidak memicu pesan sistem "Tarik dari atas...")
+  const lockLandscape = async () => {
+    const o = screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> };
+    await o.lock?.('landscape');
+  };
+  // tombol menu "Layar penuh landscape": fullscreen dulu (pesan sistem Android muncul sebentar)
   const landscape = async () => {
     const o = screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> };
-    // 1) Coba kunci landscape tanpa fullscreen (jalan di aplikasi terpasang) -> tidak muncul pesan sistem
-    try { await o.lock?.('landscape'); return; } catch { /* browser biasa butuh fullscreen */ }
-    // 2) Fallback: fullscreen dulu, baru kunci rotasi
     try {
       if (!document.fullscreenElement) await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
       await o.lock?.('landscape');
@@ -704,14 +709,14 @@ export default function FishingGame(props: Props) {
       </div>
       <style>{`@keyframes kpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}.komikita-pulse{animation:kpulse .5s infinite}`}</style>
 
-      {/* hasil tangkapan: kartu lengkap */}
+      {/* hasil tangkapan: kartu lengkap (ketuk di mana saja untuk menutup) */}
       {popup && (() => {
         const sp = SPECIES_BY_ID[popup.item.s];
         const rar = RARITY[sp.rarity];
         const xl = isXL(sp, popup.item.w);
         const big = isShowoff(sp, popup.item.w);
         const price = fishPrice(sp, popup.item.w, rod.money);
-        const ratio = sizeRatio(sp, popup.item.w);
+        const ratio = kSizeRatio(sp, popup.item.w);
         const q = qualityOf(ratio);
         const stars = 1 + Math.min(6, Math.floor(ratio * 6.999));
         const len = formatLength(fishLengthCm(sp.shape, popup.item.w));
@@ -720,78 +725,71 @@ export default function FishingGame(props: Props) {
         const pct = Math.min(100, Math.round((lv.into / Math.max(1, lv.need)) * 100));
         const special = popup.up ? `LEVEL NAIK! · LEVEL ${popup.up}` : popup.record ? 'REKOR BARU!' : big ? 'TANGKAPAN BESAR!' : '';
         const INK = '#4a2c17';
-        const act = (bg: string, fg: string): CSSProperties => ({ width: px(112), height: px(34), borderRadius: px(17), border: `${px(2)}px solid rgba(255,255,255,0.85)`, background: bg, color: fg, fontFamily: HUD, fontWeight: 700, fontSize: px(13), cursor: 'pointer', boxShadow: `0 ${px(3)}px 0 rgba(0,0,0,0.35)`, padding: 0 });
-        const box = (hi: boolean): CSSProperties => ({ flex: 1, borderRadius: px(12), padding: `${px(5)}px ${px(2)}px ${px(4)}px`, background: hi ? '#ffe3cc' : '#fff', border: `${px(2)}px solid ${hi ? '#f7c9a3' : '#f1e6d2'}`, boxShadow: `0 ${px(3)}px 0 ${hi ? '#efb487' : '#e3d6bd'}`, textAlign: 'center' });
+        const k = (n: number) => Math.round(n * u * 0.68);
+        const box = (hi: boolean): CSSProperties => ({ flex: 1, borderRadius: k(12), padding: `${k(5)}px ${k(2)}px ${k(4)}px`, background: hi ? '#ffe3cc' : '#fff', border: `${k(2)}px solid ${hi ? '#f7c9a3' : '#f1e6d2'}`, boxShadow: `0 ${k(3)}px 0 ${hi ? '#efb487' : '#e3d6bd'}`, textAlign: 'center' });
         return (
-          <div style={{ ...ov, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: px(8), background: 'rgba(8,14,28,0.72)', backdropFilter: 'blur(3px)' }} onClick={closePopup}>
-            <style>{`@keyframes kcardin{0%{transform:translateY(${px(16)}px) scale(.88);opacity:0}100%{transform:none;opacity:1}}@keyframes kspin{to{transform:rotate(360deg)}}@keyframes ktw{0%,100%{opacity:.15;transform:scale(.6)}50%{opacity:1;transform:scale(1.15)}}`}</style>
-            <div onClick={(e) => e.stopPropagation()} style={{ position: 'relative', width: px(300), maxHeight: '100%', animation: 'kcardin .28s ease-out' }}>
+          <div style={{ ...ov, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: k(8), background: 'rgba(8,14,28,0.72)', backdropFilter: 'blur(3px)' }} onClick={closePopup}>
+            <style>{`@keyframes kcardin{0%{transform:translateY(${k(16)}px) scale(.88);opacity:0}100%{transform:none;opacity:1}}@keyframes kspin{to{transform:rotate(360deg)}}@keyframes ktw{0%,100%{opacity:.15;transform:scale(.6)}50%{opacity:1;transform:scale(1.15)}}`}</style>
+            <div style={{ position: 'relative', width: k(300), maxHeight: '92%', animation: 'kcardin .28s ease-out' }}>
               {/* pita rarity */}
-              <div style={{ position: 'absolute', top: px(-6), left: '50%', transform: 'translateX(-50%)', zIndex: 3, minWidth: px(150), textAlign: 'center', background: 'linear-gradient(180deg,#eef1f7,#c9d0de)', border: `${px(2)}px solid #aab3c6`, borderRadius: px(10), padding: `${px(2)}px ${px(18)}px`, boxShadow: `0 ${px(3)}px 0 #8d97ad`, fontWeight: 700, fontSize: px(17), letterSpacing: px(2), color: '#1d2230' }}>
+              <div style={{ position: 'absolute', top: k(-6), left: '50%', transform: 'translateX(-50%)', zIndex: 3, minWidth: k(150), textAlign: 'center', background: 'linear-gradient(180deg,#eef1f7,#c9d0de)', border: `${k(2)}px solid #aab3c6`, borderRadius: k(10), padding: `${k(2)}px ${k(18)}px`, boxShadow: `0 ${k(3)}px 0 #8d97ad`, fontWeight: 700, fontSize: k(17), letterSpacing: k(2), color: '#1d2230' }}>
                 {RARITY_EN[sp.rarity]}
-                <span style={{ position: 'absolute', left: 0, right: 0, bottom: px(-4), height: px(3), borderRadius: 99, background: rar.color }} />
+                <span style={{ position: 'absolute', left: 0, right: 0, bottom: k(-4), height: k(3), borderRadius: 99, background: rar.color }} />
               </div>
-              <div style={{ borderRadius: px(24), border: `${px(4)}px solid #c4cbd8`, background: '#fff7e6', boxShadow: `0 ${px(6)}px 0 #9aa3b6, 0 0 ${px(40)}px ${rar.color}88`, padding: `${px(22)}px ${px(12)}px ${px(10)}px`, textAlign: 'center', color: INK, overflow: 'hidden', position: 'relative' }}>
-                {special && <div style={{ fontSize: px(11), fontWeight: 700, letterSpacing: px(1.5), color: '#c0561b', marginBottom: px(2) }}>{special}</div>}
+              <div style={{ borderRadius: k(24), border: `${k(4)}px solid #c4cbd8`, background: '#fff7e6', boxShadow: `0 ${k(6)}px 0 #9aa3b6, 0 0 ${k(40)}px ${rar.color}88`, padding: `${k(24)}px ${k(12)}px ${k(10)}px`, textAlign: 'center', color: INK, overflow: 'hidden', position: 'relative' }}>
+                {special && <div style={{ fontSize: k(12), fontWeight: 700, letterSpacing: k(1.5), color: '#c0561b', marginBottom: k(2) }}>{special}</div>}
                 {/* ikan + sinar + kilau */}
-                <div style={{ position: 'relative', height: px(92), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <div style={{ position: 'absolute', width: px(190), height: px(190), left: '50%', top: '50%', marginLeft: px(-95), marginTop: px(-95), borderRadius: '50%', background: `repeating-conic-gradient(${rar.color}55 0deg 9deg, transparent 9deg 24deg)`, WebkitMaskImage: 'radial-gradient(circle, #000 18%, transparent 68%)', maskImage: 'radial-gradient(circle, #000 18%, transparent 68%)', animation: 'kspin 24s linear infinite' }} />
-                  {SPARKS.map((k, i) => (
-                    <svg key={i} viewBox="0 0 20 20" width={px(k.s)} height={px(k.s)} style={{ position: 'absolute', left: `${k.x}%`, top: `${k.y}%`, animation: `ktw 1.8s ease-in-out ${k.d}s infinite` }}><path d="M10 0l2.2 7.8L20 10l-7.8 2.2L10 20l-2.2-7.8L0 10l7.8-2.2z" fill="#fff" /></svg>
+                <div style={{ position: 'relative', height: k(84), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ position: 'absolute', width: k(190), height: k(190), left: '50%', top: '50%', marginLeft: k(-95), marginTop: k(-95), borderRadius: '50%', background: `repeating-conic-gradient(${rar.color}55 0deg 9deg, transparent 9deg 24deg)`, WebkitMaskImage: 'radial-gradient(circle, #000 18%, transparent 68%)', maskImage: 'radial-gradient(circle, #000 18%, transparent 68%)', animation: 'kspin 24s linear infinite' }} />
+                  {SPARKS.map((s2, i) => (
+                    <svg key={i} viewBox="0 0 20 20" width={k(s2.s)} height={k(s2.s)} style={{ position: 'absolute', left: `${s2.x}%`, top: `${s2.y}%`, animation: `ktw 1.8s ease-in-out ${s2.d}s infinite` }}><path d="M10 0l2.2 7.8L20 10l-7.8 2.2L10 20l-2.2-7.8L0 10l7.8-2.2z" fill="#fff" /></svg>
                   ))}
                   <div style={{ position: 'relative' }}>
-                    <FishIcon id={sp.id} scale={2.6 * u} />
-                    {xl && <span style={{ position: 'absolute', top: px(-4), right: px(-14), background: '#f59e3d', color: '#fff', fontWeight: 700, fontSize: px(11), borderRadius: px(7), padding: `${px(1)}px ${px(6)}px`, border: `${px(1.5)}px solid #fff` }}>XL</span>}
+                    <FishIcon id={sp.id} scale={2.6 * u * 0.68} />
+                    {xl && <span style={{ position: 'absolute', top: k(-4), right: k(-14), background: '#f59e3d', color: '#fff', fontWeight: 700, fontSize: k(12), borderRadius: k(7), padding: `${k(1)}px ${k(6)}px`, border: `${k(1.5)}px solid #fff` }}>XL</span>}
                   </div>
                 </div>
                 {/* bintang */}
-                <div style={{ display: 'flex', justifyContent: 'center', gap: px(3), margin: `${px(2)}px 0 ${px(1)}px` }}>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: k(3), margin: `${k(2)}px 0 ${k(1)}px` }}>
                   {Array.from({ length: 7 }, (_, i) => (
-                    <svg key={i} viewBox="0 0 24 24" width={px(15)} height={px(15)}><path d="M12 2l3 6.6 7.2.8-5.4 4.9 1.5 7.1L12 17.7 5.7 21.4l1.5-7.1L1.8 9.4 9 8.6z" fill={i < stars ? '#f5b82e' : '#e8dcc4'} stroke={i < stars ? '#d98e0f' : 'none'} strokeWidth="1" /></svg>
+                    <svg key={i} viewBox="0 0 24 24" width={k(16)} height={k(16)}><path d="M12 2l3 6.6 7.2.8-5.4 4.9 1.5 7.1L12 17.7 5.7 21.4l1.5-7.1L1.8 9.4 9 8.6z" fill={i < stars ? '#f5b82e' : '#e8dcc4'} stroke={i < stars ? '#d98e0f' : 'none'} strokeWidth="1" /></svg>
                   ))}
                 </div>
-                <div style={{ fontSize: px(26), fontWeight: 700, lineHeight: 1.1, color: INK }}>{sp.name}</div>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: px(4), marginTop: px(4), background: q.bg, color: q.fg, fontWeight: 700, fontSize: px(14), borderRadius: 99, padding: `${px(2)}px ${px(14)}px`, boxShadow: '0 2px 0 rgba(0,0,0,0.18)' }}>{q.star && '⭐'}{q.label}</span>
+                <div style={{ fontSize: k(27), fontWeight: 700, lineHeight: 1.1, color: INK }}>{sp.name}</div>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: k(4), marginTop: k(4), background: q.bg, color: q.fg, fontWeight: 700, fontSize: k(15), borderRadius: 99, padding: `${k(2)}px ${k(14)}px`, boxShadow: '0 2px 0 rgba(0,0,0,0.18)' }}>{q.star && '⭐'}{q.label}</span>
                 {/* statistik */}
-                <div style={{ display: 'flex', gap: px(7), marginTop: px(9) }}>
+                <div style={{ display: 'flex', gap: k(7), marginTop: k(9) }}>
                   <div style={box(true)}>
-                    <div style={{ fontSize: px(22), fontWeight: 700, color: '#b5441f', lineHeight: 1.05 }}>{formatWeight(popup.item.w)}</div>
-                    <div style={{ fontSize: px(10.5), fontWeight: 700, letterSpacing: px(1), color: '#a07a62' }}>BERAT</div>
+                    <div style={{ fontSize: k(23), fontWeight: 700, color: '#b5441f', lineHeight: 1.05 }}>{formatWeight(popup.item.w)}</div>
+                    <div style={{ fontSize: k(12), fontWeight: 700, letterSpacing: k(1), color: '#a07a62' }}>BERAT</div>
                   </div>
                   <div style={box(false)}>
-                    <div style={{ fontSize: px(22), fontWeight: 700, lineHeight: 1.05 }}>{len}</div>
-                    <div style={{ fontSize: px(10.5), fontWeight: 700, letterSpacing: px(1), color: '#a49a88' }}>PANJANG</div>
+                    <div style={{ fontSize: k(23), fontWeight: 700, lineHeight: 1.05 }}>{len}</div>
+                    <div style={{ fontSize: k(12), fontWeight: 700, letterSpacing: k(1), color: '#a49a88' }}>PANJANG</div>
                   </div>
                   <div style={box(false)}>
-                    <div style={{ fontSize: px(22), fontWeight: 700, lineHeight: 1.05, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: px(3) }}>
-                      <svg viewBox="0 0 20 20" width={px(15)} height={px(15)}><path d="M10 1l2.4 6.6L19 10l-6.6 2.4L10 19l-2.4-6.6L1 10l6.6-2.4z" fill="none" stroke="#4aa8ff" strokeWidth="1.8" strokeLinejoin="round" /></svg>
+                    <div style={{ fontSize: k(23), fontWeight: 700, lineHeight: 1.05, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: k(3) }}>
+                      <svg viewBox="0 0 20 20" width={k(16)} height={k(16)}><path d="M10 1l2.4 6.6L19 10l-6.6 2.4L10 19l-2.4-6.6L1 10l6.6-2.4z" fill="none" stroke="#4aa8ff" strokeWidth="1.8" strokeLinejoin="round" /></svg>
                       {formatNum(price)}
                     </div>
-                    <div style={{ fontSize: px(10.5), fontWeight: 700, letterSpacing: px(1), color: '#a49a88' }}>NILAI</div>
+                    <div style={{ fontSize: k(12), fontWeight: 700, letterSpacing: k(1), color: '#a49a88' }}>NILAI</div>
                   </div>
                 </div>
-                <div style={{ marginTop: px(7), fontSize: px(13), fontWeight: 700, color: '#9d9484' }}>{odds ? `Peluang 1 dari ${formatNum(odds)}` : 'Ikan event spesial'}</div>
-                <div style={{ borderTop: `${px(2)}px dashed #ecdcb8`, margin: `${px(7)}px 0 ${px(7)}px` }} />
+                <div style={{ marginTop: k(7), fontSize: k(14), fontWeight: 700, color: '#9d9484' }}>{odds ? `Peluang 1 dari ${formatNum(odds)}` : 'Ikan event spesial'}</div>
+                <div style={{ borderTop: `${k(2)}px dashed #ecdcb8`, margin: `${k(7)}px 0` }} />
                 {/* level & XP */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: px(7) }}>
-                  <span style={{ background: 'linear-gradient(180deg,#3b8cff,#1f64d6)', color: '#fff', fontWeight: 700, fontSize: px(14), borderRadius: 99, padding: `${px(2)}px ${px(12)}px`, boxShadow: '0 2px 0 #123f8f' }}>Lv {lv.level}</span>
-                  <span style={{ fontSize: px(15), fontWeight: 700, color: '#2d7be0' }}>+{popup.gain} XP</span>
-                  {mult > 1 && <span style={{ fontSize: px(12.5), fontWeight: 700, color: '#8a6a1f', background: '#fff0c4', borderRadius: 99, padding: `${px(1)}px ${px(8)}px` }}>⭐ ×{mult.toFixed(1).replace('.', ',')}</span>}
-                  <span style={{ marginLeft: 'auto', fontSize: px(12.5), fontWeight: 700, color: '#8f8676' }}>{formatNum(lv.into)}/{formatNum(lv.need)} XP</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: k(7) }}>
+                  <span style={{ background: 'linear-gradient(180deg,#3b8cff,#1f64d6)', color: '#fff', fontWeight: 700, fontSize: k(15), borderRadius: 99, padding: `${k(2)}px ${k(12)}px`, boxShadow: '0 2px 0 #123f8f', whiteSpace: 'nowrap' }}>Lv {lv.level}</span>
+                  <span style={{ fontSize: k(16), fontWeight: 700, color: '#2d7be0', whiteSpace: 'nowrap' }}>+{popup.gain} XP</span>
+                  {mult > 1 && <span style={{ fontSize: k(13), fontWeight: 700, color: '#8a6a1f', background: '#fff0c4', borderRadius: 99, padding: `${k(1)}px ${k(8)}px`, whiteSpace: 'nowrap' }}>⭐ ×{mult.toFixed(1).replace('.', ',')}</span>}
+                  <span style={{ marginLeft: 'auto', fontSize: k(13), fontWeight: 700, color: '#8f8676', whiteSpace: 'nowrap' }}>{formatNum(lv.into)}/{formatNum(lv.need)} XP</span>
                 </div>
-                <div style={{ marginTop: px(5), height: px(10), borderRadius: 99, background: '#e9dfca', overflow: 'hidden' }}>
+                <div style={{ marginTop: k(5), height: k(10), borderRadius: 99, background: '#e9dfca', overflow: 'hidden' }}>
                   <div style={{ width: `${pct}%`, height: '100%', borderRadius: 99, background: 'linear-gradient(180deg,#8be08f,#43b94f)', transition: 'width .6s ease-out' }} />
                 </div>
               </div>
             </div>
-            {/* tombol aksi di samping kartu */}
-            <div onClick={(e) => e.stopPropagation()} style={{ position: 'absolute', right: px(14), top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', gap: px(8) }}>
-              <button onClick={closePopup} style={act('linear-gradient(180deg,#58e08f,#25b862)', '#04210f')}>Simpan</button>
-              <button onClick={async () => { await sell([popup.item.id]); closePopup(); }} style={act('linear-gradient(180deg,#ffd45a,#f5a623)', '#4a2c05')}>Jual 💎{formatNum(price)}</button>
-              {big && <button onClick={() => share(popup.item)} style={act('linear-gradient(180deg,#d38cff,#9b5cf0)', '#fff')}>Pamerkan</button>}
-              <button onClick={() => { setHeld(popup.item); closePopup(); }} style={act('linear-gradient(180deg,#6fd0ff,#3b9cf0)', '#06131f')}>🙌 Pegang</button>
-            </div>
-            <div style={{ position: 'absolute', left: 0, right: 0, bottom: px(8), textAlign: 'center', fontSize: px(13), fontWeight: 600, color: 'rgba(255,255,255,0.7)', pointerEvents: 'none' }}>Ketuk di mana saja untuk menutup</div>
+            <div style={{ marginTop: k(12), fontSize: k(15), fontWeight: 600, color: 'rgba(255,255,255,0.75)', pointerEvents: 'none' }}>Ketuk di mana saja untuk menutup</div>
           </div>
         );
       })()}
