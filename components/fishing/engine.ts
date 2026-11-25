@@ -568,10 +568,10 @@ export class FishingEngine {
     }
     // pemain lain: geser halus menuju posisi terbaru dari server
     for (const r of this.remotes.values()) {
-      const dx = r.p.x - r.rx;
-      const dy = r.p.y - r.ry;
+      const dx = (r.p.x ?? 0) - r.rx;
+      const dy = (r.p.y ?? 0) - r.ry;
       const dd = Math.hypot(dx, dy);
-      if (dd > 64) { r.rx = r.p.x; r.ry = r.p.y; }
+      if (dd > 64) { r.rx = (r.p.x ?? 0); r.ry = (r.p.y ?? 0); }
       else { const k = 1 - Math.exp(-dt * 9); r.rx += dx * k; r.ry += dy * k; }
       r.moving = r.p.moving || dd > 1.2;
       if (r.moving) r.step += dt; else r.step = 0;
