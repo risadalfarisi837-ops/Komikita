@@ -29,6 +29,7 @@ export class FishingEngine {
   readonly world: World;
   phase: Phase = 'idle';
   level = 1;
+  luck = 0;
   bagFull = false;
 
   private canvas: HTMLCanvasElement;
@@ -80,6 +81,7 @@ export class FishingEngine {
 
   // ---------- kontrol dari UI ----------
   setLevel(n: number) { this.level = n; }
+  setLuck(n: number) { this.luck = n; }
   setBagFull(b: boolean) { this.bagFull = b; }
   setMove(x: number, y: number) { this.joyX = x; this.joyY = y; }
   key(code: string, down: boolean) { if (down) this.keys.add(code); else this.keys.delete(code); }
@@ -289,7 +291,7 @@ export class FishingEngine {
       this.waitT -= dt;
       if (Math.random() < dt * 0.7) this.ripples.push({ x: this.target.wx + (Math.random() - 0.5) * 6, y: this.target.wy + (Math.random() - 0.5) * 3, t: 0.55 });
       if (this.waitT <= 0) {
-        this.fish = rollFish(this.level);
+        this.fish = rollFish(this.level, this.luck);
         this.biteT = 1.25;
         this.ripples.push({ x: this.target.wx, y: this.target.wy, t: 0 });
         this.splash(this.target.wx, this.target.wy, 6);

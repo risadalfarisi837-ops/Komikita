@@ -89,14 +89,15 @@ export function titleFor(level: number): string {
 }
 
 // ---- Tangkapan ----
-export function rollFish(level: number, rnd: () => number = Math.random): { species: Species; weight: number } {
+export function rollFish(level: number, luck: number = 0, rnd: () => number = Math.random): { species: Species; weight: number } {
   const b = Math.min(Math.max(level, 1), MAX_LEVEL) / MAX_LEVEL; // 0..1
+  const lk = Math.max(0, Math.min(1.5, luck)); // bonus dari joran yang dipakai
   const w: Record<Rarity, number> = {
-    common: RARITY.common.weight - 20 * b,
-    uncommon: RARITY.uncommon.weight + 3 * b,
-    rare: RARITY.rare.weight + 8 * b,
-    epic: RARITY.epic.weight + 8 * b,
-    legendary: RARITY.legendary.weight + 4 * b,
+    common: Math.max(2, RARITY.common.weight - 20 * b - 16 * lk),
+    uncommon: RARITY.uncommon.weight + 3 * b + 2 * lk,
+    rare: RARITY.rare.weight + 8 * b + 6 * lk,
+    epic: RARITY.epic.weight + 8 * b + 6 * lk,
+    legendary: RARITY.legendary.weight + 4 * b + 3 * lk,
   };
   const order: Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
   const total = order.reduce((a, r) => a + w[r], 0);
@@ -113,13 +114,15 @@ export function rollFish(level: number, rnd: () => number = Math.random): { spec
   return { species, weight };
 }
 
-export function fishPrice(s: Species, weight: number): number {
+export function fishPrice(s: Species, weight: number, moneyBonus: number = 0): number {
   const t = s.max > s.min ? (weight - s.min) / (s.max - s.min) : 0.5;
-  return Math.max(1, Math.round(s.price * (0.75 + 0.5 * Math.min(1, Math.max(0, t)))));
+  const base = s.price * (0.75 + 0.5 * Math.min(1, Math.max(0, t)));
+  return Math.max(1, Math.round(base * (1 + Math.max(0, moneyBonus))));
 }
 
-export function xpFor(s: Species, weight: number): number {
-  return RARITY[s.rarity].xp + Math.round(Math.min(40, Math.sqrt(weight) * 2));
+export function xpFor(s: Species, weight: number, xpBonus: number = 0): number {
+  const base = RARITY[s.rarity].xp + Math.round(Math.min(40, Math.sqrt(weight) * 2));
+  return Math.round(base * (1 + Math.max(0, xpBonus)));
 }
 
 export function formatWeight(kg: number): string {
@@ -143,4 +146,58 @@ export function sanitizeBag(raw: unknown): BagItem[] {
     if (out.length >= BAG_MAX) break;
   }
   return out;
+}
+
+// ---- Joran (Toko & Gacha) ----
+export interface Rod {
+  id: string;
+  name: string;
+  rarity: Rarity;
+  power: number; // kekuatan tarik, sekadar tampilan
+  luck: number;  // bonus peluang dapat ikan langka (0..1)
+  money: number; // bonus harga jual, mis. 0.2 = +20%
+  xp: number;    // bonus XP, mis. 0.2 = +20%
+  price: number; // harga di Toko (Crystal); 0 = tidak dijual langsung, hanya lewat Gacha
+  gachaOnly?: boolean;
+}
+
+export const DEFAULT_ROD = 'default';
+
+export const RODS: Rod[] = [
+  { id: 'default', name: 'Joran Kayu', rarity: 'common', power: 1, luck: 0, money: 0, xp: 0, price: 0 },
+  { id: 'fiber', name: 'Joran Fiber', rarity: 'common', power: 2, luck: 0.06, money: 0.08, xp: 0.08, price: 300 },
+  { id: 'karbon', name: 'Joran Karbon', rarity: 'uncommon', power: 3, luck: 0.14, money: 0.16, xp: 0.16, price: 900 },
+  { id: 'perak', name: 'Joran Perak Laut', rarity: 'rare', power: 4, luck: 0.24, money: 0.26, xp: 0.26, price: 2400 },
+  { id: 'emas', name: 'Joran Emas Samudra', rarity: 'epic', power: 5, luck: 0.36, money: 0.38, xp: 0.36, price: 6000 },
+  { id: 'kristal', name: 'Joran Kristal Badai', rarity: 'epic', power: 6, luck: 0.46, money: 0.44, xp: 0.42, price: 0, gachaOnly: true },
+  { id: 'bulan', name: 'Joran Bulan Purnama', rarity: 'legendary', power: 7, luck: 0.6, money: 0.55, xp: 0.5, price: 0, gachaOnly: true },
+  { id: 'naga', name: 'Joran Naga Laut', rarity: 'legendary', power: 8, luck: 0.75, money: 0.68, xp: 0.6, price: 0, gachaOnly: true },
+];
+export const RODS_BY_ID: Record<string, Rod> = Object.fromEntries(RODS.map((r) => [r.id, r]));
+
+// Bersihkan daftar joran milik user dari Firebase; "default" selalu dianggap dimiliki.
+export function sanitizeRods(raw: unknown): string[] {
+  const arr: unknown[] = Array.isArray(raw) ? raw : raw && typeof raw === 'object' ? Object.values(raw as object) : [];
+  const owned = arr.filter((x): x is string => typeof x === 'string' && !!RODS_BY_ID[x]);
+  return Array.from(new Set([DEFAULT_ROD, ...owned]));
+}
+
+// ---- Gacha joran ----
+export const GACHA_PRICE = 500;
+// Dapat joran yang sudah dimiliki? dikembalikan jadi Crystal supaya nggak sia-sia.
+export const GACHA_DUPLICATE_REFUND = Math.round(GACHA_PRICE * 0.5);
+
+const GACHA_POOL: { rod: Rod; weight: number }[] = RODS.filter((r) => r.gachaOnly).map((r) => ({
+  rod: r,
+  weight: r.id === 'naga' ? 6 : r.id === 'bulan' ? 16 : 60,
+}));
+
+export function rollGacha(rnd: () => number = Math.random): Rod {
+  const total = GACHA_POOL.reduce((a, p) => a + p.weight, 0);
+  let roll = rnd() * total;
+  for (const p of GACHA_POOL) {
+    if (roll < p.weight) return p.rod;
+    roll -= p.weight;
+  }
+  return GACHA_POOL[GACHA_POOL.length - 1].rod;
 }

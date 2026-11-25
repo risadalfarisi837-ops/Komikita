@@ -2,14 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { PointerEvent as RPointerEvent } from 'react';
-import { ArrowLeft, Backpack, Maximize, Sparkles, X } from 'lucide-react';
+import { ArrowLeft, Backpack, Gem, Maximize, ShoppingBag, Sparkles, X } from 'lucide-react';
 import { FishingEngine } from './engine';
 import type { Catch, Phase } from './engine';
 import { FISH_H, FISH_W, drawFish } from './art';
 import {
-  BAG_MAX, RARITY, SPECIES_BY_ID, fishPrice, formatNum, formatWeight, levelFromXp, newId, titleFor, xpFor,
+  BAG_MAX, DEFAULT_ROD, GACHA_DUPLICATE_REFUND, GACHA_PRICE, RARITY, RODS, RODS_BY_ID, SPECIES_BY_ID,
+  fishPrice, formatNum, formatWeight, levelFromXp, newId, titleFor, xpFor,
 } from '@/lib/fishing';
-import type { BagItem } from '@/lib/fishing';
+import type { BagItem, Rod } from '@/lib/fishing';
 
 interface Props {
   name: string;
@@ -17,8 +18,13 @@ interface Props {
   crystal: number;
   xp: number;
   bag: BagItem[];
+  rods: string[];
+  equippedRod: string;
   onCatch: (item: BagItem, xpGain: number) => void;
   onSell: (ids: string[]) => Promise<number>;
+  onBuyRod: (id: string) => Promise<'ok' | 'kurang' | 'gagal'>;
+  onEquipRod: (id: string) => void;
+  onGacha: () => Promise<{ rod: Rod; duplicate: boolean } | 'kurang' | 'gagal'>;
   onExit: () => void;
 }
 
@@ -55,7 +61,8 @@ const HINT: Record<Phase, string> = {
 };
 
 export default function FishingGame(props: Props) {
-  const { name, photo, crystal, xp, bag } = props;
+  const { name, photo, crystal, xp, bag, rods, equippedRod } = props;
+  const rod = RODS_BY_ID[equippedRod] || RODS_BY_ID[DEFAULT_ROD];
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<FishingEngine | null>(null);
@@ -66,6 +73,11 @@ export default function FishingGame(props: Props) {
   const [toast, setToast] = useState('');
   const [popup, setPopup] = useState<{ item: BagItem; gain: number; up: number } | null>(null);
   const [bagOpen, setBagOpen] = useState(false);
+  const [shopOpen, setShopOpen] = useState(false);
+  const [shopTab, setShopTab] = useState<'toko' | 'gacha'>('toko');
+  const [buying, setBuying] = useState('');
+  const [pulling, setPulling] = useState(false);
+  const [gachaResult, setGachaResult] = useState<{ rod: Rod; duplicate: boolean } | null>(null);
   const [knob, setKnob] = useState({ x: 0, y: 0 });
   const toastT = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -86,7 +98,8 @@ export default function FishingGame(props: Props) {
       onBite: () => { try { navigator.vibrate?.(60); } catch { /* abaikan */ } },
       onCatch: (c: Catch) => {
         const item: BagItem = { id: newId(), s: c.species.id, w: c.weight };
-        const gain = xpFor(c.species, c.weight);
+        const curRod = RODS_BY_ID[propsRef.current.equippedRod] || RODS_BY_ID[DEFAULT_ROD];
+        const gain = xpFor(c.species, c.weight, curRod.xp);
         const before = levelFromXp(propsRef.current.xp).level;
         const after = levelFromXp(propsRef.current.xp + gain).level;
         propsRef.current.onCatch(item, gain);
@@ -125,11 +138,20 @@ export default function FishingGame(props: Props) {
     };
   }, [say]);
 
-  // sinkron level & tas penuh
+  // sinkron level, joran (luck), & tas penuh
   useEffect(() => {
     engineRef.current?.setLevel(levelFromXp(xp).level);
+    engineRef.current?.setLuck(rod.luck);
     engineRef.current?.setBagFull(bag.length >= BAG_MAX);
-  }, [xp, bag.length]);
+  }, [xp, bag.length, rod.luck]);
+
+  // coba masuk layar penuh + mode lanskap otomatis begitu game dibuka
+  // (beberapa browser menolak kalau tidak dipicu langsung dari ketukan pengguna;
+  // kalau gagal, tombol di pojok kanan atas tetap bisa dipakai manual)
+  useEffect(() => {
+    landscape().catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // joystick
   const joyRef = useRef<HTMLDivElement>(null);
@@ -155,6 +177,25 @@ export default function FishingGame(props: Props) {
     joyActive.current = false;
     setKnob({ x: 0, y: 0 });
     engineRef.current?.setMove(0, 0);
+  };
+
+  const buyRod = async (id: string) => {
+    setBuying(id);
+    const res = await props.onBuyRod(id);
+    if (res === 'ok') { say('Joran dibeli & dipakai!'); }
+    else if (res === 'kurang') say('Crystal kurang buat joran ini');
+    else say('Gagal membeli, coba lagi');
+    setBuying('');
+  };
+
+  const pullGacha = async () => {
+    if (pulling) return;
+    setPulling(true);
+    const res = await props.onGacha();
+    if (res === 'kurang') say('Crystal kurang buat Gacha');
+    else if (res === 'gagal') say('Gacha gagal, coba lagi');
+    else setGachaResult(res);
+    setPulling(false);
   };
 
   const closePopup = () => {
@@ -188,8 +229,8 @@ export default function FishingGame(props: Props) {
   const lv = levelFromXp(xp);
   const btnLabel = phase === 'idle' ? 'Joran' : phase === 'bite' ? 'Tarik!' : phase === 'reel' ? 'Tahan' : phase === 'result' || phase === 'catching' ? '...' : 'Tunggu...';
   const btnColor = phase === 'bite' ? 'linear-gradient(145deg,#fb7185,#e11d48)' : phase === 'reel' ? 'linear-gradient(145deg,#4ade80,#16a34a)' : phase === 'idle' ? 'linear-gradient(145deg,#f3d9a4,#c99a52)' : 'linear-gradient(145deg,#60a5fa,#2563eb)';
-  const sorted = [...bag].sort((a, b) => fishPrice(SPECIES_BY_ID[b.s], b.w) - fishPrice(SPECIES_BY_ID[a.s], a.w));
-  const total = bag.reduce((s, b) => s + fishPrice(SPECIES_BY_ID[b.s], b.w), 0);
+  const sorted = [...bag].sort((a, b) => fishPrice(SPECIES_BY_ID[b.s], b.w, rod.money) - fishPrice(SPECIES_BY_ID[a.s], a.w, rod.money));
+  const total = bag.reduce((s, b) => s + fishPrice(SPECIES_BY_ID[b.s], b.w, rod.money), 0);
   const pill = 'rounded-2xl border border-white/15 bg-[#0b1a2b]/80 backdrop-blur';
 
   return (
@@ -219,6 +260,11 @@ export default function FishingGame(props: Props) {
             </div>
           </div>
         </div>
+        {equippedRod !== DEFAULT_ROD && (
+          <div className={pill + ' flex h-8 items-center gap-1 px-2.5 text-xs font-black'} style={{ borderColor: RARITY[rod.rarity].color + '88', color: RARITY[rod.rarity].color }}>
+            🎣 {rod.name}
+          </div>
+        )}
       </div>
 
       {/* kanan atas: crystal + layar */}
@@ -227,6 +273,9 @@ export default function FishingGame(props: Props) {
           <Sparkles className="h-5 w-5 text-sky-300" />
           {formatNum(crystal)}
         </div>
+        <button onClick={() => setShopOpen(true)} aria-label="Toko & Gacha" className={pill + ' flex h-11 items-center gap-1.5 px-3 font-black active:scale-90'}>
+          <ShoppingBag className="h-5 w-5 text-amber-300" /> Toko
+        </button>
         <button onClick={landscape} aria-label="Layar penuh landscape" className={pill + ' flex h-11 w-11 items-center justify-center active:scale-90'}>
           <Maximize className="h-5 w-5" />
         </button>
@@ -290,7 +339,7 @@ export default function FishingGame(props: Props) {
       {popup && (() => {
         const sp = SPECIES_BY_ID[popup.item.s];
         const rar = RARITY[sp.rarity];
-        const price = fishPrice(sp, popup.item.w);
+        const price = fishPrice(sp, popup.item.w, rod.money);
         return (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/55 p-3">
             <div className="max-h-full w-full max-w-xs overflow-y-auto rounded-3xl border-2 bg-[#10243a] p-4 text-center" style={{ borderColor: rar.color, boxShadow: `0 0 40px ${rar.color}55` }}>
@@ -346,6 +395,94 @@ export default function FishingGame(props: Props) {
           </div>
         </div>
       )}
+
+      {/* Toko & Gacha */}
+      {shopOpen && (
+        <div className="absolute inset-0 z-10 flex items-end justify-center bg-black/55" onClick={() => setShopOpen(false)}>
+          <div className="flex max-h-[85%] w-full max-w-md flex-col rounded-t-3xl bg-[#10243a] p-4" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3 flex items-center justify-between">
+              <div className="flex gap-2">
+                <button onClick={() => setShopTab('toko')} className={'rounded-full px-4 py-2 text-sm font-black ' + (shopTab === 'toko' ? 'bg-amber-400 text-black' : 'bg-white/10 text-white/60')}>Toko</button>
+                <button onClick={() => setShopTab('gacha')} className={'rounded-full px-4 py-2 text-sm font-black ' + (shopTab === 'gacha' ? 'bg-amber-400 text-black' : 'bg-white/10 text-white/60')}>Gacha</button>
+              </div>
+              <button onClick={() => setShopOpen(false)} aria-label="Tutup" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10"><X className="h-5 w-5" /></button>
+            </div>
+
+            {shopTab === 'toko' ? (
+              <div className="min-h-[200px] flex-1 space-y-2 overflow-y-auto">
+                <p className="mb-1 text-xs font-bold text-white/50">Joran lebih bagus = peluang ikan langka naik, harga jual &amp; XP juga naik.</p>
+                {RODS.filter((r) => !r.gachaOnly).map((r) => {
+                  const rar = RARITY[r.rarity];
+                  const owned = rods.includes(r.id);
+                  const equipped = equippedRod === r.id;
+                  return (
+                    <div key={r.id} className="flex items-center gap-3 rounded-2xl border bg-white/5 p-3" style={{ borderColor: rar.color + '66' }}>
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-2xl" style={{ background: rar.color + '22' }}>🎣</div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-extrabold leading-tight">{r.name}</p>
+                        <p className="text-xs font-bold" style={{ color: rar.color }}>{rar.label}</p>
+                        <p className="mt-0.5 text-[11px] font-bold text-white/50">🍀+{Math.round(r.luck * 100)}% · 💰+{Math.round(r.money * 100)}% · ✨+{Math.round(r.xp * 100)}%</p>
+                      </div>
+                      {equipped ? (
+                        <span className="rounded-xl bg-emerald-500/90 px-3 py-2 text-xs font-black text-black">Dipakai</span>
+                      ) : owned ? (
+                        <button onClick={() => props.onEquipRod(r.id)} className="rounded-xl bg-sky-500 px-3 py-2 text-xs font-black text-white active:scale-95">Pakai</button>
+                      ) : r.price === 0 ? (
+                        <span className="rounded-xl bg-white/10 px-3 py-2 text-xs font-black text-white/40">Gratis</span>
+                      ) : (
+                        <button onClick={() => buyRod(r.id)} disabled={buying === r.id} className="flex items-center gap-1 rounded-xl bg-amber-400 px-3 py-2 text-xs font-black text-black active:scale-95 disabled:opacity-50">
+                          <Sparkles className="h-3.5 w-3.5" />{formatNum(r.price)}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex flex-1 flex-col items-center justify-center gap-4 py-6">
+                <p className="text-center text-sm font-bold text-white/60">Tarik Gacha buat dapat joran langka &amp; legendary.<br />Dapat yang sudah dimiliki? Crystal-nya balik separuh.</p>
+                <div className="grid grid-cols-3 gap-3">
+                  {RODS.filter((r) => r.gachaOnly).map((r) => {
+                    const rar = RARITY[r.rarity];
+                    const owned = rods.includes(r.id);
+                    return (
+                      <div key={r.id} className="flex flex-col items-center gap-1 rounded-2xl border p-2 text-center" style={{ borderColor: rar.color + '66', opacity: owned ? 0.5 : 1 }}>
+                        <span className="text-2xl">🎣</span>
+                        <span className="text-[11px] font-black leading-tight">{r.name}</span>
+                        <span className="text-[10px] font-bold" style={{ color: rar.color }}>{rar.label}{owned ? ' · Dimiliki' : ''}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <button onClick={pullGacha} disabled={pulling} className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-fuchsia-500 to-amber-400 px-6 py-3 font-black text-black active:scale-95 disabled:opacity-50">
+                  <Gem className="h-5 w-5" />{pulling ? 'Menarik...' : `Tarik · ${formatNum(GACHA_PRICE)}`}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* hasil gacha */}
+      {gachaResult && (() => {
+        const rar = RARITY[gachaResult.rod.rarity];
+        return (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/70 p-3">
+            <div className="w-full max-w-xs rounded-3xl border-2 bg-[#10243a] p-5 text-center" style={{ borderColor: rar.color, boxShadow: `0 0 50px ${rar.color}77` }}>
+              <p className="text-xs font-black tracking-widest" style={{ color: rar.color }}>{gachaResult.duplicate ? 'SUDAH PUNYA' : 'JORAN BARU!'}</p>
+              <div className="my-3 text-6xl">🎣</div>
+              <p className="text-xl font-black">{gachaResult.rod.name}</p>
+              <span className="mt-1 inline-block rounded-full px-3 py-0.5 text-xs font-black text-black" style={{ background: rar.color }}>{rar.label}</span>
+              {gachaResult.duplicate ? (
+                <p className="mt-3 text-sm font-bold text-white/70">Ditukar jadi +{formatNum(GACHA_DUPLICATE_REFUND)} Crystal</p>
+              ) : (
+                <p className="mt-3 text-sm font-bold text-white/70">🍀+{Math.round(gachaResult.rod.luck * 100)}% · 💰+{Math.round(gachaResult.rod.money * 100)}% · ✨+{Math.round(gachaResult.rod.xp * 100)}%</p>
+              )}
+              <button onClick={() => setGachaResult(null)} className="mt-4 w-full rounded-2xl bg-emerald-500 py-3 font-black text-black active:scale-95">Lanjut</button>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
