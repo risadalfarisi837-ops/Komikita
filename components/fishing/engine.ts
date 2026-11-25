@@ -102,6 +102,9 @@ export class FishingEngine {
   // ---------- kontrol dari UI ----------
   setLevel(n: number) { this.level = n; }
   setLuck(n: number) { this.luck = n; }
+  // 0..1 dari kekuatan joran: makin bagus joran, makin lebar zona hijau & makin lambat ikan melawan
+  private ease = 0;
+  setEase(n: number) { this.ease = Math.min(1, Math.max(0, n)); }
   setBagFull(b: boolean) { this.bagFull = b; }
   setProfile(p: Profile) { this.profile = p; }
   held: Catch | null = null; // ikan yang sedang dipegang untuk dipamerkan
@@ -386,12 +389,13 @@ export class FishingEngine {
 
   private hook() {
     if (!this.fish) return;
-    const diff = RARITY[this.fish.species.rarity].diff;
+    const e = this.ease;
+    const diff = Math.max(0.8, RARITY[this.fish.species.rarity].diff * (1 - 0.18 * e));
     this.reel = {
       fishPos: 50, fishTarget: 50, tNext: 0.5,
       zone: 36, zoneV: 0,
-      zoneH: 27 + Math.min(10, this.level * 0.35),
-      prog: 30, time: 0, diff,
+      zoneH: 28 + Math.min(10, this.level * 0.35) + 10 * e,
+      prog: 33 + 12 * e, time: 0, diff,
     };
     this.holding = true;
     this.setPhase('reel');
@@ -473,7 +477,7 @@ export class FishingEngine {
       if (this.waitT <= 0) {
         this.fish = this.castInShoal && this.castKind === 'hiu' && Math.random() < Math.min(0.8, 0.15 + this.luck * 0.5 + this.level / 200) ? rollShark() : rollFish(this.level, this.luck + (this.castInShoal ? 2 : 0));
         if (this.forceRarity) this.fish = this.rollForced(this.forceRarity);
-        this.biteT = 1.25;
+        this.biteT = 1.5 + 0.9 * this.ease;
         this.ripples.push({ x: this.target.wx, y: this.target.wy, t: 0 });
         this.splash(this.target.wx, this.target.wy, 6);
         this.setPhase('bite');
@@ -549,7 +553,8 @@ export class FishingEngine {
     if (r.zone > maxZone) { r.zone = maxZone; r.zoneV = -Math.abs(r.zoneV) * 0.25; }
 
     const inZone = r.fishPos >= r.zone && r.fishPos <= r.zone + r.zoneH;
-    r.prog = clamp(r.prog + (inZone ? 24 : -(12 + 6 * r.diff)) * dt, 0, 100);
+    const e = this.ease;
+    r.prog = clamp(r.prog + (inZone ? 24 * (1 + 0.3 * e) : -(12 + 6 * r.diff) * (1 - 0.3 * e)) * dt, 0, 100);
 
     this.reelRip -= dt;
     if (this.reelRip <= 0) {

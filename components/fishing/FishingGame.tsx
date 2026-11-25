@@ -7,11 +7,11 @@ import type { Catch, EngineStatus, Phase } from './engine';
 import { FISH_H, FISH_W, drawFish } from './art';
 import {
   BAG_MAX, DEFAULT_ROD, GACHA_DUPLICATE_REFUND, GACHA_PRICE, RARITY, RODS, RODS_BY_ID, SPECIES, SPECIES_BY_ID,
-  fishPrice, formatNum, formatWeight, isShowoff, isXL, levelFromXp, newId, sizeRatio, titleFor, xpFor,
+  fishPrice, formatNum, formatWeight, isShowoff, isXL, levelFromXp, newId, rodEase, sizeRatio, titleFor, xpFor,
 } from '@/lib/fishing';
 import { SPECIES as KSPECIES, sizeRatio as kSizeRatio } from '@/lib/fishing';
 import type { BagItem, Rarity, Rod } from '@/lib/fishing';
-import DevTools, { EMPTY_STATS } from './DevTools';
+import DevTools, { DevFab, EMPTY_STATS } from './DevTools';
 import type { DevStats, SellMode } from './DevTools';
 
 interface Props {
@@ -443,9 +443,10 @@ export default function FishingGame(props: Props) {
   useEffect(() => {
     engineRef.current?.setLevel(lv.level);
     engineRef.current?.setLuck(rod.luck);
+    engineRef.current?.setEase(rodEase(rod.power));
     engineRef.current?.setBagFull(bag.length >= BAG_MAX);
     engineRef.current?.setProfile({ name: name || 'Tamu', title: titleFor(lv.level), level: lv.level, rodName: rod.name, rodId: rod.id });
-  }, [lv.level, bag.length, rod.luck, rod.name, rod.id, name]);
+  }, [lv.level, bag.length, rod.luck, rod.power, rod.name, rod.id, name]);
 
   // ikan yang dipegang karakter (pamer)
   useEffect(() => {
@@ -957,15 +958,7 @@ export default function FishingGame(props: Props) {
       })()}
 
       {/* Mode Developer: penanda auto aktif (tetap tampil saat mancing; ketuk untuk stop) + panel */}
-      {dev && (
-        <button
-          onClick={() => setDevOpen(true)}
-          aria-label="Dev Mancing"
-          style={{ position: 'absolute', zIndex: 24, right: `calc(env(safe-area-inset-right, 0px) + ${px(18)}px)`, bottom: `calc(env(safe-area-inset-bottom, 0px) + ${px(128)}px)`, width: px(46), height: px(46), borderRadius: '50%', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: px(21), color: '#fff', background: 'rgba(20,26,40,0.92)', border: `${px(3)}px solid ${auto ? '#22c55e' : '#818cf8'}`, boxShadow: auto ? '0 0 12px #22c55e' : '0 0 10px rgba(129,140,248,0.7)' }}
-        >
-          🛠️
-        </button>
-      )}
+      {dev && <DevFab px={px} rot={rot} getWrap={() => wrapRef.current} auto={auto} count={dstats.catches} open={devOpen} onTap={() => setDevOpen((o) => !o)} />}
       {dev && auto && (
         <button
           onClick={() => engineRef.current?.setAuto(false)}
@@ -978,7 +971,7 @@ export default function FishingGame(props: Props) {
       )}
       {dev && devOpen && (
         <DevTools
-          px={px} overlay={ov} engine={engineRef.current}
+          px={px} rot={rot} getWrap={() => wrapRef.current} engine={engineRef.current}
           auto={auto} onAuto={(on) => engineRef.current?.setAuto(on)}
           sellMode={sellMode} setSellMode={setSellMode}
           speed={speed} setSpeed={setSpeed}
@@ -1023,7 +1016,7 @@ export default function FishingGame(props: Props) {
                       <div style={{ width: px(40), height: px(40), borderRadius: px(10), background: rar.color + '22', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><RodIcon size={px(26)} color={rar.color} /></div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: px(15), fontWeight: 700 }}>{r.name}</div>
-                        <div style={{ fontSize: px(11), fontWeight: 700, color: rar.color }}>{rar.label} · 🍀+{Math.round(r.luck * 100)}% 💰+{Math.round(r.money * 100)}% ✨+{Math.round(r.xp * 100)}%</div>
+                        <div style={{ fontSize: px(11), fontWeight: 700, color: rar.color }}>{rar.label} · 🍀+{Math.round(r.luck * 100)}% 💰+{Math.round(r.money * 100)}% ✨+{Math.round(r.xp * 100)}% 🎯+{Math.round(rodEase(r.power) * 100)}%</div>
                       </div>
                       {equipped ? <span style={{ background: '#34d27a', color: '#04210f', fontWeight: 700, fontSize: px(12), borderRadius: px(10), padding: `${px(6)}px ${px(12)}px` }}>Dipakai</span>
                         : owned ? <button onClick={() => props.onEquipRod(r.id)} style={{ background: '#2f7be0', color: '#fff', border: 0, fontFamily: HUD, fontWeight: 700, fontSize: px(12), borderRadius: px(10), padding: `${px(6)}px ${px(14)}px`, cursor: 'pointer' }}>Pakai</button>

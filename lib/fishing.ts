@@ -196,6 +196,9 @@ export const RODS: Rod[] = [
 ];
 export const RODS_BY_ID: Record<string, Rod> = Object.fromEntries(RODS.map((r) => [r.id, r]));
 
+// Kemudahan menarik ikan dari kekuatan joran (power 1..8 -> 0..1). Joran Kayu = 0, Naga Laut = 1.
+export const rodEase = (power: number): number => Math.min(1, Math.max(0, (power - 1) / 7));
+
 // Bersihkan daftar joran milik user dari Firebase; "default" selalu dianggap dimiliki.
 export function sanitizeRods(raw: unknown): string[] {
   const arr: unknown[] = Array.isArray(raw) ? raw : raw && typeof raw === 'object' ? Object.values(raw as object) : [];
