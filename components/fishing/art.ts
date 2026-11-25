@@ -866,7 +866,7 @@ export function fishSprite(sp: Species): HTMLCanvasElement {
   return out;
 }
 
-const GIANT_SCALE = 6.2; // ikan raksasa: sekitar setengah lebar pulau
+const GIANT_SCALE = 10.5; // ikan raksasa: selebar pulau
 export function drawShowFish(ctx: CanvasRenderingContext2D, x: number, y: number, sp: Species, weight: number) {
   const t = performance.now() / 1000;
   const ratio = sizeRatio(sp, weight);

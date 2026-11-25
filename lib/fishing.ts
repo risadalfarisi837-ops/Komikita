@@ -46,8 +46,7 @@ export const SPECIES: Species[] = [
   { id: 'bulan', name: 'Ikan Bulan Emas', rarity: 'legendary', min: 200, max: 900, price: 1200, shape: 'round', body: '#ffd24a', belly: '#fff1b8', fin: '#ffb300', pattern: 'spots', accent: '#fff8d6', glow: true },
   { id: 'paus', name: 'Paus Kristal', rarity: 'legendary', min: 500, max: 1500, price: 1800, shape: 'big', body: '#58c7ff', belly: '#e0f7ff', fin: '#2f9bdc', pattern: 'spots', accent: '#ffffff', glow: true },
   { id: 'hiu', name: 'Hiu Raksasa', rarity: 'legendary', min: 400, max: 1800, price: 2600, shape: 'shark', body: '#6b7f94', belly: '#eef3f7', fin: '#52657a', pattern: 'none', accent: '#3d4d5f', glow: true, eventOnly: true },
-  { id: 'leviathan', name: 'Leviathan Pulau', rarity: 'legendary', min: 40000, max: 90000, price: 15000, shape: 'big', body: '#1f6f8b', belly: '#bfeaf5', fin: '#134a63', pattern: 'spots', accent: '#7df9ff', glow: true, eventOnly: true, giant: true },
-  { id: 'leviathan', name: 'Leviathan', rarity: 'legendary', min: 9000, max: 22000, price: 24000, shape: 'big', body: '#23407a', belly: '#6fb7ff', fin: '#7b5cff', pattern: 'spots', accent: '#7df9ff', glow: true, eventOnly: true },
+  { id: 'leviathan', name: 'Leviathan Pulau', rarity: 'legendary', min: 150000, max: 400000, price: 40000, shape: 'big', body: '#1f6f8b', belly: '#bfeaf5', fin: '#134a63', pattern: 'spots', accent: '#7df9ff', glow: true, eventOnly: true, giant: true },
 ];
 
 export const SPECIES_BY_ID: Record<string, Species> = Object.fromEntries(SPECIES.map((s) => [s.id, s]));
