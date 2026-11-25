@@ -3,13 +3,13 @@ import { RARITY, rollFish } from '@/lib/fishing';
 import type { Species } from '@/lib/fishing';
 import {
   TILE, generateWorld, drawPlayer, drawPalm, drawRock, drawLamp, drawBobber, drawRipple, drawLine,
-  drawBubbleAlert, drawFish, rodGeometry, drawFountain, drawBench, drawTable, drawStool, drawSign, drawBush, drawNpc,
+  drawBubbleAlert, drawFish, drawShowFish, rodGeometry, PAL_PLAYER, drawFountain, drawBench, drawTable, drawStool, drawSign, drawBush, drawNpc,
 } from './art';
 import type { Dir, World } from './art';
 
 export type Phase = 'idle' | 'cast' | 'wait' | 'bite' | 'reel' | 'catching' | 'result';
 export interface Catch { species: Species; weight: number }
-export interface Profile { name: string; title: string; level: number; rodName: string }
+export interface Profile { name: string; title: string; level: number; rodName: string; rodId?: string }
 export interface ShoalStatus { dist: number; ang: number; left: number }
 export interface EngineStatus { shoal: ShoalStatus | null; inShoal: boolean }
 interface Shoal { x: number; y: number; r: number; until: number }
@@ -100,6 +100,8 @@ export class FishingEngine {
   setLuck(n: number) { this.luck = n; }
   setBagFull(b: boolean) { this.bagFull = b; }
   setProfile(p: Profile) { this.profile = p; }
+  held: Catch | null = null; // ikan yang sedang dipegang untuk dipamerkan
+  setHeld(c: Catch | null) { this.held = c; }
   setMove(x: number, y: number) { this.joyX = x; this.joyY = y; }
   key(code: string, down: boolean) { if (down) this.keys.add(code); else this.keys.delete(code); }
 
@@ -571,7 +573,15 @@ export class FishingEngine {
         default: ents.push({ y: byp + 15, f: () => drawLamp(ctx, p, t) });
       }
     }
-    ents.push({ y: this.py, f: () => drawPlayer(ctx, this.px, this.py, this.dir, this.moving, this.stepT, rod, shake) });
+    const show = ph === 'idle' ? this.held : null;
+    const rodId = this.profile.rodId || 'default';
+    ents.push({
+      y: this.py,
+      f: () => {
+        drawPlayer(ctx, this.px, this.py, this.dir, this.moving, this.stepT, rod, shake, PAL_PLAYER, rodId, !rod && !show, !!show);
+        if (show) drawShowFish(ctx, this.px, this.py, show.species, show.weight);
+      },
+    });
     ents.sort((a, b) => a.y - b.y);
     for (const e of ents) e.f();
 

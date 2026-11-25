@@ -132,6 +132,7 @@ export default function FishingGame(props: Props) {
   const [toast, setToast] = useState('');
   const [popup, setPopup] = useState<{ item: BagItem; gain: number; up: number; record: boolean } | null>(null);
   const [bagOpen, setBagOpen] = useState(false);
+  const [held, setHeld] = useState<BagItem | null>(null);
   const [sel, setSel] = useState('');
   const [shopOpen, setShopOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -229,8 +230,14 @@ export default function FishingGame(props: Props) {
     engineRef.current?.setLevel(lv.level);
     engineRef.current?.setLuck(rod.luck);
     engineRef.current?.setBagFull(bag.length >= BAG_MAX);
-    engineRef.current?.setProfile({ name: name || 'Tamu', title: titleFor(lv.level), level: lv.level, rodName: rod.name });
-  }, [lv.level, bag.length, rod.luck, rod.name, name]);
+    engineRef.current?.setProfile({ name: name || 'Tamu', title: titleFor(lv.level), level: lv.level, rodName: rod.name, rodId: rod.id });
+  }, [lv.level, bag.length, rod.luck, rod.name, rod.id, name]);
+
+  // ikan yang dipegang karakter (pamer)
+  useEffect(() => {
+    const sp = held ? SPECIES_BY_ID[held.s] : null;
+    engineRef.current?.setHeld(held && sp ? { species: sp, weight: held.w } : null);
+  }, [held]);
 
   useEffect(() => { landscape().catch(() => {}); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
 
@@ -273,6 +280,7 @@ export default function FishingGame(props: Props) {
   const sell = async (ids: string[]) => {
     if (!ids.length) return;
     const got = await props.onSell(ids);
+    if (got > 0 && held && ids.includes(held.id)) setHeld(null);
     if (got > 0) say('+' + formatNum(got) + ' Crystal');
     else if (got < 0) say('Login dulu buat jual ikan');
     return got;
@@ -442,6 +450,12 @@ export default function FishingGame(props: Props) {
                 </button>
               );
             })}
+            {held && (
+              <button style={{ ...slot(false, '#34d27a'), width: px(48) }} onClick={() => setHeld(null)} aria-label="Lepas ikan">
+                <span style={{ fontSize: px(20) }}>🙌</span>
+                <span style={wLabel()}>Lepas</span>
+              </button>
+            )}
             <button style={{ ...slot(false, '#3d8bff'), width: px(48) }} onClick={() => { setSel(''); setBagOpen(true); }} aria-label="Ransel">
               <BagIcon size={px(28)} />
               <span style={{ ...wLabel(), color: bag.length >= BAG_MAX ? '#ff8a8a' : '#fff' }}>{bag.length}/{BAG_MAX}</span>
@@ -493,6 +507,7 @@ export default function FishingGame(props: Props) {
                 {big && <button onClick={() => share(popup.item)} style={{ ...btn, background: 'linear-gradient(90deg,#c36bff,#f5c451)', color: '#1a1020' }}>Pamerkan</button>}
                 <button onClick={closePopup} style={{ ...btn, background: '#34d27a', color: '#04210f' }}>Simpan</button>
               </div>
+              <button onClick={() => { setHeld(popup.item); closePopup(); }} style={{ ...btn, width: '100%', marginTop: px(8), background: 'linear-gradient(90deg,#38bdf8,#818cf8)', color: '#06131f' }}>🙌 Pegang & pamerkan</button>
             </div>
           </div>
         );
@@ -540,6 +555,7 @@ export default function FishingGame(props: Props) {
                     <div style={{ fontSize: px(22), fontWeight: 700, margin: `${px(2)}px 0 ${px(6)}px` }}>{formatWeight(selItem.w)}</div>
                     <div style={{ display: 'grid', gap: px(6), marginTop: 'auto' }}>
                       {isShowoff(sp, selItem.w) && <button onClick={() => share(selItem)} style={{ ...btn, background: 'linear-gradient(90deg,#c36bff,#f5c451)', color: '#1a1020' }}>Pamerkan</button>}
+                      <button onClick={() => { setHeld(held && held.id === selItem.id ? null : selItem); setBagOpen(false); }} style={{ ...btn, background: 'linear-gradient(90deg,#38bdf8,#818cf8)', color: '#06131f' }}>{held && held.id === selItem.id ? 'Lepas ikan' : '🙌 Pegang'}</button>
                       <button onClick={() => sell([selItem.id])} style={{ ...btn, background: '#f5c451', color: '#2a1d00' }}>Jual 💎{formatNum(fishPrice(sp, selItem.w, rod.money))}</button>
                     </div>
                   </div>

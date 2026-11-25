@@ -1,4 +1,5 @@
 // Semua gambar game Mancing dibuat lewat kode (pixel art procedural), tanpa file gambar.
+import { RARITY, isXL, sizeRatio } from '@/lib/fishing';
 import type { Species } from '@/lib/fishing';
 
 export const TILE = 16;
@@ -438,11 +439,68 @@ function line(ctx: CanvasRenderingContext2D, x0: number, y0: number, x1: number,
   }
 }
 
+// ---------- skin joran (tampil di tangan karakter) ----------
+export interface RodSkin { shaft: string; shaftD: string; grip: string; tip: string; ring: string; glow?: string; spark?: string }
+export const ROD_SKINS: Record<string, RodSkin> = {
+  default: { shaft: '#8a5a2b', shaftD: '#5e3a18', grip: '#3d2610', tip: '#e8d9b0', ring: '#b88a4a' },
+  fiber: { shaft: '#3fb7a6', shaftD: '#26857a', grip: '#1f4a45', tip: '#d8fff6', ring: '#8ff0df' },
+  karbon: { shaft: '#2b2f3a', shaftD: '#14171f', grip: '#c0392b', tip: '#ff6b5e', ring: '#5a6073' },
+  perak: { shaft: '#c9d3df', shaftD: '#8c99ab', grip: '#3e5a8a', tip: '#ffffff', ring: '#eaf2ff', glow: '#bcd8ff' },
+  emas: { shaft: '#f2c230', shaftD: '#b8860b', grip: '#6b3f12', tip: '#fff3b0', ring: '#ffe27a', glow: '#ffd24a', spark: '#fff6c8' },
+  kristal: { shaft: '#58d6ff', shaftD: '#2b8fc9', grip: '#2a3f7a', tip: '#e6fbff', ring: '#a8ecff', glow: '#7df9ff', spark: '#ffffff' },
+  bulan: { shaft: '#d9d2ff', shaftD: '#8f86d6', grip: '#3a2f78', tip: '#fffbe0', ring: '#f0ecff', glow: '#c9bfff', spark: '#fff7c2' },
+  naga: { shaft: '#c0392b', shaftD: '#7a1d14', grip: '#1f3b2a', tip: '#ffcf5a', ring: '#ffa14a', glow: '#ff6a3a', spark: '#ffd27a' },
+};
+
+// Posisi joran saat dipegang santai (belum dilempar): tegak di samping badan
+export function holdGeometry(x: number, y: number, dir: Dir): RodGeo {
+  switch (dir) {
+    case 'down': return { hx: x + 5, hy: y - 8, tx: x + 10, ty: y - 27 };
+    case 'up': return { hx: x + 5, hy: y - 9, tx: x + 9, ty: y - 28 };
+    case 'left': return { hx: x - 5, hy: y - 8, tx: x - 10, ty: y - 28 };
+    default: return { hx: x + 5, hy: y - 8, tx: x + 10, ty: y - 28 };
+  }
+}
+
+export function drawRodSkin(ctx: CanvasRenderingContext2D, g: RodGeo, rodId: string, skinCol: string) {
+  const sk = ROD_SKINS[rodId] || ROD_SKINS.default;
+  const t = performance.now() / 1000;
+  const dx = g.tx - g.hx;
+  const dy = g.ty - g.hy;
+  line(ctx, g.hx, g.hy, g.tx, g.ty, sk.shaftD, 2);
+  line(ctx, g.hx, g.hy, g.tx, g.ty, sk.shaft, 1);
+  line(ctx, g.hx, g.hy, g.hx + dx * 0.28, g.hy + dy * 0.28, sk.grip, 2);
+  R(ctx, g.hx + dx * 0.5, g.hy + dy * 0.5, 2, 2, sk.ring);
+  R(ctx, g.hx + dx * 0.74, g.hy + dy * 0.74, 2, 2, sk.ring);
+  R(ctx, g.tx, g.ty, 2, 2, sk.tip);
+  if (sk.glow) {
+    ctx.save();
+    ctx.globalAlpha = 0.25 + 0.15 * Math.sin(t * 4);
+    ctx.fillStyle = sk.glow;
+    ctx.beginPath();
+    ctx.arc(g.tx + 1, g.ty + 1, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  if (sk.spark) {
+    for (let i = 0; i < 3; i++) {
+      const k = (t * 0.7 + i / 3) % 1;
+      const sx = Math.round(g.hx + dx * k + Math.sin(t * 5 + i * 2) * 2);
+      const sy = Math.round(g.hy + dy * k - 2 + Math.cos(t * 4 + i) * 1.5);
+      ctx.globalAlpha = Math.max(0, Math.sin(k * Math.PI));
+      R(ctx, sx, sy - 1, 1, 3, sk.spark);
+      R(ctx, sx - 1, sy, 3, 1, sk.spark);
+    }
+    ctx.globalAlpha = 1;
+  }
+  R(ctx, g.hx - 1, g.hy, 2, 2, skinCol);
+}
+
 export interface Pal { skin: string; skinD: string; hair: string; shirt: string; shirtD: string; pants: string; boot: string; hat: string; hatD: string; band: string; cap?: boolean }
 export const PAL_PLAYER: Pal = { skin: '#f6d4b8', skinD: '#dcae8c', hair: '#9a68d8', shirt: '#2f4b7e', shirtD: '#1f3459', pants: '#223559', boot: '#2a2233', hat: '#2b4375', hatD: '#1b2c52', band: '#f0c75a', cap: true };
 export const PAL_BAYU: Pal = { skin: '#e2b48a', skinD: '#c4936a', hair: '#d9d6cf', shirt: '#6b9a4e', shirtD: '#527a3a', pants: '#c8a96a', boot: '#6b4a2a', hat: '#ead69a', hatD: '#c9b06a', band: '#8a5a2b' };
 
-export function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number, dir: Dir, moving: boolean, step: number, rod: boolean, rodShake = 0, pal: Pal = PAL_PLAYER) {
+export function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number, dir: Dir, moving: boolean, step: number, rod: boolean, rodShake = 0, pal: Pal = PAL_PLAYER, rodId = 'default', hold = false, armsUp = false) {
   const fr = moving ? Math.floor(step * 8) % 4 : 0;
   const bob = moving && (fr === 1 || fr === 3) ? -1 : 0;
   drawShadow(ctx, x, y - 1, 6, 2, 0.28);
@@ -464,10 +522,17 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number, 
     R(ctx, ox + 4, oy + 10, 8, 7, pal.shirt);
     R(ctx, ox + 4, oy + 15, 8, 2, pal.shirtD);
     if (dir === 'up') R(ctx, ox + 5, oy + 11, 6, 5, '#8a5a2b');
-    R(ctx, ox + 2, oy + 11, 2, 5, pal.shirt);
-    R(ctx, ox + 12, oy + 11, 2, 5, pal.shirt);
-    R(ctx, ox + 2, oy + 16, 2, 1, pal.skin);
-    R(ctx, ox + 12, oy + 16, 2, 1, pal.skin);
+    if (armsUp) {
+      R(ctx, ox + 2, oy - 6, 2, 17, pal.shirt);
+      R(ctx, ox + 12, oy - 6, 2, 17, pal.shirt);
+      R(ctx, ox + 2, oy - 8, 2, 2, pal.skin);
+      R(ctx, ox + 12, oy - 8, 2, 2, pal.skin);
+    } else {
+      R(ctx, ox + 2, oy + 11, 2, 5, pal.shirt);
+      R(ctx, ox + 12, oy + 11, 2, 5, pal.shirt);
+      R(ctx, ox + 2, oy + 16, 2, 1, pal.skin);
+      R(ctx, ox + 12, oy + 16, 2, 1, pal.skin);
+    }
     R(ctx, ox + 4, oy + 3, 8, 8, dir === 'up' ? pal.hair : pal.skin);
     if (dir === 'down') {
       R(ctx, ox + 4, oy + 3, 8, 2, pal.hair);
@@ -498,8 +563,13 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number, 
     R(ctx, ox + 3, oy + 8, 1, 1, pal.skinD);
     R(ctx, ox + 4, oy + 9, 2, 1, 'rgba(240,110,120,0.55)');
     R(ctx, ox + 4, oy + 10, 2, 1, '#b5543f');
-    R(ctx, ox + 5, oy + 11, 3, 5, lighten(pal.shirt, 0.1));
-    R(ctx, ox + 5, oy + 16, 2, 1, pal.skin);
+    if (armsUp) {
+      R(ctx, ox + 5, oy - 6, 3, 17, lighten(pal.shirt, 0.1));
+      R(ctx, ox + 5, oy - 8, 3, 2, pal.skin);
+    } else {
+      R(ctx, ox + 5, oy + 11, 3, 5, lighten(pal.shirt, 0.1));
+      R(ctx, ox + 5, oy + 16, 2, 1, pal.skin);
+    }
   }
   if (pal.cap) {
     // topi pelaut
@@ -521,13 +591,8 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number, 
   }
   ctx.restore();
 
-  if (rod) {
-    const g = rodGeometry(Math.round(x), Math.round(y), dir, rodShake);
-    line(ctx, g.hx, g.hy, g.tx, g.ty, '#7a4b22', 1);
-    line(ctx, g.hx, g.hy - 1, g.hx + (g.tx - g.hx) * 0.25, g.hy - 1 + (g.ty - g.hy) * 0.25, '#4a2c12', 1);
-    R(ctx, g.tx, g.ty, 1, 1, '#d8d8d8');
-    R(ctx, g.hx - 1, g.hy, 2, 2, pal.skin);
-  }
+  if (rod) drawRodSkin(ctx, rodGeometry(Math.round(x), Math.round(y), dir, rodShake), rodId, pal.skin);
+  else if (hold && !armsUp) drawRodSkin(ctx, holdGeometry(Math.round(x), Math.round(y), dir), rodId, pal.skin);
 }
 
 // ---------- umpan, riak, percikan ----------
@@ -701,6 +766,40 @@ export function fishSprite(sp: Species): HTMLCanvasElement {
   }
   fishCache.set(sp.id, out);
   return out;
+}
+
+export function drawShowFish(ctx: CanvasRenderingContext2D, x: number, y: number, sp: Species, weight: number) {
+  const t = performance.now() / 1000;
+  const ratio = sizeRatio(sp, weight);
+  const scale = Math.min(1.7, 0.5 + 0.8 * ratio + (sp.rarity === 'legendary' ? 0.3 : sp.rarity === 'epic' ? 0.15 : 0));
+  const fw = FISH_W * scale;
+  const fh = FISH_H * scale;
+  const cx = Math.round(x);
+  const cy = Math.round(y) - 28 - fh / 2 + Math.sin(t * 3) * 1.2;
+  const col = RARITY[sp.rarity].color;
+  const fancy = sp.rarity !== 'common' || isXL(sp, weight);
+  if (fancy) {
+    ctx.save();
+    ctx.globalAlpha = 0.22 + 0.1 * Math.sin(t * 3);
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.arc(cx, cy, Math.max(fw, fh) * 0.62, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  drawFish(ctx, sp, cx, cy, scale, Math.sin(t * 2.5) * 0.12, false);
+  if (fancy) {
+    const n = sp.rarity === 'legendary' ? 5 : 3;
+    for (let i = 0; i < n; i++) {
+      const a = t * 1.4 + (i * Math.PI * 2) / n;
+      const sx = Math.round(cx + Math.cos(a) * (fw * 0.55));
+      const sy = Math.round(cy + Math.sin(a) * (fh * 0.7));
+      ctx.globalAlpha = 0.5 + 0.5 * Math.sin(t * 6 + i);
+      R(ctx, sx, sy - 1, 1, 3, '#ffffff');
+      R(ctx, sx - 1, sy, 3, 1, '#ffffff');
+    }
+    ctx.globalAlpha = 1;
+  }
 }
 
 export function drawFish(ctx: CanvasRenderingContext2D, sp: Species, x: number, y: number, scale: number, angle = 0, flip = false) {
