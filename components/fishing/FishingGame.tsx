@@ -263,6 +263,19 @@ export default function FishingGame(props: Props) {
   const [buffOpen, setBuffOpen] = useState(true);
   const [bagSort, setBagSort] = useState<'baru' | 'nilai'>('baru');
   const [menu2, setMenu2] = useState(false);
+  // HP masih portrait (kunci landscape tidak diizinkan browser) → game diputar 90° sendiri,
+  // tanpa layar penuh & tanpa pesan sistem. Tinggal putar HP. Kalau layar sudah landscape, tidak ada rotasi.
+  const [vp, setVp] = useState({ w: 0, h: 0, touch: false });
+  const rot = vp.touch && vp.h > vp.w;
+  const rotRef = useRef(false);
+  rotRef.current = rot;
+  useEffect(() => {
+    const upd = () => setVp({ w: window.innerWidth, h: window.innerHeight, touch: window.matchMedia('(pointer: coarse)').matches });
+    upd();
+    window.addEventListener('resize', upd);
+    window.addEventListener('orientationchange', upd);
+    return () => { window.removeEventListener('resize', upd); window.removeEventListener('orientationchange', upd); };
+  }, []);
   const toastT = useRef<ReturnType<typeof setTimeout> | null>(null);
   const px = (n: number) => Math.round(n * u);
 
@@ -356,7 +369,7 @@ export default function FishingGame(props: Props) {
     canvas.addEventListener('wheel', wheel, { passive: false });
 
     const fit = () => {
-      const r = wrap.getBoundingClientRect();
+      const r = { width: wrap.offsetWidth, height: wrap.offsetHeight };
       setU(Math.max(0.8, Math.min(1.7, r.height / 360)));
       engine.resize(Math.max(1, Math.floor(r.width)), Math.max(1, Math.floor(r.height)), Math.min(window.devicePixelRatio || 1, 3));
     };
@@ -422,6 +435,7 @@ export default function FishingGame(props: Props) {
     const max = r.width / 2 - r.width * 0.2;
     let dx = e.clientX - (r.left + r.width / 2);
     let dy = e.clientY - (r.top + r.height / 2);
+    if (rotRef.current) { const t = dx; dx = dy; dy = -t; }
     const m = Math.hypot(dx, dy);
     if (m > max) { dx = (dx / m) * max; dy = (dy / m) * max; }
     setKnob({ x: dx, y: dy });
@@ -540,7 +554,7 @@ export default function FishingGame(props: Props) {
   const rotate = guide ? (guide.ang * 180) / Math.PI + 90 : 0;
 
   return (
-    <div ref={wrapRef} style={{ position: 'fixed', inset: 0, zIndex: 70, userSelect: 'none', overflow: 'hidden', background: '#2872b4', color: '#fff', touchAction: 'none', fontFamily: HUD }}>
+    <div ref={wrapRef} style={{ position: 'fixed', ...(rot ? { top: 0, left: vp.w, width: vp.h, height: vp.w, transform: 'rotate(90deg)', transformOrigin: 'top left' } : { inset: 0 }), zIndex: 70, userSelect: 'none', overflow: 'hidden', background: '#2872b4', color: '#fff', touchAction: 'none', fontFamily: HUD }}>
       <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0 }} />
 
       {/* kiri atas: kartu pemain + pulau / chat / menu */}

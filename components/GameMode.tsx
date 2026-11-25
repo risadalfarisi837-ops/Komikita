@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
 // Mode game: masuk halaman → layar otomatis landscape.
 // Keluar halaman → layar dikembalikan ke mode HP (portrait), lalu rotasi bebas lagi.
 // Sengaja TANPA layar penuh, supaya pesan sistem Android "Tarik dari atas..." tidak muncul.
 // Catatan: kunci landscape hanya diizinkan Android di aplikasi terpasang (APK / PWA).
-// Di tab Chrome biasa kuncinya ditolak, jadi cuma muncul petunjuk untuk memutar HP sendiri.
+// Kalau kuncinya ditolak, game Mancing memutar tampilannya sendiri (lihat FishingGame.tsx).
 
 type Orient = ScreenOrientation & { lock?: (o: string) => Promise<void>; unlock?: () => void };
 
@@ -35,34 +35,9 @@ async function leaveGameMode() {
 }
 
 export default function GameMode() {
-  const [hint, setHint] = useState(false);
-
   useEffect(() => {
-    let alive = true;
-    let t: ReturnType<typeof setTimeout> | undefined;
-    enterGameMode().then((ok) => {
-      if (!alive || ok) return;
-      const portrait = window.innerHeight > window.innerWidth;
-      const touch = window.matchMedia('(pointer: coarse)').matches;
-      if (portrait && touch) {
-        setHint(true);
-        t = setTimeout(() => setHint(false), 6000);
-      }
-    });
-    return () => { alive = false; if (t) clearTimeout(t); leaveGameMode(); };
+    enterGameMode();
+    return () => { leaveGameMode(); };
   }, []);
-
-  if (!hint) return null;
-
-  return (
-    <div
-      style={{
-        position: 'fixed', left: '50%', top: 16, transform: 'translateX(-50%)', zIndex: 200, pointerEvents: 'none',
-        padding: '10px 18px', borderRadius: 999, background: 'rgba(15,23,42,0.94)', border: '2px solid #ffd36a',
-        color: '#fff', fontWeight: 700, fontSize: 14, maxWidth: '90vw', textAlign: 'center',
-      }}
-    >
-      🎮 Putar HP ke landscape untuk main
-    </div>
-  );
+  return null;
 }
