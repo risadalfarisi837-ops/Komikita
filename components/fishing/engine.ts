@@ -791,46 +791,90 @@ export class FishingEngine {
     const avail = this.cssH - topOff - 150;
     const mh = clamp(avail, 120, 280);
     const top = topOff + Math.max(0, (avail - mh) / 2);
-    const mw = 36;
-    const mx = this.cssW - 58 - mw / 2;
+    const PW = 122;
+    const panelX = this.cssW - 14 - PW;
+    const panelY = top - 54;
     const pad = 4;
     const inner = mh - pad * 2;
     const ypx = (pos: number) => top + mh - pad - (pos / 100) * inner;
+    const bw = 14;
+    const bx = panelX + 10;
+    const mw = 76;
+    const mx = bx + bw + 8;
 
-    // bar kemajuan (kiri meter)
-    const pw = 9;
-    const px0 = mx - pw - 8;
-    ctx.fillStyle = 'rgba(8,16,32,0.8)';
-    this.rrect(px0 - 2, top, pw + 4, mh, 6);
+    // panel krem
+    ctx.fillStyle = '#fbf1dc';
+    this.rrect(panelX, panelY, PW, mh + 54 + 12, 12);
     ctx.fill();
-    const pc = r.prog > 66 ? '#4ade80' : r.prog > 33 ? '#facc15' : '#f87171';
+    ctx.strokeStyle = '#d9c196';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // judul + label rarity (nama disembunyikan sampai ketangkap)
+    const sp = this.fish ? this.fish.species : null;
+    const rar = sp ? RARITY[sp.rarity] : null;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '700 17px "Pixelify Sans", ui-monospace, monospace';
+    ctx.fillStyle = '#3b2f1a';
+    ctx.fillText('???', panelX + PW / 2, panelY + 16);
+    if (rar && sp) {
+      const label = rar.label;
+      ctx.font = '700 12px "Pixelify Sans", ui-monospace, monospace';
+      const tw = ctx.measureText(label).width + 22;
+      const hot = sp.rarity !== 'common' && sp.rarity !== 'uncommon';
+      ctx.fillStyle = sp.rarity === 'common' ? '#2a2a2a' : rar.color;
+      this.rrect(panelX + PW / 2 - tw / 2, panelY + 29, tw, 18, 5);
+      ctx.fill();
+      ctx.fillStyle = sp.rarity === 'common' ? '#f3f3f3' : '#1a1206';
+      ctx.fillText(label, panelX + PW / 2, panelY + 38.5);
+      if (hot) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.2; this.rrect(panelX + PW / 2 - tw / 2, panelY + 29, tw, 18, 5); ctx.stroke(); }
+    }
+    ctx.textAlign = 'start';
+    ctx.textBaseline = 'alphabetic';
+
+    // bar kemajuan (kiri)
+    ctx.fillStyle = '#2a2a2e';
+    this.rrect(bx - 1, top, bw + 2, mh, 4);
+    ctx.fill();
+    const pc = r.prog > 66 ? '#facc15' : r.prog > 33 ? '#f5b82e' : '#f08a24';
     ctx.fillStyle = pc;
     const ph = (r.prog / 100) * inner;
-    this.rrect(px0, top + mh - pad - ph, pw, Math.max(0, ph), 4);
-    ctx.fill();
+    ctx.fillRect(bx + 2, top + mh - pad - ph, bw - 4, Math.max(0, ph));
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    for (let y = top + 4; y < top + mh - 2; y += 7) ctx.fillRect(bx + 2, y, bw - 4, 1);
 
     // meter utama
     const g = ctx.createLinearGradient(0, top, 0, top + mh);
-    g.addColorStop(0, '#1d4f7a');
-    g.addColorStop(1, '#0d2b4a');
+    g.addColorStop(0, '#173a5c');
+    g.addColorStop(1, '#0d2540');
     ctx.fillStyle = g;
-    this.rrect(mx, top, mw, mh, 10);
+    this.rrect(mx, top, mw, mh, 5);
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = '#0a1a2c';
+    ctx.lineWidth = 2;
     ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    for (let y = top + 12; y < top + mh - 6; y += 22) ctx.fillRect(mx + 6, y, mw - 12, 1);
 
     const inZone = r.fishPos >= r.zone && r.fishPos <= r.zone + r.zoneH;
     const zt = ypx(r.zone + r.zoneH);
     const zh = (r.zoneH / 100) * inner;
-    ctx.fillStyle = inZone ? 'rgba(74,222,128,0.65)' : 'rgba(74,222,128,0.4)';
-    this.rrect(mx + 3, zt, mw - 6, zh, 6);
+    ctx.fillStyle = inZone ? '#3f8f52' : '#2f6b40';
+    this.rrect(mx + 4, zt, mw - 8, zh, 3);
     ctx.fill();
-    ctx.strokeStyle = inZone ? '#bbf7d0' : '#4ade80';
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = inZone ? '#9cf0a8' : '#5fd076';
+    ctx.lineWidth = 2;
     ctx.stroke();
 
-    if (this.fish) drawFish(ctx, this.fish.species, mx + mw / 2, ypx(r.fishPos), 0.55 * 1, 0, false);
+    // siluet ikan
+    if (this.fish) {
+      const anyCtx = ctx as CanvasRenderingContext2D & { filter?: string };
+      const hasF = 'filter' in anyCtx;
+      if (hasF) anyCtx.filter = 'brightness(0.12)';
+      drawFish(ctx, this.fish.species, mx + mw / 2, ypx(r.fishPos), 0.62, 0, false);
+      if (hasF) anyCtx.filter = 'none';
+    }
     ctx.setTransform(1, 0, 0, 1, 0, 0);
   }
 
