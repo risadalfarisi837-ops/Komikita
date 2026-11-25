@@ -1,12 +1,13 @@
 // Mesin game Mancing (tanpa React): gerak, lempar joran, tunggu gigitan, mini-game menarik ikan, dan render.
-import { RARITY, SPECIES, rollFish, rollShark, withSize } from '@/lib/fishing';
+import { RARITY, SPECIES, SPECIES_BY_ID, rollFish, rollShark, withSize } from '@/lib/fishing';
+import type { NetPose, RemotePlayer } from '@/lib/fishingNet';
 import type { Rarity, SizeTier, Species } from '@/lib/fishing';
 import {
   TILE, generateWorld, drawPlayer, drawPalm, drawRock, drawLamp, drawBobber, drawRipple, drawLine,
   drawBubbleAlert, drawFish, drawShowFish, rodGeometry, PAL_PLAYER, drawFountain, drawBench, drawTable, drawStool, drawSign, drawBush, drawNpc,
-  drawStall, drawFlowers, drawBarrel, drawCrate, drawNet, drawUmbrella, drawBoat, drawGiantFish,
+  drawStall, drawFlowers, drawBarrel, drawCrate, drawNet, drawUmbrella, drawBoat, drawGiantFish, palForId, mulberry32,
 } from './art';
-import type { Dir, World } from './art';
+import type { Dir, Pal, World } from './art';
 
 export type Phase = 'idle' | 'cast' | 'wait' | 'bite' | 'reel' | 'catching' | 'result';
 export interface Catch { species: Species; weight: number }
@@ -50,6 +51,11 @@ export class FishingEngine {
   private castInShoal = false;
   private castKind: 'ikan' | 'hiu' = 'ikan';
   private waterSpots: [number, number][] | null = null;
+  private shoalForced = false; // gerombolan dari Dev Tools (bukan jadwal bersama)
+  private shoalId = -1;
+  private clockOffset = 0;      // selisih jam server (ms)
+  private remotes = new Map<string, { p: RemotePlayer; rx: number; ry: number; step: number; moving: boolean; pal: Pal }>();
+  private bubbles = new Map<string, { text: string; until: number }>();
 
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -108,6 +114,30 @@ export class FishingEngine {
   setEase(n: number) { this.ease = Math.min(1, Math.max(0, n)); }
   setBagFull(b: boolean) { this.bagFull = b; }
   setProfile(p: Profile) { this.profile = p; }
+
+  // ---------- mabar ----------
+  setClockOffset(ms: number) { this.clockOffset = ms; }
+  setRemotes(list: RemotePlayer[]) {
+    const seen = new Set<string>();
+    for (const p of list) {
+      seen.add(p.id);
+      const cur = this.remotes.get(p.id);
+      if (cur) cur.p = p;
+      else this.remotes.set(p.id, { p, rx: p.x, ry: p.y, step: 0, moving: p.moving, pal: palForId(p.id) });
+    }
+    for (const id of Array.from(this.remotes.keys())) if (!seen.has(id)) this.remotes.delete(id);
+  }
+  /** Gelembung chat di atas kepala. id = uid pemain, atau 'me' untuk karakter sendiri. */
+  setBubble(id: string, text: string, seconds = 6) {
+    this.bubbles.set(id, { text: text.slice(0, 80), until: performance.now() / 1000 + seconds });
+  }
+  netPose(): NetPose {
+    const ph = this.phase;
+    const casting = ph === 'cast' || ph === 'wait' || ph === 'bite' || ph === 'reel' || ph === 'catching';
+    const tg = this.target;
+    const held = ph === 'idle' && this.held ? { s: this.held.species.id, w: this.held.weight } : null;
+    return { x: this.px, y: this.py, dir: this.dir, moving: this.moving, casting, bx: tg ? tg.wx : 0, by: tg ? tg.wy : 0, held };
+  }
   held: Catch | null = null; // ikan yang sedang dipegang untuk dipamerkan
   setHeld(c: Catch | null) { this.held = c; }
   setMove(x: number, y: number) { this.joyX = x; this.joyY = y; }
@@ -325,7 +355,7 @@ export class FishingEngine {
     return { tx, ty, wx: (tx + 0.5) * TILE, wy: (ty + 0.5) * TILE };
   }
 
-  private spawnShoal(force = false, kind?: 'ikan' | 'hiu') {
+  private ensureSpots(): [number, number][] {
     const w = this.world;
     if (!this.waterSpots) {
       const spots: [number, number][] = [];
@@ -344,8 +374,46 @@ export class FishingEngine {
       }
       this.waterSpots = spots;
     }
-    const spots = this.waterSpots;
-    if (!spots.length) { this.nextShoal = this.time + 60; return; }
+    return this.waterSpots || [];
+  }
+
+  // jadwal gerombolan dihitung dari jam server, jadi SAMA untuk semua pemain
+  private sharedEvent(nowMs: number): { id: number; kind: 'ikan' | 'hiu'; tx: number; ty: number; end: number } | null {
+    const SLOT = 150000;
+    const spots = this.ensureSpots();
+    if (!spots.length) return null;
+    const n = Math.floor(nowMs / SLOT);
+    const rnd = mulberry32(((n * 2654435761) >>> 0) ^ 0x5bd1e995);
+    if (rnd() > 0.85) return null;
+    const kind: 'ikan' | 'hiu' = rnd() < 0.3 ? 'hiu' : 'ikan';
+    const start = n * SLOT + 5000 + rnd() * 55000;
+    const end = start + (kind === 'hiu' ? 80000 : 60000);
+    const [tx, ty] = spots[Math.floor(rnd() * spots.length)];
+    return nowMs >= start && nowMs < end ? { id: n, kind, tx, ty, end } : null;
+  }
+
+  private syncSharedShoal() {
+    const nowMs = Date.now() + this.clockOffset;
+    const ev = this.sharedEvent(nowMs);
+    if (ev) {
+      const left = (ev.end - nowMs) / 1000;
+      if (!this.shoal || this.shoalId !== ev.id) {
+        this.shoal = { x: (ev.tx + 0.5) * TILE, y: (ev.ty + 0.5) * TILE, r: (ev.kind === 'hiu' ? 4 : 3.4) * TILE, until: this.time + left, kind: ev.kind };
+        this.shoalId = ev.id;
+        this.ev.onToast?.(ev.kind === 'hiu' ? 'Hiu Legendary muncul! Cari bayangannya' : 'Ada gerombolan ikan! Cari yang berkilau di laut');
+      } else {
+        this.shoal.until = this.time + left;
+      }
+    } else if (this.shoal && !this.shoalForced) {
+      this.shoal = null;
+      this.castInShoal = false;
+      this.shoalId = -1;
+    }
+  }
+
+  private spawnShoal(force = false, kind?: 'ikan' | 'hiu') {
+    const spots = this.ensureSpots();
+    if (!spots.length) return;
     const ptx = this.px / TILE;
     const pty = this.py / TILE;
     const far = spots.filter(([x, y]) => { const d = Math.hypot(x - ptx, y - pty); return d >= 9 && d <= 40; });
@@ -353,6 +421,8 @@ export class FishingEngine {
     const [tx, ty] = pool[Math.floor(Math.random() * pool.length)];
     const k: 'ikan' | 'hiu' = kind || (!force && Math.random() < 0.3 ? 'hiu' : 'ikan');
     this.shoal = { x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE, r: (k === 'hiu' ? 4 : 3.4) * TILE, until: this.time + (k === 'hiu' ? 80 : force ? 90 : 60), kind: k };
+    this.shoalForced = true;
+    this.shoalId = -2;
     if (k === 'hiu') this.ev.onToast?.('Hiu Legendary muncul! Cari bayangannya');
   }
 
@@ -459,10 +529,20 @@ export class FishingEngine {
     }
 
     // event Gerombolan Ikan
-    if (this.shoal) {
-      if (this.time >= this.shoal.until) { this.shoal = null; this.castInShoal = false; this.nextShoal = this.time + 45 + Math.random() * 60; }
-    } else if (this.time >= this.nextShoal) {
-      this.spawnShoal();
+    if (this.shoal && this.shoalForced) {
+      if (this.time >= this.shoal.until) { this.shoal = null; this.castInShoal = false; this.shoalForced = false; this.shoalId = -1; }
+    } else {
+      this.syncSharedShoal();
+    }
+    // pemain lain: geser halus menuju posisi terbaru dari server
+    for (const r of this.remotes.values()) {
+      const dx = r.p.x - r.rx;
+      const dy = r.p.y - r.ry;
+      const dd = Math.hypot(dx, dy);
+      if (dd > 64) { r.rx = r.p.x; r.ry = r.p.y; }
+      else { const k = 1 - Math.exp(-dt * 9); r.rx += dx * k; r.ry += dy * k; }
+      r.moving = r.p.moving || dd > 1.2;
+      if (r.moving) r.step += dt; else r.step = 0;
     }
 
     // fase mancing
@@ -714,6 +794,10 @@ export class FishingEngine {
         if (show) drawShowFish(ctx, this.px, this.py, show.species, show.weight);
       },
     });
+    for (const r of this.remotes.values()) {
+      if (r.rx < vx0 - 30 || r.rx > vx0 + vw + 30 || r.ry < vy0 - 30 || r.ry > vy0 + vh + 40) continue;
+      ents.push({ y: r.ry, f: () => this.drawRemote(ctx, r, t) });
+    }
     ents.sort((a, b) => a.y - b.y);
     for (const e of ents) e.f();
 
@@ -745,6 +829,21 @@ export class FishingEngine {
     if (this.vignette) { ctx.fillStyle = this.vignette; ctx.fillRect(0, 0, CW, CH); }
     this.drawTags(ox, oy);
     if (ph === 'reel') this.drawMeter();
+  }
+
+  private drawRemote(ctx: CanvasRenderingContext2D, r: { p: RemotePlayer; rx: number; ry: number; step: number; moving: boolean; pal: Pal }, t: number) {
+    const p = r.p;
+    const x = Math.round(r.rx);
+    const y = Math.round(r.ry);
+    const sp = p.held && !p.casting ? SPECIES_BY_ID[p.held.s] : null;
+    drawPlayer(ctx, x, y, p.dir, r.moving, r.step, p.casting, 0, r.pal, p.rodId, !p.casting && !sp, !!sp);
+    if (sp && p.held) drawShowFish(ctx, x, y, sp, p.held.w);
+    if (p.casting && p.bx) {
+      const g = rodGeometry(x, y, p.dir, 0);
+      const dip = Math.sin(t * 3 + x);
+      drawBobber(ctx, p.bx, p.by, dip);
+      drawLine(ctx, g.tx, g.ty, p.bx, p.by - 3, 7);
+    }
   }
 
   private pillText(text: string, cx: number, cy: number, size: number, bg: string, fg: string, padX: number, stroke?: string) {
@@ -795,6 +894,18 @@ export class FishingEngine {
       if (lx < -300 || lx > this.canvas.width + 300 || ly < -100 || ly > this.canvas.height + 100) continue;
       this.pillText((p.name || '') + (p.role ? ' · ' + p.role : ''), lx, ly, sz * 0.92, 'rgba(18,16,14,0.82)', p.kind === 'giantfish' ? '#ffd9a0' : '#f3ead8', 8 * u, p.kind === 'giantfish' ? 'rgba(255,170,60,0.95)' : 'rgba(245,196,81,0.9)');
     }
+    // pemain lain: nama + gelembung chat
+    const nowS = performance.now() / 1000;
+    for (const r of this.remotes.values()) {
+      const rx = r.rx * S - ox;
+      const ry = (r.ry - 21 - (r.p.held && !r.p.casting ? 24 : 0)) * S - oy;
+      if (rx < -200 || rx > this.canvas.width + 200 || ry < -100 || ry > this.canvas.height + 100) continue;
+      this.pillText(r.p.name + ' · Lv' + r.p.level, rx, ry - 10 * u, sz * 0.85, 'rgba(18,16,14,0.82)', '#eaf7ff', 7 * u, 'rgba(110,200,255,0.9)');
+      const b = this.bubbles.get(r.p.id);
+      if (b && b.until > nowS) this.pillText(b.text, rx, ry - 34 * u, sz * 0.95, '#ffffff', '#222222', 9 * u, 'rgba(60,60,60,0.35)');
+    }
+    const mine = this.bubbles.get('me');
+    if (mine && mine.until > nowS) this.pillText(mine.text, sxp, syHead - 34 * u, sz * 0.95, '#ffffff', '#222222', 9 * u, 'rgba(60,60,60,0.35)');
     // NPC
     for (const p of this.world.props) {
       if (p.kind !== 'npc') continue;

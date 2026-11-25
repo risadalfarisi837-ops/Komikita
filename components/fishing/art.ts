@@ -1370,3 +1370,25 @@ export function drawGiantFish(ctx: CanvasRenderingContext2D, p: Prop, t: number)
     ctx.fillRect(X + 244 + i * 3, Y + 20 - Math.round(k * 28), 2, 2);
   }
 }
+
+// ---------- warna karakter pemain lain (konsisten per akun) ----------
+function shadeHex(hex: string, f: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  const ch = (v: number) => Math.max(0, Math.min(255, Math.round(f < 0 ? v * (1 + f) : v + (255 - v) * f)));
+  const r = ch((n >> 16) & 255);
+  const g = ch((n >> 8) & 255);
+  const b = ch(n & 255);
+  return '#' + ((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1);
+}
+export function palForId(id: string): Pal {
+  let h = 2166136261;
+  for (let i = 0; i < id.length; i++) { h ^= id.charCodeAt(i); h = Math.imul(h, 16777619); }
+  h >>>= 0;
+  const hairs = ['#9a68d8', '#2a2a35', '#c8793a', '#e8c15a', '#d9d6cf', '#4aa3d8', '#d85a8a', '#4a8a4a'];
+  const shirts = ['#2f4b7e', '#8a3a3a', '#3f7a5a', '#6a4a8a', '#b8782a', '#2f7a8a', '#5a5a66', '#a8456a'];
+  const skins: [string, string][] = [['#f6d4b8', '#dcae8c'], ['#e2b48a', '#c4936a'], ['#c68e62', '#a8714a'], ['#8d5b3a', '#6e4328']];
+  const hair = hairs[h % hairs.length];
+  const shirt = shirts[(h >>> 4) % shirts.length];
+  const skin = skins[(h >>> 9) % skins.length];
+  return { ...PAL_PLAYER, skin: skin[0], skinD: skin[1], hair, shirt, shirtD: shadeHex(shirt, -0.3), pants: shadeHex(shirt, -0.45), hat: shadeHex(shirt, -0.12), hatD: shadeHex(shirt, -0.38) };
+}
