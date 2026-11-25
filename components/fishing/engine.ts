@@ -3,9 +3,9 @@ import { RARITY, rollFish } from '@/lib/fishing';
 import type { Species } from '@/lib/fishing';
 import {
   TILE, generateWorld, drawPlayer, drawPalm, drawRock, drawLamp, drawBobber, drawRipple, drawLine,
-  drawBubbleAlert, drawFish, drawShowFish, rodGeometry, PAL_PLAYER, drawFountain, drawBench, drawTable, drawStool, drawSign, drawBush, drawNpc, drawShop,
+  drawBubbleAlert, drawFish, drawShowFish, rodGeometry, PAL_PLAYER, drawFountain, drawBench, drawTable, drawStool, drawSign, drawBush, drawNpc,
 } from './art';
-import type { Dir, Prop, World } from './art';
+import type { Dir, World } from './art';
 
 export type Phase = 'idle' | 'cast' | 'wait' | 'bite' | 'reel' | 'catching' | 'result';
 export interface Catch { species: Species; weight: number }
@@ -25,9 +25,6 @@ export interface EngineEvents {
   onCatch?: (c: Catch) => void;
   onToast?: (m: string) => void;
   onBite?: () => void;
-  onCast?: () => void;           // joran dilempar (dipakai untuk mengurangi umpan)
-  onShop?: () => void;           // tombol aksi ditekan saat dekat toko
-  onNearShop?: (near: boolean) => void;
 }
 
 const DIRV: Record<Dir, { x: number; y: number }> = { down: { x: 0, y: 1 }, up: { x: 0, y: -1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 } };
@@ -44,9 +41,6 @@ export class FishingEngine {
   phase: Phase = 'idle';
   level = 1;
   luck = 0;
-  private castLuck = 0; // luck saat joran dilempar (termasuk umpan yang baru dipakai)
-  private shop: Prop | null = null;
-  private nearShop = false;
   bagFull = false;
   profile: Profile = { name: '', title: '', level: 1, rodName: '' };
   private shoal: Shoal | null = null;
@@ -96,7 +90,6 @@ export class FishingEngine {
     this.ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
     this.ev = ev;
     this.world = generateWorld();
-    this.shop = this.world.props.find((p) => p.kind === 'shop') || null;
     this.px = (this.world.start.x + 0.5) * TILE;
     this.py = (this.world.start.y + 1) * TILE - 3;
     this.dir = 'right';
@@ -115,10 +108,8 @@ export class FishingEngine {
   action(down: boolean) {
     if (this.phase === 'reel') { this.holding = down; return; }
     if (!down) return;
-    if (this.phase === 'idle') {
-      if (this.nearShop) { this.ev.onShop?.(); return; }
-      this.tryCast();
-    } else if (this.phase === 'bite') this.hook();
+    if (this.phase === 'idle') this.tryCast();
+    else if (this.phase === 'bite') this.hook();
   }
 
   cancel() {
@@ -279,20 +270,7 @@ export class FishingEngine {
     const sh = this.shoal;
     this.castInShoal = !!sh && Math.hypot(t.wx - sh.x, t.wy - sh.y) <= sh.r;
     if (this.castInShoal) this.ev.onToast?.('Kena gerombolan ikan! Peluang langka naik');
-    this.castLuck = this.luck;
     this.setPhase('cast');
-    this.ev.onCast?.();
-  }
-
-  private checkShop() {
-    let near = false;
-    const s = this.shop;
-    if (s && this.phase === 'idle') {
-      const cx = (s.x + (s.w || 1) / 2) * TILE;
-      const cy = (s.y + (s.h || 1)) * TILE + 2;
-      near = Math.hypot(this.px - cx, this.py - cy) < TILE * 3.2;
-    }
-    if (near !== this.nearShop) { this.nearShop = near; this.ev.onNearShop?.(near); }
   }
 
   private hook() {
@@ -361,8 +339,6 @@ export class FishingEngine {
       this.stepT = 0;
     }
 
-    this.checkShop();
-
     // event Gerombolan Ikan
     if (this.shoal) {
       if (this.time >= this.shoal.until) { this.shoal = null; this.castInShoal = false; this.nextShoal = this.time + 45 + Math.random() * 60; }
@@ -383,7 +359,7 @@ export class FishingEngine {
       this.waitT -= dt;
       if (Math.random() < dt * 0.7) this.ripples.push({ x: this.target.wx + (Math.random() - 0.5) * 6, y: this.target.wy + (Math.random() - 0.5) * 3, t: 0.55 });
       if (this.waitT <= 0) {
-        this.fish = rollFish(this.level, this.castLuck + (this.castInShoal ? 2 : 0));
+        this.fish = rollFish(this.level, this.luck + (this.castInShoal ? 2 : 0));
         this.biteT = 1.25;
         this.ripples.push({ x: this.target.wx, y: this.target.wy, t: 0 });
         this.splash(this.target.wx, this.target.wy, 6);
@@ -594,7 +570,6 @@ export class FishingEngine {
         case 'sign': ents.push({ y: byp + 14, f: () => drawSign(ctx, p) }); break;
         case 'bush': ents.push({ y: byp + 14, f: () => drawBush(ctx, p) }); break;
         case 'npc': ents.push({ y: byp + 15, f: () => drawNpc(ctx, p, t) }); break;
-        case 'shop': ents.push({ y: byp + ph2 - 2, f: () => drawShop(ctx, p, t) }); break;
         default: ents.push({ y: byp + 15, f: () => drawLamp(ctx, p, t) });
       }
     }
@@ -640,7 +615,7 @@ export class FishingEngine {
     if (ph === 'reel') this.drawMeter();
   }
 
-  private pillText(text: string, cx: number, cy: number, size: number, bg: string, fg: string, padX: number) {
+  private pillText(text: string, cx: number, cy: number, size: number, bg: string, fg: string, padX: number, stroke?: string) {
     const ctx = this.ctx;
     ctx.font = '700 ' + size + 'px "Pixelify Sans", ui-monospace, monospace';
     const tw = ctx.measureText(text).width;
@@ -649,6 +624,7 @@ export class FishingEngine {
     ctx.fillStyle = bg;
     this.rrect(cx - w / 2, cy - h / 2, w, h, h / 2.6);
     ctx.fill();
+    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = Math.max(1, size * 0.14); ctx.stroke(); }
     ctx.fillStyle = fg;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -679,16 +655,6 @@ export class FishingEngine {
     const sxp = this.px * S - ox;
     const syHead = (this.py - 21) * S - oy;
     const syFeet = this.py * S - oy;
-    // Toko
-    if (this.shop) {
-      const sp = this.shop;
-      const sx = ((sp.x + (sp.w || 1) / 2) * TILE) * S - ox;
-      const sy = (sp.y * TILE - 14) * S - oy;
-      if (sx > -200 && sx < this.canvas.width + 200 && sy > -200 && sy < this.canvas.height + 100) {
-        this.pillText('Toko Mancing', sx, sy, sz, 'rgba(18,16,14,0.82)', '#ffe29a', 8 * u);
-        if (this.nearShop) this.pillText('Tekan Toko untuk belanja', sx, sy + 17 * u, sz * 0.85, 'rgba(34,140,80,0.92)', '#ffffff', 8 * u);
-      }
-    }
     // NPC
     for (const p of this.world.props) {
       if (p.kind !== 'npc') continue;
@@ -696,7 +662,20 @@ export class FishingEngine {
       const nyHead = (p.y * TILE + 15 - 21) * S - oy;
       if (nx < -200 || nx > this.canvas.width + 200 || nyHead < -200 || nyHead > this.canvas.height + 100) continue;
       const near = Math.hypot(this.px - (p.x * TILE + 8), this.py - (p.y * TILE + 15)) < TILE * 3.6;
-      this.pillText((p.name || '') + ' · ' + (p.role || ''), nx, nyHead - 10 * u, sz * 0.92, 'rgba(18,16,14,0.82)', '#f3ead8', 8 * u);
+      this.pillText((p.name || '') + ' · ' + (p.role || ''), nx, nyHead - 10 * u, sz * 0.92, 'rgba(18,16,14,0.82)', '#f3ead8', 8 * u, 'rgba(245,196,81,0.9)');
+      if (!near) {
+        const qy = nyHead - 38 * u;
+        const qr = 9 * u;
+        ctx.fillStyle = '#f5c451';
+        ctx.strokeStyle = '#6b4a0a';
+        ctx.lineWidth = Math.max(1.5, u);
+        ctx.beginPath(); ctx.arc(nx, qy, qr, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#4a3206';
+        ctx.font = '700 ' + qr * 1.3 + 'px "Pixelify Sans", ui-monospace, monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('?', nx, qy + qr * 0.08);
+      }
       if (near) {
         const tip = TIPS[Math.max(0, Math.floor((Number.isFinite(this.time) ? this.time : 0) / 6)) % TIPS.length] || TIPS[0];
         ctx.font = '700 ' + sz * 0.95 + 'px "Pixelify Sans", ui-monospace, monospace';
@@ -732,20 +711,46 @@ export class FishingEngine {
       const tw = ctx.measureText(pr.title).width;
       const w = tw + 30 * u;
       const h = sz * 1.6;
-      ctx.fillStyle = 'rgba(30,60,36,0.88)';
+      ctx.fillStyle = '#d7efd0';
       this.rrect(sxp - w / 2, cy - h / 2, w, h, h / 2.4);
       ctx.fill();
-      // ikon perahu kecil
-      ctx.fillStyle = '#ff6a5c';
-      ctx.beginPath(); ctx.moveTo(sxp - w / 2 + 8 * u, cy - 5 * u); ctx.lineTo(sxp - w / 2 + 8 * u, cy + 3 * u); ctx.lineTo(sxp - w / 2 + 14 * u, cy + 3 * u); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = '#c9e7ff';
-      ctx.fillRect(sxp - w / 2 + 6 * u, cy + 4 * u, 10 * u, 2 * u);
-      ctx.fillStyle = '#bff0c4';
+      ctx.strokeStyle = '#5faa66';
+      ctx.lineWidth = Math.max(1, u * 0.9);
+      ctx.stroke();
+      // ikon kecil di kiri
+      ctx.fillStyle = '#4aa356';
+      this.rrect(sxp - w / 2 + 4 * u, cy - h * 0.32, h * 0.64, h * 0.64, 2 * u);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.moveTo(sxp - w / 2 + 6.2 * u, cy + h * 0.2);
+      ctx.lineTo(sxp - w / 2 + 4 * u + h * 0.32, cy - h * 0.2);
+      ctx.lineTo(sxp - w / 2 + 4 * u + h * 0.6, cy + h * 0.2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#2c5a33';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
       ctx.fillText(pr.title, sxp - w / 2 + 20 * u, cy + sz * 0.05);
     }
-    this.outlined((pr.name || 'Tamu') + ' · Lv' + pr.level, sxp, syHead - 24 * u, sz * 1.05, '#ffffff');
+    const nm = (pr.name || 'Tamu') + ' · Lv' + pr.level;
+    this.outlined(nm, sxp, syHead - 24 * u, sz * 1.05, '#ffffff');
+    if (pr.name && pr.name !== 'Tamu') {
+      // lencana centang biru di ujung nama
+      ctx.font = '700 ' + sz * 1.05 + 'px "Pixelify Sans", ui-monospace, monospace';
+      const bx = sxp + ctx.measureText(nm).width / 2 + 9 * u;
+      const by = syHead - 24 * u;
+      const br = 6 * u;
+      ctx.fillStyle = '#4aa3ff';
+      ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+      ctx.lineWidth = Math.max(1, u * 0.8);
+      ctx.beginPath(); ctx.arc(bx, by, br, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = Math.max(1.5, u * 1.4);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath(); ctx.moveTo(bx - br * 0.45, by); ctx.lineTo(bx - br * 0.1, by + br * 0.35); ctx.lineTo(bx + br * 0.5, by - br * 0.35); ctx.stroke();
+    }
     if (pr.rodName) this.outlined(pr.rodName, sxp, syFeet + 16 * u, sz * 0.95, '#fff6d8');
   }
 

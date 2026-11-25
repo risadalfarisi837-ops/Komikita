@@ -69,6 +69,82 @@ function BagIcon({ size }: { size: number }) {
   );
 }
 
+
+// ---------- ikon HUD ----------
+function CloverIcon({ size, color = '#3fbf5a' }: { size: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16"><g fill={color} stroke="rgba(0,0,0,0.35)" strokeWidth="0.8"><rect x="1" y="5" width="6" height="6" rx="2" /><rect x="9" y="5" width="6" height="6" rx="2" /><rect x="5" y="1" width="6" height="6" rx="2" /><rect x="5" y="9" width="6" height="6" rx="2" /></g></svg>
+  );
+}
+function CoinIcon({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="#f5c451" stroke="#9a6a10" strokeWidth="1.4" /><path d="M8 4.5v7M6 6.6c0-1 4-1 4 0s-4 1.2-4 2.6 4 1.1 4 0" stroke="#9a6a10" strokeWidth="1.2" fill="none" strokeLinecap="round" /></svg>
+  );
+}
+function XpIcon({ size }: { size: number }) {
+  return (
+    <svg width={size * 1.3} height={size} viewBox="0 0 26 20"><rect x="1" y="2" width="24" height="16" rx="3" fill="#3b7fe0" stroke="#9cc4ff" strokeWidth="1.4" /><text x="13" y="14.2" textAnchor="middle" fontSize="10" fontWeight="800" fill="#fff" fontFamily="system-ui, sans-serif">XP</text></svg>
+  );
+}
+function SparkIcon({ size, fill = '#fff', glow = '#79b7ff' }: { size: number; fill?: string; glow?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24"><path d="M12 1.5C12.9 8.2 15.8 11.1 22.5 12 15.8 12.9 12.9 15.8 12 22.5 11.1 15.8 8.2 12.9 1.5 12 8.2 11.1 11.1 8.2 12 1.5Z" fill={fill} stroke={glow} strokeWidth="1.4" strokeLinejoin="round" /></svg>
+  );
+}
+function GemIcon({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24"><path d="M6 4h12l4 6-10 11L2 10z" fill="#39e07f" stroke="#12803e" strokeWidth="1.6" strokeLinejoin="round" /><path d="M2 10h20M9 4l-2 6 5 11M15 4l2 6-5 11" stroke="#b8ffd2" strokeWidth="0.9" fill="none" opacity="0.7" /></svg>
+  );
+}
+function PeopleIcon({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="#cfe9ff"><circle cx="8.5" cy="8" r="3.6" /><circle cx="16.5" cy="9" r="3" opacity="0.85" /><path d="M2 20c0-3.6 3-6 6.5-6s6.5 2.4 6.5 6z" /><path d="M15.5 14.2c3.2 0 6.5 1.8 6.5 5.8h-5.2" opacity="0.85" /></svg>
+  );
+}
+function ChatIcon({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24"><path d="M4 4h16a2.5 2.5 0 012.5 2.5v9A2.5 2.5 0 0120 18h-7l-5 4v-4H4a2.5 2.5 0 01-2.5-2.5v-9A2.5 2.5 0 014 4z" fill="#fff" /><g fill="#2a2626"><circle cx="8" cy="11" r="1.5" /><circle cx="12" cy="11" r="1.5" /><circle cx="16" cy="11" r="1.5" /></g></svg>
+  );
+}
+function IslandIcon({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24"><ellipse cx="12" cy="19" rx="10" ry="3.6" fill="#38b6e8" /><ellipse cx="12" cy="17" rx="6.5" ry="2.6" fill="#f0cf8a" /><path d="M12 16.5c.2-3 .4-5 1-7" stroke="#8a5a2a" strokeWidth="1.8" strokeLinecap="round" fill="none" /><path d="M13 9.5c-1-2.6-3.6-3.4-6-2.6 2-.2 4 .2 6 2.6zM13 9.5c1.2-2.4 3.8-2.8 6-1.6-2.2-.2-4.2.2-6 1.6zM13 9.5c-.6-2.6.2-4.4 2.4-5.4-1.4 1.6-1.8 3.4-2.4 5.4z" fill="#33b04c" /></svg>
+  );
+}
+function GiftIcon({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24"><rect x="3.5" y="10" width="17" height="11" rx="1.5" fill="#f59e0b" stroke="#8a4a14" strokeWidth="1.2" /><rect x="2.5" y="7" width="19" height="4.2" rx="1.2" fill="#ef4444" stroke="#8a1c14" strokeWidth="1.2" /><rect x="10.6" y="7" width="2.8" height="14" fill="#ffd36a" /><path d="M12 7C9.5 7 8 5.8 8.4 4.4 9.2 2.6 11.6 4.2 12 7zM12 7c2.5 0 4-1.2 3.6-2.6C14.8 2.6 12.4 4.2 12 7z" fill="#ef4444" stroke="#8a1c14" strokeWidth="1" /></svg>
+  );
+}
+function GearIcon({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"><circle cx="12" cy="12" r="3.2" /><path d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3M5.5 5.5l2.1 2.1M16.4 16.4l2.1 2.1M18.5 5.5l-2.1 2.1M7.6 16.4l-2.1 2.1" /></svg>
+  );
+}
+function BoatIcon({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16"><path d="M8 1.5v9L3 10.5z" fill="#ff6a5c" /><path d="M9 3.5v7h4.5z" fill="#ffd2c9" /><path d="M2 12h12l-1.6 2.4H3.6z" fill="#c9e7ff" /></svg>
+  );
+}
+function CrossRodIcon({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 28 28" fill="none" strokeLinecap="round"><path d="M3 25L12 16" stroke="#9aa0a6" strokeWidth="2.4" /><path d="M5 5L23 23M23 5L5 23" stroke="#e5483a" strokeWidth="3.2" /></svg>
+  );
+}
+function FishRodIcon({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" strokeLinecap="round">
+      <path d="M27 4C17 3 12 10 14 19" stroke="#2f7f8f" strokeWidth="3" />
+      <path d="M27 4L29 9" stroke="#d9b98a" strokeWidth="3" />
+      <path d="M14 19L12 22" stroke="#e8e8e8" strokeWidth="1.2" />
+      <ellipse cx="9" cy="24" rx="6.2" ry="3.8" fill="#2f8fe0" stroke="#1d5fa8" strokeWidth="1" />
+      <path d="M14.5 24l4-3.2v6.4z" fill="#2f8fe0" stroke="#1d5fa8" strokeWidth="1" strokeLinejoin="round" />
+      <circle cx="6.6" cy="23" r="1" fill="#fff" />
+      <path d="M8 27.6l3 1.6-.4-3z" fill="#f59e3d" />
+    </svg>
+  );
+}
+
 const Svg = ({ d, size = 22, stroke = '#fff', w = 2.4 }: { d: string; size?: number; stroke?: string; w?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>
 );
@@ -83,7 +159,7 @@ const HINT: Record<Phase, string> = {
   result: '',
 };
 
-const rarityBorder = (r: keyof typeof RARITY, xl: boolean) => (r === 'common' ? (xl ? '#f59e3d' : 'rgba(255,255,255,0.22)') : RARITY[r].color);
+const rarityBorder = (r: keyof typeof RARITY, _xl: boolean) => (r === 'common' ? 'rgba(190,196,212,0.65)' : RARITY[r].color);
 
 // ---------- kartu pamer (gambar untuk dibagikan) ----------
 async function makeShareCard(item: BagItem, player: string, level: number): Promise<Blob | null> {
@@ -155,6 +231,10 @@ export default function FishingGame(props: Props) {
   const [status, setStatus] = useState<EngineStatus>({ shoal: null, inShoal: false });
   const [now, setNow] = useState(() => new Date());
   const [intro, setIntro] = useState(true);
+  const [fails, setFails] = useState(0);
+  const [chat, setChat] = useState<{ who: string; msg: string; t: number }[]>([]);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [buffOpen, setBuffOpen] = useState(true);
   const toastT = useRef<ReturnType<typeof setTimeout> | null>(null);
   const px = (n: number) => Math.round(n * u);
 
@@ -181,7 +261,7 @@ export default function FishingGame(props: Props) {
     if (!canvas || !wrap) return;
     const engine = new FishingEngine(canvas, {
       onPhase: (p) => { setPhase(p); if (p !== 'idle') setIntro(false); },
-      onToast: (m) => say(m),
+      onToast: (m) => { if (/kabur|lepas/i.test(m)) setFails((f) => f + 1); say(m); },
       onBite: () => { try { navigator.vibrate?.(60); } catch { /* abaikan */ } },
       onCatch: (c: Catch) => {
         const item: BagItem = { id: newId(), s: c.species.id, w: c.weight };
@@ -195,6 +275,8 @@ export default function FishingGame(props: Props) {
           if (!best[c.species.id] || c.weight > best[c.species.id]) { record = !!best[c.species.id]; best[c.species.id] = c.weight; localStorage.setItem('komikita-fish-best', JSON.stringify(best)); }
         } catch { /* abaikan */ }
         propsRef.current.onCatch(item, gain);
+        setFails(0);
+        setChat((l) => [...l.slice(-19), { who: propsRef.current.name || 'Tamu', msg: 'dapat ' + c.species.name + ' ' + formatWeight(c.weight) + ' 🎣', t: Date.now() }]);
         setPopup({ item, gain, up: after > before ? after : 0, record });
       },
     });
@@ -340,22 +422,41 @@ export default function FishingGame(props: Props) {
   const selItem = bag.find((b) => b.id === sel) || sorted[0];
   const off = now.getTimezoneOffset();
   const tz = off === -420 ? 'WIB' : off === -480 ? 'WITA' : off === -540 ? 'WIT' : 'GMT' + (off <= 0 ? '+' : '-') + Math.abs(off / 60);
-  const dateStr = new Intl.DateTimeFormat('id-ID', { weekday: 'short', day: 'numeric', month: 'short' }).format(now).replace(',', '');
+  const dateStr = new Intl.DateTimeFormat('id-ID', { weekday: 'short', day: 'numeric', month: 'short' }).format(now);
   const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false }).replace('.', ':');
   const luckPct = Math.round((rod.luck + (status.inShoal ? 2 : 0)) * 100);
   const mmss = (s: number) => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
 
   const btnLabel = phase === 'idle' ? 'Joran' : phase === 'bite' ? 'Tarik!' : phase === 'reel' ? 'Tahan' : phase === 'result' || phase === 'catching' ? '...' : 'Tunggu...';
-  const btnBg = phase === 'bite' ? 'radial-gradient(circle at 35% 30%,#ff8a9a,#e11d48)' : phase === 'reel' ? 'radial-gradient(circle at 35% 30%,#7df0a4,#16a34a)' : 'radial-gradient(circle at 35% 30%,#d9c3a8,#a58f78)';
+  const btnBg = phase === 'bite' ? 'radial-gradient(circle at 35% 30%,#ff8a9a,#e11d48)' : phase === 'reel' ? 'radial-gradient(circle at 35% 30%,#7df0a4,#16a34a)' : 'radial-gradient(circle at 38% 28%,#c4b29b,#8d7a65)';
 
   const circleBtn: CSSProperties = { width: px(40), height: px(40), borderRadius: '50%', background: PANEL, border: `${px(2)}px solid ${GOLD}88`, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 };
   const pillBox: CSSProperties = { background: PANEL, borderRadius: px(18), border: `${px(1.5)}px solid rgba(255,255,255,0.14)`, color: '#fff', fontFamily: HUD };
-  const slot = (selected: boolean, color: string): CSSProperties => ({
-    position: 'relative', width: px(42), height: px(46), borderRadius: px(9), background: 'rgba(20,24,34,0.82)',
-    border: `${px(2)}px solid ${selected ? '#3d8bff' : color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto', cursor: 'pointer', padding: 0,
+  const slot = (selected: boolean, color: string): CSSProperties => {
+    const tint = !selected && color.startsWith('#') && color.length === 7 ? color + '30' : 'transparent';
+    return {
+      position: 'relative', width: px(37), height: px(39), borderRadius: px(6), boxSizing: 'border-box',
+      background: selected ? 'linear-gradient(180deg,#2b3b5e,#121626)' : `linear-gradient(${tint},${tint}), linear-gradient(180deg,rgba(62,68,88,0.88),rgba(20,22,34,0.94))`,
+      border: `${px(1.6)}px solid ${selected ? '#4a9bff' : color}`, boxShadow: '0 2px 0 rgba(0,0,0,0.35)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto', cursor: 'pointer', padding: 0,
+    };
+  };
+  const xlTag = (): CSSProperties => ({ position: 'absolute', top: px(-5), right: px(-4), background: '#f08a24', color: '#fff', fontSize: px(8.5), fontWeight: 700, borderRadius: px(4), padding: `0 ${px(3.5)}px`, zIndex: 1, border: `${px(1)}px solid rgba(255,255,255,0.55)` });
+  const wLabel = (): CSSProperties => ({ position: 'absolute', bottom: px(1), left: 0, right: 0, textAlign: 'center', fontFamily: '"Pixelify Sans", ui-monospace, monospace', fontSize: px(9.5), fontWeight: 700, color: '#fff', textShadow: '-1px 0 #000, 1px 0 #000, 0 -1px #000, 0 1px #000, 0 2px 2px rgba(0,0,0,0.6)' });
+  const wl = (w: number) => formatWeight(w).replace(' ', '');
+  const ringBtn = (ring: string): CSSProperties => ({
+    width: px(33), height: px(33), borderRadius: '50%', boxSizing: 'border-box', background: PANEL, border: `${px(2)}px solid #1b1818`,
+    boxShadow: `0 0 0 ${px(2)}px ${ring}, 0 ${px(3)}px 0 ${px(2)}px ${ring}`, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0, flex: '0 0 auto', margin: px(2),
   });
-  const xlTag = (): CSSProperties => ({ position: 'absolute', top: px(-6), right: px(-4), background: '#f59e3d', color: '#fff', fontSize: px(9), fontWeight: 700, borderRadius: px(5), padding: `0 ${px(4)}px`, zIndex: 1 });
-  const wLabel = (): CSSProperties => ({ position: 'absolute', bottom: px(1), left: 0, right: 0, textAlign: 'center', fontSize: px(10), fontWeight: 700, textShadow: '0 1px 2px #000' });
+  const dockPill = (accent: string): CSSProperties => ({
+    ...pillBox, display: 'flex', alignItems: 'center', gap: px(6), height: px(32), boxSizing: 'border-box', borderRadius: px(16), border: `${px(2)}px solid #1b1818`,
+    boxShadow: `0 ${px(3)}px 0 ${accent}, 0 0 ${px(8)}px ${accent}77`, marginBottom: px(3),
+  });
+  const chipSt = (white: boolean, hi = false): CSSProperties => ({
+    display: 'inline-flex', alignItems: 'center', gap: px(4), height: px(20), boxSizing: 'border-box', padding: `0 ${px(9)}px`, borderRadius: 99,
+    background: white ? '#fff8e8' : 'rgba(22,20,20,0.94)', color: white ? '#1d3a24' : hi ? '#7dffa5' : '#fff', border: `${px(1.5)}px solid ${white ? '#f1e2bd' : '#2c2828'}`,
+    fontSize: px(13.5), fontWeight: 700, boxShadow: `0 ${px(1.5)}px 0 rgba(0,0,0,0.35)`, whiteSpace: 'nowrap',
+  });
   const ov: CSSProperties = { position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 30 };
 
   const guide = status.shoal;
@@ -365,50 +466,70 @@ export default function FishingGame(props: Props) {
     <div ref={wrapRef} style={{ position: 'fixed', inset: 0, zIndex: 70, userSelect: 'none', overflow: 'hidden', background: '#2872b4', color: '#fff', touchAction: 'none', fontFamily: HUD }}>
       <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0 }} />
 
-      {/* kartu pemain */}
-      <div style={{ position: 'absolute', left: px(8), top: px(8), display: fishing ? 'none' : 'flex', alignItems: 'center', gap: px(8), paddingTop: 'env(safe-area-inset-top, 0px)' }}>
-        <div style={{ ...pillBox, display: 'flex', alignItems: 'center', gap: px(8), padding: px(6), paddingRight: px(14), borderColor: `${GOLD}77`, minWidth: px(190) }}>
-          <div style={{ width: px(50), height: px(50), borderRadius: px(12), overflow: 'hidden', border: `${px(2.5)}px solid #5ee0e0`, background: '#35405c', flex: '0 0 auto' }}>
+      {/* kiri atas: kartu pemain + pulau / chat / menu */}
+      <div style={{ position: 'absolute', left: `calc(env(safe-area-inset-left, 0px) + ${px(6)}px)`, top: `calc(env(safe-area-inset-top, 0px) + ${px(6)}px)`, display: fishing ? 'none' : 'flex', alignItems: 'center', gap: px(7) }}>
+        <div style={{ ...pillBox, display: 'flex', alignItems: 'center', gap: px(7), width: px(189), height: px(60), boxSizing: 'border-box', padding: `${px(5)}px ${px(8)}px ${px(5)}px ${px(7)}px`, borderRadius: px(17), border: `${px(2)}px solid #ffd36a`, boxShadow: `0 ${px(2.5)}px 0 #f0b33f`, marginRight: px(2) }}>
+          <div style={{ width: px(42), height: px(42), borderRadius: px(10), overflow: 'hidden', border: `${px(3)}px solid #5ee0e0`, boxSizing: 'border-box', background: '#35405c', flex: '0 0 auto' }}>
             {photo ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={photo} alt="" referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : null}
           </div>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: px(6) }}>
-              <span style={{ background: '#2f7be0', borderRadius: '50%', minWidth: px(22), height: px(22), display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: px(13), fontWeight: 700 }}>{lv.level}</span>
-              <span style={{ fontSize: px(17), fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: px(150) }}>{name || 'Tamu'}</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: px(5) }}>
+              <span style={{ background: '#23a3b5', border: `${px(1.5)}px solid #7fe3ee`, boxSizing: 'border-box', borderRadius: '50%', minWidth: px(20), height: px(20), display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: px(12), fontWeight: 700, flex: '0 0 auto' }}>{lv.level}</span>
+              <span style={{ fontSize: px(14), fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.1 }}>{name || 'Tamu'}</span>
             </div>
-            <div style={{ fontSize: px(12), fontWeight: 600, color: 'rgba(255,255,255,0.72)', marginTop: px(1) }}>⛵ {titleFor(lv.level)}</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: px(8), marginTop: px(2) }}>
-              <div style={{ flex: 1, height: px(6), borderRadius: px(4), background: 'rgba(255,255,255,0.18)', overflow: 'hidden' }}>
-                <div style={{ width: Math.min(100, (lv.into / lv.need) * 100) + '%', height: '100%', background: '#4ade80' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: px(3), fontSize: px(11.5), fontWeight: 700, color: '#a9afbd', marginTop: px(2), lineHeight: 1.1 }}><BoatIcon size={px(12)} />{titleFor(lv.level)}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: px(6), marginTop: px(3) }}>
+              <div style={{ flex: 1, height: px(5), borderRadius: px(3), background: '#3b3e47', overflow: 'hidden' }}>
+                <div style={{ width: Math.min(100, (lv.into / lv.need) * 100) + '%', height: '100%', background: 'linear-gradient(90deg,#2fbf8a,#6fdc8c)' }} />
               </div>
-              <span style={{ fontSize: px(11), fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>{lv.into}/{lv.need}</span>
+              <span style={{ fontSize: px(11), fontWeight: 700, color: '#b7bcc8', whiteSpace: 'nowrap' }}>{lv.into}/{lv.need}</span>
             </div>
           </div>
         </div>
-        <button onClick={() => setShopOpen(true)} aria-label="Toko & Gacha" style={circleBtn}><Svg d="M4 7h16M4 12h16M4 17h16" size={px(20)} /></button>
+        <div style={{ position: 'relative' }}>
+          <button onClick={() => say('Pemain online: 1 (kamu)')} aria-label="Pulau" style={{ ...ringBtn('#3fd6c8'), marginTop: px(8) }}><IslandIcon size={px(22)} /></button>
+          <span style={{ position: 'absolute', top: px(-5), left: px(-3), display: 'flex', alignItems: 'center', gap: px(3), padding: `${px(1.5)}px ${px(7)}px`, borderRadius: 99, background: 'linear-gradient(180deg,#38d58b,#1fa56a)', border: `${px(1.5)}px solid #1b1818`, fontSize: px(12), fontWeight: 700, color: '#fff', lineHeight: 1.2 }}><PeopleIcon size={px(12)} />1</span>
+        </div>
+        <button onClick={() => setChatOpen((o) => !o)} aria-label="Chat" style={ringBtn('#ffd36a')}><ChatIcon size={px(18)} /></button>
+        <button onClick={() => setShopOpen(true)} aria-label="Menu: Toko & Gacha" style={ringBtn('#ffd36a')}><Svg d="M4 7h16M4 12h16M4 17h16" size={px(18)} /></button>
       </div>
 
-      {/* kanan atas */}
-      <div style={{ position: 'absolute', right: px(8), top: px(8), display: fishing ? 'none' : 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: px(6), paddingTop: 'env(safe-area-inset-top, 0px)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: px(8) }}>
-          <div style={{ ...pillBox, display: 'flex', alignItems: 'center', gap: px(7), height: px(36), padding: `0 ${px(5)}px 0 ${px(12)}px`, borderRadius: px(18) }}>
-            <svg width={px(18)} height={px(18)} viewBox="0 0 24 24"><path d="M6 4h12l4 6-10 11L2 10z" fill="#39e07f" stroke="#12803e" strokeWidth="1.6" strokeLinejoin="round" /></svg>
-            <span style={{ fontSize: px(17), fontWeight: 700 }}>{formatNum(crystal)}</span>
-            <button onClick={() => setShopOpen(true)} aria-label="Tambah" style={{ width: px(26), height: px(26), borderRadius: '50%', background: '#2ecf74', border: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}><Svg d="M12 5v14M5 12h14" size={px(16)} w={3.2} /></button>
+      {/* chat */}
+      {!fishing && (() => {
+        const last = chat[chat.length - 1];
+        const box: CSSProperties = { position: 'absolute', left: `calc(env(safe-area-inset-left, 0px) + ${px(6)}px)`, top: `calc(env(safe-area-inset-top, 0px) + ${px(74)}px)`, maxWidth: px(277), boxSizing: 'border-box', background: 'rgba(18,16,16,0.58)', borderRadius: px(12), padding: `${px(3)}px ${px(10)}px`, fontSize: px(13), fontWeight: 700, textShadow: '0 1px 2px rgba(0,0,0,0.7)' };
+        const line = (m: { who: string; msg: string }, i: number) => (
+          <div key={i} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}><span style={{ color: '#f6c445' }}>{m.who}:</span> {m.msg}</div>
+        );
+        if (chatOpen) return <div style={{ ...box, minWidth: px(200) }}>{chat.length ? chat.slice(-6).map(line) : <span style={{ color: 'rgba(255,255,255,0.6)' }}>Belum ada pesan</span>}</div>;
+        if (last && Date.now() - last.t < 9000) return <div style={box}>{line(last, 0)}</div>;
+        return null;
+      })()}
+
+      {/* kanan atas: mata uang, hadiah, pengaturan, lokasi */}
+      <div style={{ position: 'absolute', right: `calc(env(safe-area-inset-right, 0px) + ${px(10)}px)`, top: `calc(env(safe-area-inset-top, 0px) + ${px(6)}px)`, display: fishing ? 'none' : 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: px(5) }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: px(4) }}>
+          <div style={{ ...dockPill('#b08cff'), padding: `0 ${px(14)}px 0 ${px(10)}px` }}>
+            <SparkIcon size={px(18)} />
+            <span style={{ fontSize: px(15), fontWeight: 700, color: '#c7b2ff' }}>{formatNum(xp)}</span>
           </div>
-          <button onClick={() => setMenuOpen(true)} aria-label="Pengaturan" style={circleBtn}>
-            <svg width={px(20)} height={px(20)} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"><circle cx="12" cy="12" r="3.2" /><path d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3M5.5 5.5l2.1 2.1M16.4 16.4l2.1 2.1M18.5 5.5l-2.1 2.1M7.6 16.4l-2.1 2.1" /></svg>
-          </button>
+          <div style={{ ...dockPill('#3fe08a'), padding: `0 ${px(5)}px 0 ${px(11)}px`, gap: px(7) }}>
+            <GemIcon size={px(18)} />
+            <span style={{ fontSize: px(15), fontWeight: 700, color: '#8ff0a6' }}>{formatNum(crystal)}</span>
+            <button onClick={() => setShopOpen(true)} aria-label="Tambah" style={{ width: px(22), height: px(22), borderRadius: '50%', background: 'radial-gradient(circle at 35% 30%,#58e89a,#1fa85a)', border: `${px(1.5)}px solid #1b1818`, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}><Svg d="M12 5v14M5 12h14" size={px(13)} w={3.4} /></button>
+          </div>
+          <button onClick={() => say('Belum ada hadiah hari ini 🎁')} aria-label="Hadiah" style={{ ...ringBtn('#ffb02e'), marginBottom: px(5) }}><GiftIcon size={px(20)} /></button>
+          <button onClick={() => setMenuOpen(true)} aria-label="Pengaturan" style={{ ...ringBtn('#8fdcf0'), marginBottom: px(5) }}><GearIcon size={px(19)} /></button>
         </div>
-        <div style={{ ...pillBox, padding: `${px(7)}px ${px(16)}px`, textAlign: 'right', borderRadius: px(14) }}>
-          <div style={{ fontSize: px(16), fontWeight: 700, color: '#5ee0e0', lineHeight: 1.1 }}>Pulau Tengah Laut</div>
-          <div style={{ fontSize: px(14), fontWeight: 600, marginTop: px(2) }}>{dateStr} · <b>{timeStr}</b> {tz}</div>
+        <div style={{ ...pillBox, boxSizing: 'border-box', minWidth: px(154), padding: `${px(5)}px ${px(11)}px`, textAlign: 'right', borderRadius: px(14), border: `${px(2)}px solid #1b1818`, boxShadow: `0 0 0 ${px(1.5)}px #5fc3f2, 0 ${px(3)}px ${px(6)}px rgba(60,170,255,0.45)`, marginTop: px(2) }}>
+          <div style={{ fontSize: px(14), fontWeight: 700, color: '#7fd2ff', lineHeight: 1.15 }}>Pulau Tengah Laut</div>
+          <div style={{ fontSize: px(12.5), fontWeight: 600, color: '#b4bac6', marginTop: px(1), whiteSpace: 'nowrap' }}>{dateStr} · <b style={{ color: '#fff' }}>{timeStr}</b> {tz}</div>
         </div>
         {guide && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: px(8), background: 'rgba(255,252,242,0.96)', color: '#1a3a22', borderRadius: px(14), padding: `${px(6)}px ${px(14)}px ${px(6)}px ${px(6)}px`, boxShadow: '0 2px 10px rgba(0,0,0,0.25)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: px(8), background: 'rgba(255,252,242,0.96)', color: '#1a3a22', borderRadius: px(14), padding: `${px(6)}px ${px(14)}px ${px(6)}px ${px(6)}px`, boxShadow: '0 2px 10px rgba(0,0,0,0.25)', marginTop: px(2) }}>
             <div style={{ width: px(34), height: px(34), borderRadius: '50%', background: '#2fb35a', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto' }}>
               <svg width={px(20)} height={px(20)} viewBox="0 0 24 24" style={{ transform: `rotate(${rotate}deg)` }}><path d="M12 3l7 16-7-4-7 4z" fill="#fff" /></svg>
             </div>
@@ -435,53 +556,64 @@ export default function FishingGame(props: Props) {
         onPointerMove={(e) => joyActive.current && joyMove(e)}
         onPointerUp={joyUp}
         onPointerCancel={joyUp}
-        style={{ position: 'absolute', left: px(14), bottom: `calc(env(safe-area-inset-bottom, 0px) + ${px(16)}px)`, width: px(112), height: px(112), borderRadius: '50%', background: 'rgba(196,160,110,0.45)', border: `${px(2)}px solid rgba(255,235,200,0.45)`, display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'none' }}
+        style={{ position: 'absolute', left: `calc(env(safe-area-inset-left, 0px) + ${px(9)}px)`, bottom: `calc(env(safe-area-inset-bottom, 0px) + ${px(27)}px)`, width: px(105), height: px(105), borderRadius: '50%', background: 'rgba(196,160,110,0.5)', border: `${px(2)}px solid rgba(255,235,200,0.4)`, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'none' }}
       >
-        <div style={{ width: px(46), height: px(46), borderRadius: '50%', background: 'rgba(245,225,190,0.55)', border: `${px(2)}px solid rgba(255,240,215,0.7)`, transform: `translate(${knob.x}px, ${knob.y}px)` }} />
+        <div style={{ width: px(45), height: px(45), borderRadius: '50%', background: 'rgba(240,220,185,0.6)', border: `${px(2)}px solid rgba(255,240,215,0.75)`, boxSizing: 'border-box', transform: `translate(${knob.x}px, ${knob.y}px)` }} />
       </div>}
 
       {/* buff + hotbar ransel */}
-      {!fishing && (
-        <div style={{ position: 'absolute', left: '50%', bottom: `calc(env(safe-area-inset-bottom, 0px) + ${px(8)}px)`, transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: px(6) }}>
-          <div style={{ display: 'flex', gap: px(5), alignItems: 'center' }}>
-            {[
-              { t: '🍀 ' + rod.power, bg: '#fff', fg: '#1d3a24' },
-              { t: '🍀 +' + luckPct + '%', bg: PANEL, fg: status.inShoal ? '#7dffa5' : '#fff' },
-              { t: '💰 +' + Math.round(rod.money * 100) + '%', bg: PANEL, fg: '#fff' },
-              { t: '✨ +' + Math.round(rod.xp * 100) + '%', bg: PANEL, fg: '#fff' },
-            ].map((c, i) => (
-              <span key={i} style={{ background: c.bg, color: c.fg, borderRadius: 99, padding: `${px(3)}px ${px(10)}px`, fontSize: px(13), fontWeight: 700, border: '1px solid rgba(255,255,255,0.14)' }}>{c.t}</span>
-            ))}
-          </div>
-          <div style={{ display: 'flex', gap: px(4), alignItems: 'flex-end', padding: px(4), borderRadius: px(14), background: 'rgba(10,14,22,0.35)' }}>
-            <button style={slot(true, '#3d8bff')} onClick={() => setShopOpen(true)} aria-label="Joran"><RodIcon size={px(28)} color={RARITY[rod.rarity].color} /></button>
-            {recent.map((b) => {
-              const sp = SPECIES_BY_ID[b.s];
-              const xl = isXL(sp, b.w);
-              return (
-                <button key={b.id} style={slot(false, rarityBorder(sp.rarity, xl))} onClick={() => { setSel(b.id); setBagOpen(true); }} aria-label={sp.name}>
-                  {xl && <span style={xlTag()}>XL</span>}
-                  <FishIcon id={sp.id} scale={0.62 * u} />
-                  <span style={wLabel()}>{formatWeight(b.w)}</span>
+      {!fishing && (() => {
+        const chips = [
+          { k: 'pow', icon: <CloverIcon size={px(12)} color="#1f7a35" />, t: String(rod.power), white: true, hi: false },
+          { k: 'luck', icon: <CloverIcon size={px(13)} />, t: '+' + luckPct + '%', white: false, hi: status.inShoal },
+          { k: 'money', icon: <CoinIcon size={px(13)} />, t: '+' + Math.round(rod.money * 100) + '%', white: false, hi: false },
+          { k: 'xp', icon: <XpIcon size={px(12)} />, t: '+' + Math.round(rod.xp * 100) + '%', white: false, hi: false },
+        ];
+        return (
+          <div style={{ position: 'absolute', left: '50%', bottom: `calc(env(safe-area-inset-bottom, 0px) + ${px(12)}px)`, transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: px(5) }}>
+            <div style={{ display: 'flex', gap: px(5), alignItems: 'center' }}>
+              {chips.slice(0, buffOpen ? chips.length : 1).map((c) => (
+                <span key={c.k} style={chipSt(c.white, c.hi)}>{c.icon}{c.t}</span>
+              ))}
+              <button onClick={() => setBuffOpen((o) => !o)} aria-label="Buff" style={{ width: px(22), height: px(22), borderRadius: '50%', background: '#1f6fe0', border: `${px(2)}px solid #6aa8ff`, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}><Svg d={buffOpen ? 'M14 6l-6 6 6 6' : 'M10 6l6 6-6 6'} size={px(12)} w={3.6} /></button>
+            </div>
+            <div style={{ display: 'flex', gap: px(3), alignItems: 'flex-end' }}>
+              <button style={slot(true, '#4a9bff')} onClick={() => setShopOpen(true)} aria-label="Joran"><RodIcon size={px(26)} color={RARITY[rod.rarity].color} /></button>
+              {recent.map((b) => {
+                const sp = SPECIES_BY_ID[b.s];
+                const xl = isXL(sp, b.w);
+                return (
+                  <button key={b.id} style={slot(false, rarityBorder(sp.rarity, xl))} onClick={() => { setSel(b.id); setBagOpen(true); }} aria-label={sp.name}>
+                    {xl && <span style={xlTag()}>XL</span>}
+                    <FishIcon id={sp.id} scale={0.62 * u} />
+                    <span style={wLabel()}>{wl(b.w)}</span>
+                  </button>
+                );
+              })}
+              {held && (
+                <button style={{ ...slot(false, '#34d27a'), width: px(40) }} onClick={() => setHeld(null)} aria-label="Lepas ikan">
+                  <span style={{ fontSize: px(18) }}>🙌</span>
+                  <span style={wLabel()}>Lepas</span>
                 </button>
-              );
-            })}
-            {held && (
-              <button style={{ ...slot(false, '#34d27a'), width: px(48) }} onClick={() => setHeld(null)} aria-label="Lepas ikan">
-                <span style={{ fontSize: px(20) }}>🙌</span>
-                <span style={wLabel()}>Lepas</span>
+              )}
+              <button style={slot(false, '#4a9bff')} onClick={() => { setSel(''); setBagOpen(true); }} aria-label="Ransel">
+                <BagIcon size={px(26)} />
+                <span style={{ ...wLabel(), color: bag.length >= BAG_MAX ? '#ff8a8a' : '#fff' }}>{bag.length}/{BAG_MAX}</span>
               </button>
-            )}
-            <button style={{ ...slot(false, '#3d8bff'), width: px(48) }} onClick={() => { setSel(''); setBagOpen(true); }} aria-label="Ransel">
-              <BagIcon size={px(28)} />
-              <span style={{ ...wLabel(), color: bag.length >= BAG_MAX ? '#ff8a8a' : '#fff' }}>{bag.length}/{BAG_MAX}</span>
-            </button>
+            </div>
           </div>
+        );
+      })()}
+
+      {/* penghitung ikan lepas (x0) */}
+      {!fishing && (
+        <div style={{ position: 'absolute', right: `calc(env(safe-area-inset-right, 0px) + ${px(88)}px)`, bottom: `calc(env(safe-area-inset-bottom, 0px) + ${px(112)}px)`, display: 'flex', alignItems: 'center', gap: px(5), height: px(26), boxSizing: 'border-box', padding: `0 ${px(12)}px 0 ${px(8)}px`, borderRadius: 99, background: '#fbf1dc', border: `${px(2)}px solid #d9c196`, boxShadow: '0 2px 0 rgba(120,90,40,0.45)', color: '#c2392b', fontWeight: 700, fontSize: px(16) }}>
+          <CrossRodIcon size={px(20)} />×{fails}
         </div>
       )}
 
       {/* tombol aksi */}
-      <div style={{ position: 'absolute', right: px(16), bottom: `calc(env(safe-area-inset-bottom, 0px) + ${px(16)}px)`, display: 'flex', alignItems: 'flex-end', gap: px(10) }}>
+      <div style={{ position: 'absolute', right: `calc(env(safe-area-inset-right, 0px) + ${px(14)}px)`, bottom: `calc(env(safe-area-inset-bottom, 0px) + ${px(32)}px)`, display: 'flex', alignItems: 'flex-end', gap: px(10) }}>
         {(phase === 'cast' || phase === 'wait') && (
           <button onClick={() => engineRef.current?.cancel()} aria-label="Batal" style={{ ...pillBox, width: px(46), height: px(46), borderRadius: '50%', marginBottom: px(8), display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0, background: 'rgba(225,29,72,0.9)' }}><Svg d="M6 6l12 12M18 6L6 18" size={px(22)} /></button>
         )}
@@ -490,10 +622,10 @@ export default function FishingGame(props: Props) {
           onPointerUp={() => engineRef.current?.action(false)}
           onPointerCancel={() => engineRef.current?.action(false)}
           className={phase === 'bite' ? 'komikita-pulse' : undefined}
-          style={{ width: px(100), height: px(100), borderRadius: '50%', border: `${px(4)}px solid #fff`, background: btnBg, color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: px(1), boxShadow: '0 4px 14px rgba(0,0,0,0.35)', touchAction: 'none', cursor: 'pointer', padding: 0, fontFamily: HUD }}
+          style={{ width: px(80), height: px(80), borderRadius: '50%', border: `${px(4)}px solid #fff`, boxSizing: 'border-box', background: btnBg, color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: px(1), boxShadow: '0 3px 0 rgba(80,60,40,0.55), 0 5px 14px rgba(0,0,0,0.35)', touchAction: 'none', cursor: 'pointer', padding: 0, fontFamily: HUD }}
         >
-          <RodIcon size={px(34)} color="#fff" />
-          <span style={{ fontSize: px(19), fontWeight: 700, textShadow: '0 2px 3px rgba(60,40,20,0.7)' }}>{btnLabel}</span>
+          {phase === 'idle' ? <FishRodIcon size={px(32)} /> : <RodIcon size={px(30)} color="#fff" />}
+          <span style={{ fontSize: px(15), fontWeight: 700, textShadow: '0 2px 3px rgba(60,40,20,0.7)' }}>{btnLabel}</span>
         </button>
       </div>
       <style>{`@keyframes kpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}.komikita-pulse{animation:kpulse .5s infinite}`}</style>
@@ -550,7 +682,7 @@ export default function FishingGame(props: Props) {
                     <button key={b.id} onClick={() => setSel(b.id)} style={{ ...slot(on, rarityBorder(sp.rarity, xl)), width: px(56), height: px(60), boxShadow: isShowoff(sp, b.w) ? `0 0 ${px(10)}px ${RARITY[sp.rarity].color}88` : 'none' }}>
                       {xl && <span style={xlTag()}>XL</span>}
                       <FishIcon id={sp.id} scale={0.85 * u} />
-                      <span style={wLabel()}>{formatWeight(b.w)}</span>
+                      <span style={wLabel()}>{wl(b.w)}</span>
                     </button>
                   );
                 })}
