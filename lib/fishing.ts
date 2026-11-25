@@ -53,7 +53,7 @@ export interface BagItem {
   w: number; // berat (kg)
 }
 
-export const BAG_MAX = 30;
+export const BAG_MAX = 45;
 export const MAX_LEVEL = 50;
 
 export function newId(): string {
@@ -91,7 +91,7 @@ export function titleFor(level: number): string {
 // ---- Tangkapan ----
 export function rollFish(level: number, luck: number = 0, rnd: () => number = Math.random): { species: Species; weight: number } {
   const b = Math.min(Math.max(level, 1), MAX_LEVEL) / MAX_LEVEL; // 0..1
-  const lk = Math.max(0, Math.min(1.5, luck)); // bonus dari joran yang dipakai
+  const lk = Math.max(0, Math.min(3, luck)); // bonus joran (+ event Gerombolan Ikan sampai +2)
   const w: Record<Rarity, number> = {
     common: Math.max(2, RARITY.common.weight - 20 * b - 16 * lk),
     uncommon: RARITY.uncommon.weight + 3 * b + 2 * lk,
@@ -123,6 +123,19 @@ export function fishPrice(s: Species, weight: number, moneyBonus: number = 0): n
 export function xpFor(s: Species, weight: number, xpBonus: number = 0): number {
   const base = RARITY[s.rarity].xp + Math.round(Math.min(40, Math.sqrt(weight) * 2));
   return Math.round(base * (1 + Math.max(0, xpBonus)));
+}
+
+// Posisi berat dalam rentang spesies (0 = terkecil, 1 = terbesar)
+export function sizeRatio(s: Species, weight: number): number {
+  return s.max > s.min ? Math.min(1, Math.max(0, (weight - s.min) / (s.max - s.min))) : 0.5;
+}
+// Tangkapan "XL": berat di 20% teratas rentang spesiesnya
+export function isXL(s: Species, weight: number): boolean {
+  return sizeRatio(s, weight) >= 0.8;
+}
+// Layak dipamerkan: XL, atau ikan Epik/Legendary
+export function isShowoff(s: Species, weight: number): boolean {
+  return isXL(s, weight) || s.rarity === 'epic' || s.rarity === 'legendary';
 }
 
 export function formatWeight(kg: number): string {

@@ -3,8 +3,9 @@ import type { Species } from '@/lib/fishing';
 
 export const TILE = 16;
 export type Dir = 'down' | 'up' | 'left' | 'right';
-export type Tile = 'deep' | 'shallow' | 'sand' | 'grass' | 'plank';
-export interface Prop { kind: 'palm' | 'rock' | 'lamp'; x: number; y: number; v: number }
+export type Tile = 'deep' | 'shallow' | 'sand' | 'grass' | 'plank' | 'dirt';
+export type PropKind = 'palm' | 'rock' | 'lamp' | 'fountain' | 'bench' | 'table' | 'stool' | 'sign' | 'bush' | 'npc';
+export interface Prop { kind: PropKind; x: number; y: number; v: number; w?: number; h?: number; name?: string; role?: string }
 export interface World {
   w: number;
   h: number;
@@ -104,6 +105,16 @@ export function generateWorld(seed = 11): World {
   bfs(dl, (x, y) => land[y][x]);
   bfs(dw, (x, y) => !land[y][x]);
 
+  // noise halus untuk bercak rumput
+  const hash = (x: number, y: number) => { const n = Math.sin(x * 127.1 + y * 311.7 + seed * 17.3) * 43758.5453; return n - Math.floor(n); };
+  const vnoise = (x: number, y: number) => {
+    const xi = Math.floor(x); const yi = Math.floor(y);
+    const xf = x - xi; const yf = y - yi;
+    const u = xf * xf * (3 - 2 * xf); const v = yf * yf * (3 - 2 * yf);
+    const n00 = hash(xi, yi); const n10 = hash(xi + 1, yi); const n01 = hash(xi, yi + 1); const n11 = hash(xi + 1, yi + 1);
+    return n00 + (n10 - n00) * u + (n01 - n00) * v + (n00 - n10 - n01 + n11) * u * v;
+  };
+
   const tiles: Tile[][] = [];
   for (let y = 0; y < H; y++) {
     tiles[y] = [];
@@ -111,18 +122,43 @@ export function generateWorld(seed = 11): World {
       if (land[y][x]) {
         const n = (Math.sin(x * 12.9898 + y * 78.233) * 43758.5453) % 1;
         const frac = n < 0 ? n + 1 : n;
-        tiles[y][x] = dw[y][x] <= 1 || (dw[y][x] === 2 && frac < 0.45) ? 'sand' : 'grass';
+        const beach = dw[y][x] <= 1 || (dw[y][x] === 2 && frac < 0.45);
+        tiles[y][x] = beach ? 'sand' : (dw[y][x] >= 3 && vnoise(x / 4.2, y / 4.2) > 0.6 ? 'grass' : 'sand');
       } else {
         tiles[y][x] = dl[y][x] <= 2 ? 'shallow' : 'deep';
       }
     }
   }
 
-  // titik mulai: pantai timur
+  // titik mulai: dekat pantai timur, di jalur tanah
   const sy = 13;
   let shoreX = Math.round(cx);
   while (shoreX < W - 1 && land[sy][shoreX]) shoreX++;
-  const start = { x: shoreX - 3, y: sy };
+  const start = { x: shoreX - 5, y: sy };
+
+  // jalur tanah berkelok dari barat ke pantai
+  const pathPts: [number, number][] = [
+    [2.5, sy - 6], [start.x - 17, sy - 3], [start.x - 12, sy + 1.5], [start.x - 7, sy - 0.5],
+    [start.x - 3, sy + 2], [start.x + 1, sy], [shoreX - 2.4, sy + 1.2],
+  ];
+  for (let i = 0; i + 1 < pathPts.length; i++) {
+    const [x0, y0] = pathPts[i];
+    const [x1, y1] = pathPts[i + 1];
+    const steps = Math.ceil(Math.hypot(x1 - x0, y1 - y0) * 4);
+    for (let k = 0; k <= steps; k++) {
+      const f = k / steps;
+      const wob = Math.sin((i * 7 + f * 5)) * 0.35;
+      const px = x0 + (x1 - x0) * f;
+      const py = y0 + (y1 - y0) * f + wob;
+      const rad = 1.05 + 0.3 * Math.sin(f * 6 + i);
+      for (let ty = Math.floor(py - 2); ty <= Math.ceil(py + 2); ty++) {
+        for (let tx = Math.floor(px - 2); tx <= Math.ceil(px + 2); tx++) {
+          if (tx < 2 || ty < 2 || tx >= W || ty >= H || !land[ty][tx] || dw[ty][tx] < 2) continue;
+          if ((tx + 0.5 - px) ** 2 + (ty + 0.5 - py) ** 2 < rad * rad) tiles[ty][tx] = 'dirt';
+        }
+      }
+    }
+  }
 
   // dermaga (2 petak lebar) menjorok ke laut
   const py = sy + 3;
@@ -145,18 +181,53 @@ export function generateWorld(seed = 11): World {
     props.push({ kind, x, y, v: rnd() });
     occ[y][x] = true;
   };
+  const walkable = (x: number, y: number) => x > 1 && y > 1 && x < W && y < H && (tiles[y][x] === 'sand' || tiles[y][x] === 'grass' || tiles[y][x] === 'dirt') && !occ[y][x];
+  // letakkan properti berukuran w×h petak di salah satu posisi calon (kiri-atas); kembalikan posisi yang dipakai
+  const putBlock = (kind: Prop['kind'], cands: [number, number][], w: number, h: number, extra: Partial<Prop> = {}): [number, number] | null => {
+    for (const [bx, by] of cands) {
+      let ok = true;
+      for (let yy = by; yy < by + h && ok; yy++) {
+        for (let xx = bx; xx < bx + w; xx++) {
+          if (!walkable(xx, yy) || near(xx, yy, start.x, start.y, 1)) { ok = false; break; }
+        }
+      }
+      if (!ok) continue;
+      props.push({ kind, x: bx, y: by, v: rnd(), w, h, ...extra });
+      for (let yy = by; yy < by + h; yy++) for (let xx = bx; xx < bx + w; xx++) occ[yy][xx] = true;
+      return [bx, by];
+    }
+    return null;
+  };
+  const sx = start.x;
+  putBlock('fountain', [[sx - 1, sy - 9], [sx - 3, sy - 9], [sx + 1, sy - 8], [sx - 5, sy - 9], [sx - 2, sy - 10], [sx - 7, sy - 9]], 4, 3);
+  const tbl = putBlock('table', [[sx - 8, sy - 3], [sx - 7, sy - 4], [sx - 9, sy - 3], [sx - 8, sy - 5]], 2, 1);
+  if (tbl) {
+    putBlock('stool', [[tbl[0] - 1, tbl[1]]], 1, 1);
+    putBlock('stool', [[tbl[0] + 2, tbl[1]]], 1, 1);
+  }
+  putBlock('bench', [[sx - 13, sy - 5], [sx - 12, sy - 6], [sx - 14, sy - 4], [sx - 12, sy - 3]], 3, 1);
+  putBlock('sign', [[sx - 5, sy + 4], [sx - 4, sy + 4], [sx - 5, sy + 3], [sx - 6, sy + 4]], 1, 1);
+  putBlock('lamp', [[sx - 8, sy + 4], [sx - 9, sy + 4], [sx - 8, sy + 3]], 1, 1);
+  putBlock('lamp', [[sx - 1, sy + 4], [sx, sy + 4], [sx - 1, sy + 3]], 1, 1);
+  putBlock('npc', [[sx + 3, sy - 2], [sx + 3, sy - 3], [sx + 2, sy - 2], [sx + 2, sy - 3]], 1, 1, { name: 'Pak Bayu', role: 'Pemancing' });
+  for (const c of [[sx + 6, sy - 3], [sx + 7, sy - 1], [sx + 5, sy - 6], [sx - 11, sy + 1], [sx - 3, sy - 7], [sx + 4, sy - 7], [sx - 15, sy - 1], [sx - 10, sy - 6]] as [number, number][]) {
+    putBlock('bush', [c], 1, 1);
+  }
+
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
       const t = tiles[y][x];
       if (t !== 'grass' && t !== 'sand') continue;
       if (near(x, y, start.x, start.y, 3) || near(x, y, pierX - 1, py, 3) || near(x, y, pierX - 1, py + 1, 3)) continue;
-      if (x === 0 || y === 0) continue; // tepi peta: dibatasi lewat blocked, pohon ada di baris/kolom ke-1
+      if (x === 0 || y === 0 || occ[y][x]) continue; // tepi peta: dibatasi lewat blocked, pohon ada di baris/kolom ke-1
       const neighOcc = occ[y][x - 1] || occ[y - 1][x] || (x + 1 < W && occ[y - 1][x + 1]) || occ[y - 1][x - 1];
-      if (x === 1 || y === 1) { if (t === 'grass' && rnd() < 0.85) place('palm', x, y); continue; }
+      if (x === 1 || y === 1) { if (rnd() < 0.85) place('palm', x, y); continue; }
       if (t === 'grass') {
-        const p = dw[y][x] >= 3 ? 0.07 : 0.1;
-        if (!neighOcc && rnd() < p) place('palm', x, y);
-      } else if (rnd() < 0.035 && !neighOcc) {
+        const pp = dw[y][x] >= 3 ? 0.07 : 0.1;
+        if (!neighOcc && rnd() < pp) place('palm', x, y);
+      } else if (dw[y][x] >= 3 && rnd() < 0.035 && !neighOcc) {
+        place('palm', x, y);
+      } else if (rnd() < 0.03 && !neighOcc) {
         place('rock', x, y);
       }
     }
@@ -212,6 +283,16 @@ function renderTerrain(world: World, dl: number[][], pond: boolean[][], pier: [n
         for (let i = 0; i < 7; i++) R(ctx, X + rnd() * 15, Y + rnd() * 15, 1, 1, '#d8bd7c');
         for (let i = 0; i < 4; i++) R(ctx, X + rnd() * 15, Y + rnd() * 15, 1, 1, '#f4e3ae');
         if (rnd() < 0.05) { R(ctx, X + 5, Y + 7, 2, 1, '#fff'); R(ctx, X + 6, Y + 8, 1, 1, '#f1b6c8'); }
+      } else if (t === 'dirt') {
+        R(ctx, X, Y, TILE, TILE, '#b48a5c');
+        for (let i = 0; i < 9; i++) R(ctx, X + rnd() * 15, Y + rnd() * 15, 1, 1, '#9b7248');
+        for (let i = 0; i < 6; i++) R(ctx, X + rnd() * 15, Y + rnd() * 15, 1, 1, '#c9a274');
+        if (rnd() < 0.35) { const qx = X + 2 + Math.floor(rnd() * 11); const qy = Y + 2 + Math.floor(rnd() * 11); R(ctx, qx, qy, 2, 1, '#d8c7a6'); R(ctx, qx, qy + 1, 2, 1, '#8c6a43'); }
+        const isDirt = (ax: number, ay: number) => ax >= 0 && ay >= 0 && ax < w && ay < h && tiles[ay][ax] === 'dirt';
+        if (!isDirt(tx, ty - 1)) { R(ctx, X, Y, TILE, 1, '#cfa876'); R(ctx, X, Y + 1, TILE, 1, '#a07a4d'); }
+        if (!isDirt(tx, ty + 1)) { R(ctx, X, Y + TILE - 2, TILE, 1, '#8f6c44'); R(ctx, X, Y + TILE - 1, TILE, 1, '#7c5b36'); }
+        if (!isDirt(tx - 1, ty)) R(ctx, X, Y, 1, TILE, '#a07a4d');
+        if (!isDirt(tx + 1, ty)) R(ctx, X + TILE - 1, Y, 1, TILE, '#8f6c44');
       } else {
         const d = Math.min(5, Math.max(0, dl[ty][tx] - 1));
         R(ctx, X, Y, TILE, TILE, WATER_COLORS[d]);
@@ -357,17 +438,11 @@ function line(ctx: CanvasRenderingContext2D, x0: number, y0: number, x1: number,
   }
 }
 
-const SKIN = '#f2c9a0';
-const SKIN_D = '#d9a77c';
-const HAIR = '#4a2c1a';
-const SHIRT = '#e8604c';
-const SHIRT_D = '#c24634';
-const PANTS = '#34476b';
-const BOOT = '#5a3a22';
-const HAT = '#f0cc6a';
-const HAT_D = '#c9a444';
+export interface Pal { skin: string; skinD: string; hair: string; shirt: string; shirtD: string; pants: string; boot: string; hat: string; hatD: string; band: string; cap?: boolean }
+export const PAL_PLAYER: Pal = { skin: '#f6d4b8', skinD: '#dcae8c', hair: '#9a68d8', shirt: '#2f4b7e', shirtD: '#1f3459', pants: '#223559', boot: '#2a2233', hat: '#2b4375', hatD: '#1b2c52', band: '#f0c75a', cap: true };
+export const PAL_BAYU: Pal = { skin: '#e2b48a', skinD: '#c4936a', hair: '#d9d6cf', shirt: '#6b9a4e', shirtD: '#527a3a', pants: '#c8a96a', boot: '#6b4a2a', hat: '#ead69a', hatD: '#c9b06a', band: '#8a5a2b' };
 
-export function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number, dir: Dir, moving: boolean, step: number, rod: boolean, rodShake = 0) {
+export function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number, dir: Dir, moving: boolean, step: number, rod: boolean, rodShake = 0, pal: Pal = PAL_PLAYER) {
   const fr = moving ? Math.floor(step * 8) % 4 : 0;
   const bob = moving && (fr === 1 || fr === 3) ? -1 : 0;
   drawShadow(ctx, x, y - 1, 6, 2, 0.28);
@@ -382,56 +457,68 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number, 
   }
   const legA = moving ? (fr === 1 ? -1 : fr === 3 ? 1 : 0) : 0;
   if (dir === 'down' || dir === 'up') {
-    R(ctx, ox + 5, oy + 16 + (legA < 0 ? -1 : 0), 2, 4, PANTS);
-    R(ctx, ox + 9, oy + 16 + (legA > 0 ? -1 : 0), 2, 4, PANTS);
-    R(ctx, ox + 4, oy + 19 + (legA < 0 ? -1 : 0), 3, 2, BOOT);
-    R(ctx, ox + 9, oy + 19 + (legA > 0 ? -1 : 0), 3, 2, BOOT);
-    R(ctx, ox + 4, oy + 10, 8, 7, SHIRT);
-    R(ctx, ox + 4, oy + 15, 8, 2, SHIRT_D);
+    R(ctx, ox + 5, oy + 16 + (legA < 0 ? -1 : 0), 2, 4, pal.pants);
+    R(ctx, ox + 9, oy + 16 + (legA > 0 ? -1 : 0), 2, 4, pal.pants);
+    R(ctx, ox + 4, oy + 19 + (legA < 0 ? -1 : 0), 3, 2, pal.boot);
+    R(ctx, ox + 9, oy + 19 + (legA > 0 ? -1 : 0), 3, 2, pal.boot);
+    R(ctx, ox + 4, oy + 10, 8, 7, pal.shirt);
+    R(ctx, ox + 4, oy + 15, 8, 2, pal.shirtD);
     if (dir === 'up') R(ctx, ox + 5, oy + 11, 6, 5, '#8a5a2b');
-    R(ctx, ox + 2, oy + 11, 2, 5, SHIRT);
-    R(ctx, ox + 12, oy + 11, 2, 5, SHIRT);
-    R(ctx, ox + 2, oy + 16, 2, 1, SKIN);
-    R(ctx, ox + 12, oy + 16, 2, 1, SKIN);
-    R(ctx, ox + 4, oy + 3, 8, 8, dir === 'up' ? HAIR : SKIN);
+    R(ctx, ox + 2, oy + 11, 2, 5, pal.shirt);
+    R(ctx, ox + 12, oy + 11, 2, 5, pal.shirt);
+    R(ctx, ox + 2, oy + 16, 2, 1, pal.skin);
+    R(ctx, ox + 12, oy + 16, 2, 1, pal.skin);
+    R(ctx, ox + 4, oy + 3, 8, 8, dir === 'up' ? pal.hair : pal.skin);
     if (dir === 'down') {
-      R(ctx, ox + 4, oy + 3, 8, 2, HAIR);
-      R(ctx, ox + 3, oy + 4, 1, 4, HAIR);
-      R(ctx, ox + 12, oy + 4, 1, 4, HAIR);
+      R(ctx, ox + 4, oy + 3, 8, 2, pal.hair);
+      R(ctx, ox + 3, oy + 4, 1, 4, pal.hair);
+      R(ctx, ox + 12, oy + 4, 1, 4, pal.hair);
       R(ctx, ox + 6, oy + 7, 1, 2, '#1d1d2b');
       R(ctx, ox + 9, oy + 7, 1, 2, '#1d1d2b');
       R(ctx, ox + 5, oy + 9, 2, 1, 'rgba(240,110,120,0.55)');
       R(ctx, ox + 9, oy + 9, 2, 1, 'rgba(240,110,120,0.55)');
       R(ctx, ox + 7, oy + 10, 2, 1, '#b5543f');
     } else {
-      R(ctx, ox + 3, oy + 4, 1, 5, HAIR);
-      R(ctx, ox + 12, oy + 4, 1, 5, HAIR);
+      R(ctx, ox + 3, oy + 4, 1, 5, pal.hair);
+      R(ctx, ox + 12, oy + 4, 1, 5, pal.hair);
     }
   } else {
     // samping (menghadap kiri; kanan = cermin)
-    R(ctx, ox + 6 + (legA < 0 ? -1 : 0), oy + 16, 2, 4, PANTS);
-    R(ctx, ox + 8 + (legA > 0 ? 1 : 0), oy + 16, 2, 4, darken(PANTS, 0.15));
-    R(ctx, ox + 4 + (legA < 0 ? -1 : 0), oy + 19, 4, 2, BOOT);
-    R(ctx, ox + 8 + (legA > 0 ? 1 : 0), oy + 19, 4, 2, darken(BOOT, 0.15));
-    R(ctx, ox + 5, oy + 10, 6, 7, SHIRT);
-    R(ctx, ox + 5, oy + 15, 6, 2, SHIRT_D);
+    R(ctx, ox + 6 + (legA < 0 ? -1 : 0), oy + 16, 2, 4, pal.pants);
+    R(ctx, ox + 8 + (legA > 0 ? 1 : 0), oy + 16, 2, 4, darken(pal.pants, 0.15));
+    R(ctx, ox + 4 + (legA < 0 ? -1 : 0), oy + 19, 4, 2, pal.boot);
+    R(ctx, ox + 8 + (legA > 0 ? 1 : 0), oy + 19, 4, 2, darken(pal.boot, 0.15));
+    R(ctx, ox + 5, oy + 10, 6, 7, pal.shirt);
+    R(ctx, ox + 5, oy + 15, 6, 2, pal.shirtD);
     R(ctx, ox + 9, oy + 11, 3, 5, '#8a5a2b');
-    R(ctx, ox + 4, oy + 3, 8, 8, SKIN);
-    R(ctx, ox + 8, oy + 3, 4, 8, HAIR);
-    R(ctx, ox + 4, oy + 3, 5, 2, HAIR);
+    R(ctx, ox + 4, oy + 3, 8, 8, pal.skin);
+    R(ctx, ox + 8, oy + 3, 4, 8, pal.hair);
+    R(ctx, ox + 4, oy + 3, 5, 2, pal.hair);
     R(ctx, ox + 5, oy + 7, 1, 2, '#1d1d2b');
-    R(ctx, ox + 3, oy + 8, 1, 1, SKIN_D);
+    R(ctx, ox + 3, oy + 8, 1, 1, pal.skinD);
     R(ctx, ox + 4, oy + 9, 2, 1, 'rgba(240,110,120,0.55)');
     R(ctx, ox + 4, oy + 10, 2, 1, '#b5543f');
-    R(ctx, ox + 5, oy + 11, 3, 5, lighten(SHIRT, 0.1));
-    R(ctx, ox + 5, oy + 16, 2, 1, SKIN);
+    R(ctx, ox + 5, oy + 11, 3, 5, lighten(pal.shirt, 0.1));
+    R(ctx, ox + 5, oy + 16, 2, 1, pal.skin);
   }
-  // topi jerami
-  R(ctx, ox + 1, oy + 2, 14, 2, HAT);
-  R(ctx, ox + 1, oy + 4, 14, 1, HAT_D);
-  R(ctx, ox + 4, oy, 8, 3, HAT);
-  R(ctx, ox + 4, oy + 2, 8, 1, '#c2402f');
-  R(ctx, ox + 5, oy, 3, 1, lighten(HAT, 0.35));
+  if (pal.cap) {
+    // topi pelaut
+    R(ctx, ox + 4, oy, 8, 4, pal.hat);
+    R(ctx, ox + 3, oy + 2, 1, 2, pal.hat);
+    R(ctx, ox + 12, oy + 2, 1, 2, pal.hat);
+    R(ctx, ox + 4, oy + 3, 8, 1, pal.band);
+    R(ctx, ox + 5, oy, 3, 1, lighten(pal.hat, 0.3));
+    if (dir === 'down') { R(ctx, ox + 7, oy + 1, 2, 2, pal.band); R(ctx, ox + 4, oy + 4, 8, 1, pal.hatD); }
+    else if (dir === 'up') { R(ctx, ox + 4, oy + 4, 8, 1, pal.hatD); }
+    else { R(ctx, ox + 2, oy + 3, 3, 2, pal.hatD); R(ctx, ox + 3, oy + 3, 2, 1, pal.hat); }
+  } else {
+    // topi jerami
+    R(ctx, ox + 1, oy + 2, 14, 2, pal.hat);
+    R(ctx, ox + 1, oy + 4, 14, 1, pal.hatD);
+    R(ctx, ox + 4, oy, 8, 3, pal.hat);
+    R(ctx, ox + 4, oy + 2, 8, 1, pal.band);
+    R(ctx, ox + 5, oy, 3, 1, lighten(pal.hat, 0.35));
+  }
   ctx.restore();
 
   if (rod) {
@@ -439,7 +526,7 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number, 
     line(ctx, g.hx, g.hy, g.tx, g.ty, '#7a4b22', 1);
     line(ctx, g.hx, g.hy - 1, g.hx + (g.tx - g.hx) * 0.25, g.hy - 1 + (g.ty - g.hy) * 0.25, '#4a2c12', 1);
     R(ctx, g.tx, g.ty, 1, 1, '#d8d8d8');
-    R(ctx, g.hx - 1, g.hy, 2, 2, SKIN);
+    R(ctx, g.hx - 1, g.hy, 2, 2, pal.skin);
   }
 }
 
@@ -625,4 +712,159 @@ export function drawFish(ctx: CanvasRenderingContext2D, sp: Species, x: number, 
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(s, -FISH_W / 2, -FISH_H / 2);
   ctx.restore();
+}
+
+
+// ---------- properti taman ----------
+function ell(ctx: CanvasRenderingContext2D, cx: number, cy: number, rx: number, ry: number, col: string) {
+  ctx.fillStyle = col;
+  for (let yy = -Math.ceil(ry); yy <= Math.ceil(ry); yy++) {
+    for (let xx = -Math.ceil(rx); xx <= Math.ceil(rx); xx++) {
+      if ((xx * xx) / (rx * rx) + (yy * yy) / (ry * ry) <= 1) ctx.fillRect(Math.round(cx + xx), Math.round(cy + yy), 1, 1);
+    }
+  }
+}
+
+let fountainBase: HTMLCanvasElement | null = null;
+function getFountainBase() {
+  if (fountainBase) return fountainBase;
+  const c = mk(64, 48);
+  const g = c.getContext('2d') as CanvasRenderingContext2D;
+  ell(g, 32, 40, 30, 6, 'rgba(0,20,10,0.22)');
+  ell(g, 32, 33, 30, 13, '#6f7885');
+  ell(g, 32, 31, 30, 13, '#b8c1cc');
+  ell(g, 32, 31, 27, 11, '#8f99a6');
+  ell(g, 32, 32, 25, 10, '#3fb4e6');
+  ell(g, 32, 32, 22, 8, '#58cbf2');
+  ell(g, 32, 33, 15, 5, '#6fdaf6');
+  // tiang & mangkuk bertingkat
+  R(g, 28, 12, 8, 20, '#a9b2bd');
+  R(g, 28, 12, 2, 20, '#d0d7df');
+  R(g, 34, 12, 2, 20, '#848e9b');
+  ell(g, 32, 23, 11, 4, '#7f8996');
+  ell(g, 32, 22, 11, 4, '#b8c1cc');
+  ell(g, 32, 22, 9, 3, '#58cbf2');
+  ell(g, 32, 13, 6, 2.5, '#b8c1cc');
+  ell(g, 32, 13, 4.5, 1.6, '#58cbf2');
+  R(g, 31, 8, 2, 6, '#a9b2bd');
+  fountainBase = c;
+  return c;
+}
+export function drawFountain(ctx: CanvasRenderingContext2D, p: Prop, t: number) {
+  const X = p.x * TILE;
+  const Y = p.y * TILE;
+  ctx.drawImage(getFountainBase(), X, Y);
+  // riak air
+  for (let i = 0; i < 7; i++) {
+    const x = X + 10 + ((t * 9 + i * 8.3) % 42);
+    const y = Y + 28 + (i % 4) * 2.5;
+    ctx.fillStyle = 'rgba(255,255,255,' + (0.35 + 0.25 * Math.sin(t * 3 + i)).toFixed(2) + ')';
+    ctx.fillRect(Math.round(x), Math.round(y), 3, 1);
+  }
+  // pancuran
+  for (let k = -2; k <= 2; k++) {
+    for (let j = 0; j < 6; j++) {
+      const f = (t * 1.3 + j * 0.14 + k * 0.05) % 1;
+      const dx = k * f * 7;
+      const dy = -2 + f * 9 - Math.sin(f * Math.PI) * 6 + Math.abs(k) * f * 2;
+      ctx.fillStyle = f < 0.5 ? '#e8fbff' : '#9fe3fb';
+      ctx.fillRect(Math.round(X + 32 + dx), Math.round(Y + 12 + dy), 1, 1);
+    }
+  }
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.fillRect(X + 31, Y + 7, 2, 1);
+}
+
+export function drawBench(ctx: CanvasRenderingContext2D, p: Prop) {
+  const X = p.x * TILE;
+  const Y = p.y * TILE;
+  ell(ctx, X + 24, Y + 15, 23, 3, 'rgba(0,20,10,0.22)');
+  R(ctx, X + 3, Y - 8, 3, 18, '#6b4a2a');
+  R(ctx, X + 42, Y - 8, 3, 18, '#6b4a2a');
+  R(ctx, X + 1, Y - 7, 46, 3, '#cf9d62');
+  R(ctx, X + 1, Y - 4, 46, 1, '#9a6c3a');
+  R(ctx, X + 1, Y - 3, 46, 3, '#c28c52');
+  R(ctx, X + 1, Y, 46, 1, '#9a6c3a');
+  R(ctx, X, Y + 3, 48, 3, '#e0b67e');
+  R(ctx, X, Y + 3, 48, 1, '#f1d3a3');
+  R(ctx, X, Y + 6, 48, 2, '#a97745');
+  R(ctx, X + 4, Y + 8, 3, 6, '#6b4a2a');
+  R(ctx, X + 41, Y + 8, 3, 6, '#6b4a2a');
+}
+
+export function drawTable(ctx: CanvasRenderingContext2D, p: Prop, t: number) {
+  const X = p.x * TILE;
+  const Y = p.y * TILE;
+  ell(ctx, X + 16, Y + 15, 15, 3, 'rgba(0,20,10,0.25)');
+  R(ctx, X + 8, Y + 8, 3, 7, '#6e3714');
+  R(ctx, X + 21, Y + 8, 3, 7, '#6e3714');
+  ell(ctx, X + 16, Y + 8, 15, 6.5, '#7a3d16');
+  ell(ctx, X + 16, Y + 7, 15, 6.5, '#d6762f');
+  ell(ctx, X + 16, Y + 7, 12, 4.5, '#e08a3f');
+  R(ctx, X + 8, Y + 4, 5, 1, '#f0a85c');
+  // lentera
+  R(ctx, X + 14, Y + 5, 4, 2, '#3a2a18');
+  R(ctx, X + 14, Y - 2, 4, 7, '#ffd36a');
+  R(ctx, X + 15, Y - 1, 1, 4, '#fff1b8');
+  R(ctx, X + 13, Y - 3, 6, 1, '#3a2a18');
+  R(ctx, X + 15, Y - 5, 2, 2, '#3a2a18');
+  R(ctx, X + 14, Y - 2, 4, 1, '#3a2a18');
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  const g = ctx.createRadialGradient(X + 16, Y + 1, 1, X + 16, Y + 1, 22);
+  const a = 0.3 + Math.sin(t * 5 + p.v * 8) * 0.05;
+  g.addColorStop(0, 'rgba(255,200,90,' + a + ')');
+  g.addColorStop(1, 'rgba(255,200,90,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(X - 8, Y - 24, 48, 48);
+  ctx.restore();
+}
+
+export function drawStool(ctx: CanvasRenderingContext2D, p: Prop) {
+  const X = p.x * TILE;
+  const Y = p.y * TILE;
+  ell(ctx, X + 8, Y + 15, 7, 2, 'rgba(0,20,10,0.25)');
+  R(ctx, X + 3, Y + 9, 2, 6, '#7a1d1d');
+  R(ctx, X + 11, Y + 9, 2, 6, '#7a1d1d');
+  ell(ctx, X + 8, Y + 9, 7, 3.5, '#a32020');
+  ell(ctx, X + 8, Y + 8, 7, 3.5, '#d93030');
+  R(ctx, X + 5, Y + 7, 3, 1, '#f06a6a');
+}
+
+export function drawSign(ctx: CanvasRenderingContext2D, p: Prop) {
+  const X = p.x * TILE;
+  const Y = p.y * TILE;
+  ell(ctx, X + 8, Y + 15, 6, 2, 'rgba(0,20,10,0.25)');
+  R(ctx, X + 7, Y - 8, 3, 23, '#6b4a2a');
+  R(ctx, X + 7, Y - 8, 1, 23, '#8a6338');
+  R(ctx, X - 4, Y - 7, 14, 6, '#dcb27a');
+  R(ctx, X - 6, Y - 6, 2, 4, '#dcb27a');
+  R(ctx, X - 4, Y - 7, 14, 1, '#f1d3a3');
+  R(ctx, X - 4, Y - 2, 14, 1, '#9a6c3a');
+  R(ctx, X - 1, Y - 5, 8, 1, '#7a5230');
+  R(ctx, X + 9, Y, 14, 6, '#c8975e');
+  R(ctx, X + 23, Y + 1, 2, 4, '#c8975e');
+  R(ctx, X + 9, Y, 14, 1, '#e3b87f');
+  R(ctx, X + 9, Y + 5, 14, 1, '#8c5f33');
+  R(ctx, X + 12, Y + 3, 8, 1, '#7a5230');
+}
+
+export function drawBush(ctx: CanvasRenderingContext2D, p: Prop) {
+  const X = p.x * TILE;
+  const Y = p.y * TILE;
+  ell(ctx, X + 8, Y + 14, 9, 2.5, 'rgba(0,20,10,0.25)');
+  const blobs: [number, number, number, number][] = [[4, 10, 5, 4.5], [12, 10, 5, 4.5], [8, 7, 6, 5], [8, 11, 7, 4]];
+  for (const [bx, by, rx, ry] of blobs) ell(ctx, X + bx, Y + by, rx, ry, '#256f3b');
+  for (const [bx, by, rx, ry] of blobs) ell(ctx, X + bx - 0.5, Y + by - 1, rx - 1, ry - 1, '#2f9448');
+  ell(ctx, X + 7, Y + 5, 3, 2, '#4cbb62');
+  ell(ctx, X + 12, Y + 9, 2, 1.5, '#4cbb62');
+  const berries = p.v > 0.55;
+  if (berries) { R(ctx, X + 4, Y + 9, 1, 1, '#ff6b6b'); R(ctx, X + 11, Y + 6, 1, 1, '#ff6b6b'); R(ctx, X + 9, Y + 11, 1, 1, '#ff6b6b'); }
+}
+
+export function drawNpc(ctx: CanvasRenderingContext2D, p: Prop, t: number) {
+  const x = p.x * TILE + 8;
+  const y = p.y * TILE + 15;
+  const bob = Math.sin(t * 2 + p.v * 6) > 0.92 ? 1 : 0;
+  drawPlayer(ctx, x, y - bob * 0, 'down', false, 0, false, 0, PAL_BAYU);
 }

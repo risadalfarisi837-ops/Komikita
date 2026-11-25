@@ -4,7 +4,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getFirebase } from '@/lib/firebase-client';
 import FishingGame from '@/components/fishing/FishingGame';
-import { DEFAULT_ROD, GACHA_DUPLICATE_REFUND, GACHA_PRICE, RODS_BY_ID, SPECIES_BY_ID, fishPrice, rollGacha, sanitizeBag, sanitizeRods } from '@/lib/fishing';
+import {
+  DEFAULT_ROD, GACHA_DUPLICATE_REFUND, GACHA_PRICE, RODS_BY_ID, SPECIES_BY_ID, fishPrice, rollGacha, sanitizeBag, sanitizeRods,
+} from '@/lib/fishing';
 import type { BagItem, Rod } from '@/lib/fishing';
 
 export default function MancingPage() {
@@ -15,17 +17,19 @@ export default function MancingPage() {
   const [crystal, setCrystal] = useState(0);
   const [xp, setXp] = useState(0);
   const [bag, setBagState] = useState<BagItem[]>([]);
-  const [rods, setRods] = useState<string[]>([DEFAULT_ROD]);
-  const [equippedRod, setEquippedRod] = useState(DEFAULT_ROD);
   const [err, setErr] = useState('');
+  const [rods, setRodsState] = useState<string[]>([DEFAULT_ROD]);
+  const [equippedRod, setEquippedState] = useState<string>(DEFAULT_ROD);
   const fb = useRef<any>(null);
   const uid = useRef('');
   const bagRef = useRef<BagItem[]>([]);
   const xpRef = useRef(0);
-  const crystalRef = useRef(0);
   const rodsRef = useRef<string[]>([DEFAULT_ROD]);
+  const equipRef = useRef<string>(DEFAULT_ROD);
 
   const setBag = (b: BagItem[]) => { bagRef.current = b; setBagState(b); };
+  const setRods = (r: string[]) => { rodsRef.current = r; setRodsState(r); };
+  const setEquipped = (id: string) => { equipRef.current = id; setEquippedState(id); };
   const warn = useCallback((m: string) => { setErr(m); setTimeout(() => setErr(''), 3000); }, []);
 
   useEffect(() => {
@@ -45,17 +49,15 @@ export default function MancingPage() {
           if (stop) return;
           if (typeof v.displayName === 'string' && v.displayName) setName(v.displayName);
           if (typeof v.photoURL === 'string' && v.photoURL) setPhoto(v.photoURL);
-          crystalRef.current = typeof v.koin === 'number' ? v.koin : 0;
-          setCrystal(crystalRef.current);
+          setCrystal(typeof v.koin === 'number' ? v.koin : 0);
           const fx = typeof v.fishing?.xp === 'number' ? v.fishing.xp : 0;
           xpRef.current = fx;
           setXp(fx);
           setBag(sanitizeBag(v.fishing?.bag));
-          const r = sanitizeRods(v.fishing?.rods);
-          rodsRef.current = r;
-          setRods(r);
-          const eq = typeof v.fishing?.equipped === 'string' && r.includes(v.fishing.equipped) ? v.fishing.equipped : DEFAULT_ROD;
-          setEquippedRod(eq);
+          const owned = sanitizeRods(v.fishing?.rods);
+          setRods(owned);
+          const eq = v.fishing?.equippedRod;
+          setEquipped(typeof eq === 'string' && owned.includes(eq) ? eq : DEFAULT_ROD);
         } catch { /* tetap bisa main tanpa data tersimpan */ }
         if (!stop) setReady(true);
       });
@@ -81,8 +83,8 @@ export default function MancingPage() {
     const set = new Set(ids);
     const items = bagRef.current.filter((b) => set.has(b.id));
     if (!items.length) return 0;
-    const curRod = RODS_BY_ID[equippedRod] || RODS_BY_ID[DEFAULT_ROD];
-    const total = items.reduce((s, b) => s + fishPrice(SPECIES_BY_ID[b.s], b.w, curRod.money), 0);
+    const bonus = RODS_BY_ID[equipRef.current]?.money ?? 0; // bonus harga jual dari joran yang dipakai
+    const total = items.reduce((s, b) => s + fishPrice(SPECIES_BY_ID[b.s], b.w, bonus), 0);
     const nb = bagRef.current.filter((b) => !set.has(b.id));
     setBag(nb);
     try {
@@ -90,7 +92,7 @@ export default function MancingPage() {
       await u.child('fishing').update({ bag: nb });
       const res = await u.child('koin').transaction((c: any) => (typeof c === 'number' ? c : 0) + total);
       const val = res?.snapshot?.val();
-      if (typeof val === 'number') { crystalRef.current = val; setCrystal(val); } else { crystalRef.current += total; setCrystal((c) => c + total); }
+      if (typeof val === 'number') setCrystal(val); else setCrystal((c) => c + total);
       return total;
     } catch {
       warn('Gagal menjual, coba lagi');
@@ -99,71 +101,63 @@ export default function MancingPage() {
     }
   }, [warn]);
 
-  // 'ok' | 'kurang' (Crystal tidak cukup) | 'gagal' (error jaringan/Firebase)
-  const buyRod = useCallback(async (id: string): Promise<'ok' | 'kurang' | 'gagal'> => {
+  // potong Crystal pakai transaction supaya aman dari klik ganda / dua tab
+  const spend = useCallback(async (cost: number): Promise<'ok' | 'kurang' | 'gagal'> => {
     if (!uid.current || !fb.current) return 'gagal';
-    const def = RODS_BY_ID[id];
-    if (!def || def.gachaOnly) return 'gagal';
-    if (rodsRef.current.includes(id)) return 'ok';
-    if (crystalRef.current < def.price) return 'kurang';
     try {
-      const u = fb.current.db.ref('users/' + uid.current);
-      const res = await u.child('koin').transaction((c: any) => {
-        const cur = typeof c === 'number' ? c : 0;
-        return cur >= def.price ? cur - def.price : c;
-      });
+      const res = await fb.current.db.ref('users/' + uid.current + '/koin').transaction((c: any) => (typeof c !== 'number' ? c : c >= cost ? c - cost : undefined));
       const val = res?.snapshot?.val();
       if (!res?.committed || typeof val !== 'number') return 'kurang';
-      crystalRef.current = val;
       setCrystal(val);
-      const nr = Array.from(new Set([...rodsRef.current, id]));
-      rodsRef.current = nr;
-      setRods(nr);
-      setEquippedRod(id);
-      await u.child('fishing').update({ rods: nr, equipped: id });
       return 'ok';
     } catch {
       return 'gagal';
     }
   }, []);
 
-  const equipRod = useCallback((id: string) => {
-    if (!rodsRef.current.includes(id)) return;
-    setEquippedRod(id);
-    if (uid.current && fb.current) {
-      fb.current.db.ref('users/' + uid.current + '/fishing/equipped').set(id).catch(() => {});
-    }
-  }, []);
-
-  const gacha = useCallback(async (): Promise<{ rod: Rod; duplicate: boolean } | 'kurang' | 'gagal'> => {
-    if (!uid.current || !fb.current) return 'gagal';
-    if (crystalRef.current < GACHA_PRICE) return 'kurang';
+  const onBuyRod = useCallback(async (id: string): Promise<'ok' | 'kurang' | 'gagal'> => {
+    const r = RODS_BY_ID[id];
+    if (!r || r.gachaOnly || r.price <= 0 || rodsRef.current.includes(id)) return 'gagal';
+    const st = await spend(r.price);
+    if (st !== 'ok') return st;
+    const nr = [...rodsRef.current, id];
+    setRods(nr);
     try {
-      const u = fb.current.db.ref('users/' + uid.current);
-      const res = await u.child('koin').transaction((c: any) => {
-        const cur = typeof c === 'number' ? c : 0;
-        return cur >= GACHA_PRICE ? cur - GACHA_PRICE : c;
-      });
-      if (!res?.committed) return 'kurang';
-      let val = typeof res.snapshot.val() === 'number' ? res.snapshot.val() : crystalRef.current;
-      const got = rollGacha();
-      const duplicate = rodsRef.current.includes(got.id);
-      if (duplicate) {
-        const r2 = await u.child('koin').transaction((c: any) => (typeof c === 'number' ? c : 0) + GACHA_DUPLICATE_REFUND);
-        if (typeof r2?.snapshot?.val() === 'number') val = r2.snapshot.val();
-      } else {
-        const nr = Array.from(new Set([...rodsRef.current, got.id]));
-        rodsRef.current = nr;
-        setRods(nr);
-        await u.child('fishing/rods').set(nr);
-      }
-      crystalRef.current = val;
-      setCrystal(val);
-      return { rod: got, duplicate };
+      await fb.current.db.ref('users/' + uid.current + '/fishing').update({ rods: nr });
     } catch {
-      return 'gagal';
+      warn('Joran belum tersimpan, coba beli ulang');
     }
-  }, []);
+    return 'ok';
+  }, [spend, warn]);
+
+  const onEquipRod = useCallback((id: string) => {
+    if (!rodsRef.current.includes(id)) return;
+    setEquipped(id);
+    if (!uid.current || !fb.current) return;
+    fb.current.db.ref('users/' + uid.current + '/fishing').update({ equippedRod: id }).catch(() => warn('Joran belum tersimpan'));
+  }, [warn]);
+
+  const onGacha = useCallback(async (): Promise<{ rod: Rod; duplicate: boolean } | 'kurang' | 'gagal'> => {
+    const st = await spend(GACHA_PRICE);
+    if (st !== 'ok') return st;
+    const rod = rollGacha();
+    const duplicate = rodsRef.current.includes(rod.id);
+    const u = fb.current.db.ref('users/' + uid.current);
+    try {
+      if (duplicate) {
+        const res = await u.child('koin').transaction((c: any) => (typeof c === 'number' ? c : 0) + GACHA_DUPLICATE_REFUND);
+        const val = res?.snapshot?.val();
+        if (typeof val === 'number') setCrystal(val);
+      } else {
+        const nr = [...rodsRef.current, rod.id];
+        setRods(nr);
+        await u.child('fishing').update({ rods: nr });
+      }
+    } catch {
+      warn('Hasil gacha belum tersimpan');
+    }
+    return { rod, duplicate };
+  }, [spend, warn]);
 
   if (!ready) {
     return (
@@ -176,8 +170,7 @@ export default function MancingPage() {
       <FishingGame
         name={name} photo={photo} crystal={crystal} xp={xp} bag={bag}
         rods={rods} equippedRod={equippedRod}
-        onCatch={onCatch} onSell={onSell}
-        onBuyRod={buyRod} onEquipRod={equipRod} onGacha={gacha}
+        onCatch={onCatch} onSell={onSell} onBuyRod={onBuyRod} onEquipRod={onEquipRod} onGacha={onGacha}
         onExit={() => router.push('/komikstore')}
       />
       {err && <div className="fixed left-1/2 top-24 z-[80] -translate-x-1/2 rounded-full bg-rose-600 px-4 py-2 text-sm font-bold text-white">{err}</div>}

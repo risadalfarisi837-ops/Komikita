@@ -3,12 +3,23 @@ import { RARITY, rollFish } from '@/lib/fishing';
 import type { Species } from '@/lib/fishing';
 import {
   TILE, generateWorld, drawPlayer, drawPalm, drawRock, drawLamp, drawBobber, drawRipple, drawLine,
-  drawBubbleAlert, drawFish, rodGeometry,
+  drawBubbleAlert, drawFish, rodGeometry, drawFountain, drawBench, drawTable, drawStool, drawSign, drawBush, drawNpc,
 } from './art';
 import type { Dir, World } from './art';
 
 export type Phase = 'idle' | 'cast' | 'wait' | 'bite' | 'reel' | 'catching' | 'result';
 export interface Catch { species: Species; weight: number }
+export interface Profile { name: string; title: string; level: number; rodName: string }
+export interface ShoalStatus { dist: number; ang: number; left: number }
+export interface EngineStatus { shoal: ShoalStatus | null; inShoal: boolean }
+interface Shoal { x: number; y: number; r: number; until: number }
+const TIPS = [
+  'Tahan tombol supaya zona hijau ngikutin ikan.',
+  'Ada gerombolan ikan? Mancing di situ, peluang ikan langka naik drastis!',
+  'Ikan XL itu yang paling besar di jenisnya. Pamerin, yuk!',
+  'Joran yang lebih bagus bikin ikan langka lebih sering nyangkut.',
+  'Tas penuh? Jual dulu ikannya biar bisa mancing lagi.',
+];
 export interface EngineEvents {
   onPhase?: (p: Phase) => void;
   onCatch?: (c: Catch) => void;
@@ -31,6 +42,11 @@ export class FishingEngine {
   level = 1;
   luck = 0;
   bagFull = false;
+  profile: Profile = { name: '', title: '', level: 1, rodName: '' };
+  private shoal: Shoal | null = null;
+  private nextShoal = 12;
+  private castInShoal = false;
+  private waterSpots: [number, number][] | null = null;
 
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -83,6 +99,7 @@ export class FishingEngine {
   setLevel(n: number) { this.level = n; }
   setLuck(n: number) { this.luck = n; }
   setBagFull(b: boolean) { this.bagFull = b; }
+  setProfile(p: Profile) { this.profile = p; }
   setMove(x: number, y: number) { this.joyX = x; this.joyY = y; }
   key(code: string, down: boolean) { if (down) this.keys.add(code); else this.keys.delete(code); }
 
@@ -125,7 +142,7 @@ export class FishingEngine {
     this.canvas.style.width = cssW + 'px';
     this.canvas.style.height = cssH + 'px';
     const base = Math.min(cssW, cssH) * dpr;
-    this.S = Math.max(2, Math.round(base / 176));
+    this.S = Math.max(3, Math.round(base / 128));
     const c = this.ctx;
     const g = c.createRadialGradient(this.canvas.width / 2, this.canvas.height / 2, Math.min(this.canvas.width, this.canvas.height) * 0.35, this.canvas.width / 2, this.canvas.height / 2, Math.max(this.canvas.width, this.canvas.height) * 0.75);
     g.addColorStop(0, 'rgba(0,10,30,0)');
@@ -154,7 +171,17 @@ export class FishingEngine {
     cancelAnimationFrame(this.raf);
   }
 
+  // status untuk HUD (dipanggil berkala oleh React)
+  status(): EngineStatus {
+    const sh = this.shoal;
+    if (!sh) return { shoal: null, inShoal: false };
+    const dx = sh.x - this.px;
+    const dy = sh.y - this.py;
+    return { shoal: { dist: Math.max(1, Math.round(Math.hypot(dx, dy) / TILE)), ang: Math.atan2(dy, dx), left: Math.max(0, sh.until - this.time) }, inShoal: this.castInShoal && this.phase !== 'idle' };
+  }
   // untuk pengujian
+  forceShoal() { this.spawnShoal(true); }
+  castTo(dir: Dir) { this.dir = dir; this.tryCast(); }
   step(dt: number) { this.update(dt); this.render(); }
   debug() { return { phase: this.phase, reel: this.reel, fish: this.fish, px: this.px, py: this.py, dir: this.dir, S: this.S }; }
 
@@ -203,12 +230,44 @@ export class FishingEngine {
     return { tx, ty, wx: (tx + 0.5) * TILE, wy: (ty + 0.5) * TILE };
   }
 
+  private spawnShoal(force = false) {
+    const w = this.world;
+    if (!this.waterSpots) {
+      const spots: [number, number][] = [];
+      for (let ty = 2; ty < w.h - 2; ty++) {
+        for (let tx = 2; tx < w.w - 2; tx++) {
+          if (!isWater(w.tiles[ty][tx])) continue;
+          let nearLand = false;
+          for (let yy = -3; yy <= 3 && !nearLand; yy++) {
+            for (let xx = -3; xx <= 3; xx++) {
+              const t = w.tiles[ty + yy]?.[tx + xx];
+              if (t === 'sand' || t === 'grass' || t === 'dirt' || t === 'plank') { nearLand = true; break; }
+            }
+          }
+          if (nearLand) spots.push([tx, ty]);
+        }
+      }
+      this.waterSpots = spots;
+    }
+    const spots = this.waterSpots;
+    if (!spots.length) { this.nextShoal = this.time + 60; return; }
+    const ptx = this.px / TILE;
+    const pty = this.py / TILE;
+    const far = spots.filter(([x, y]) => { const d = Math.hypot(x - ptx, y - pty); return d >= 9 && d <= 40; });
+    const pool = far.length ? far : spots;
+    const [tx, ty] = pool[Math.floor(Math.random() * pool.length)];
+    this.shoal = { x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE, r: 3.4 * TILE, until: this.time + (force ? 90 : 60) };
+  }
+
   private tryCast() {
     if (this.bagFull) { this.ev.onToast?.('Tas penuh! Jual ikan dulu.'); return; }
     const t = this.findTarget();
     if (!t) { this.ev.onToast?.('Hadapkan karakter ke air dulu'); return; }
     this.target = t;
     this.castT = 0;
+    const sh = this.shoal;
+    this.castInShoal = !!sh && Math.hypot(t.wx - sh.x, t.wy - sh.y) <= sh.r;
+    if (this.castInShoal) this.ev.onToast?.('Kena gerombolan ikan! Peluang langka naik');
     this.setPhase('cast');
   }
 
@@ -278,11 +337,18 @@ export class FishingEngine {
       this.stepT = 0;
     }
 
+    // event Gerombolan Ikan
+    if (this.shoal) {
+      if (this.time >= this.shoal.until) { this.shoal = null; this.castInShoal = false; this.nextShoal = this.time + 45 + Math.random() * 60; }
+    } else if (this.time >= this.nextShoal) {
+      this.spawnShoal();
+    }
+
     // fase mancing
     if (this.phase === 'cast') {
       this.castT += dt;
       if (this.castT >= 0.5 && this.target) {
-        this.waitT = 2 + Math.random() * 5;
+        this.waitT = (2 + Math.random() * 5) * (this.castInShoal ? 0.45 : 1);
         this.ripples.push({ x: this.target.wx, y: this.target.wy, t: 0 });
         this.splash(this.target.wx, this.target.wy, 8);
         this.setPhase('wait');
@@ -291,7 +357,7 @@ export class FishingEngine {
       this.waitT -= dt;
       if (Math.random() < dt * 0.7) this.ripples.push({ x: this.target.wx + (Math.random() - 0.5) * 6, y: this.target.wy + (Math.random() - 0.5) * 3, t: 0.55 });
       if (this.waitT <= 0) {
-        this.fish = rollFish(this.level, this.luck);
+        this.fish = rollFish(this.level, this.luck + (this.castInShoal ? 2 : 0));
         this.biteT = 1.25;
         this.ripples.push({ x: this.target.wx, y: this.target.wy, t: 0 });
         this.splash(this.target.wx, this.target.wy, 6);
@@ -431,6 +497,32 @@ export class FishingEngine {
       }
     }
 
+    const sh = this.shoal;
+    if (sh && sh.x > vx0 - 70 && sh.x < vx0 + vw + 70 && sh.y > vy0 - 70 && sh.y < vy0 + vh + 70) {
+      const k = (t * 0.8) % 1;
+      ctx.strokeStyle = 'rgba(255,255,255,' + (0.5 * (1 - k)).toFixed(3) + ')';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.ellipse(sh.x, sh.y, 8 + k * sh.r * 0.85, 4 + k * sh.r * 0.45, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      for (let i = 0; i < 11; i++) {
+        const dir = i % 2 ? 1 : -1;
+        const a = t * 0.7 * dir + i * 0.57;
+        const rr = 7 + ((i * 37) % 19) * 1.3;
+        const fx = sh.x + Math.cos(a) * rr * 1.7;
+        const fy = sh.y + Math.sin(a) * rr * 0.95;
+        const heading = Math.atan2(Math.cos(a) * dir * 0.95, -Math.sin(a) * dir * 1.7);
+        ctx.save();
+        ctx.translate(fx, fy);
+        ctx.rotate(heading);
+        ctx.fillStyle = 'rgba(8,48,104,0.38)';
+        ctx.beginPath(); ctx.ellipse(0, 0, 3.6, 1.7, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(-3, 0); ctx.lineTo(-6.2, -1.9); ctx.lineTo(-6.2, 1.9); ctx.closePath(); ctx.fill();
+        ctx.restore();
+        if ((i + Math.floor(t * 3)) % 7 === 0) { ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fillRect(Math.round(fx + 2), Math.round(fy - 3), 1, 1); }
+      }
+    }
+
     for (const r of this.ripples) drawRipple(ctx, r.x, r.y, r.t);
 
     // posisi umpan
@@ -463,10 +555,21 @@ export class FishingEngine {
     for (const p of w.props) {
       const bxp = p.x * TILE;
       const byp = p.y * TILE;
-      if (bxp < vx0 - 30 || bxp > vx0 + vw + 30 || byp < vy0 - 8 || byp > vy0 + vh + 40) continue;
-      if (p.kind === 'palm') ents.push({ y: byp + 15, f: () => drawPalm(ctx, p, t) });
-      else if (p.kind === 'rock') ents.push({ y: byp + 13, f: () => drawRock(ctx, p) });
-      else ents.push({ y: byp + 15, f: () => drawLamp(ctx, p, t) });
+      const pw = (p.w || 1) * TILE;
+      const ph2 = (p.h || 1) * TILE;
+      if (bxp + pw < vx0 - 30 || bxp > vx0 + vw + 30 || byp + ph2 < vy0 - 30 || byp > vy0 + vh + 40) continue;
+      switch (p.kind) {
+        case 'palm': ents.push({ y: byp + 15, f: () => drawPalm(ctx, p, t) }); break;
+        case 'rock': ents.push({ y: byp + 13, f: () => drawRock(ctx, p) }); break;
+        case 'fountain': ents.push({ y: byp + ph2 - 6, f: () => drawFountain(ctx, p, t) }); break;
+        case 'bench': ents.push({ y: byp + 14, f: () => drawBench(ctx, p) }); break;
+        case 'table': ents.push({ y: byp + 14, f: () => drawTable(ctx, p, t) }); break;
+        case 'stool': ents.push({ y: byp + 14, f: () => drawStool(ctx, p) }); break;
+        case 'sign': ents.push({ y: byp + 14, f: () => drawSign(ctx, p) }); break;
+        case 'bush': ents.push({ y: byp + 14, f: () => drawBush(ctx, p) }); break;
+        case 'npc': ents.push({ y: byp + 15, f: () => drawNpc(ctx, p, t) }); break;
+        default: ents.push({ y: byp + 15, f: () => drawLamp(ctx, p, t) });
+      }
     }
     ents.push({ y: this.py, f: () => drawPlayer(ctx, this.px, this.py, this.dir, this.moving, this.stepT, rod, shake) });
     ents.sort((a, b) => a.y - b.y);
@@ -498,7 +601,107 @@ export class FishingEngine {
     // lapisan layar
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     if (this.vignette) { ctx.fillStyle = this.vignette; ctx.fillRect(0, 0, CW, CH); }
+    this.drawTags(ox, oy);
     if (ph === 'reel') this.drawMeter();
+  }
+
+  private pillText(text: string, cx: number, cy: number, size: number, bg: string, fg: string, padX: number) {
+    const ctx = this.ctx;
+    ctx.font = '700 ' + size + 'px "Pixelify Sans", ui-monospace, monospace';
+    const tw = ctx.measureText(text).width;
+    const h = size * 1.7;
+    const w = tw + padX * 2;
+    ctx.fillStyle = bg;
+    this.rrect(cx - w / 2, cy - h / 2, w, h, h / 2.6);
+    ctx.fill();
+    ctx.fillStyle = fg;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, cx, cy + size * 0.06);
+    return w;
+  }
+
+  private outlined(text: string, cx: number, cy: number, size: number, fg: string) {
+    const ctx = this.ctx;
+    ctx.font = '700 ' + size + 'px "Pixelify Sans", ui-monospace, monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = Math.max(2, size * 0.28);
+    ctx.strokeStyle = 'rgba(20,14,8,0.9)';
+    ctx.strokeText(text, cx, cy);
+    ctx.fillStyle = fg;
+    ctx.fillText(text, cx, cy);
+  }
+
+  // label nama di atas karakter & NPC (digambar di layar supaya tajam)
+  private drawTags(ox: number, oy: number) {
+    const ctx = this.ctx;
+    const S = this.S;
+    const d = this.dpr;
+    const u = Math.min(1.7, Math.max(0.8, this.cssH / 360)) * d;
+    const sz = 11 * u;
+    const sxp = this.px * S - ox;
+    const syHead = (this.py - 21) * S - oy;
+    const syFeet = this.py * S - oy;
+    // NPC
+    for (const p of this.world.props) {
+      if (p.kind !== 'npc') continue;
+      const nx = (p.x * TILE + 8) * S - ox;
+      const nyHead = (p.y * TILE + 15 - 21) * S - oy;
+      if (nx < -200 || nx > this.canvas.width + 200 || nyHead < -200 || nyHead > this.canvas.height + 100) continue;
+      const near = Math.hypot(this.px - (p.x * TILE + 8), this.py - (p.y * TILE + 15)) < TILE * 3.6;
+      this.pillText((p.name || '') + ' · ' + (p.role || ''), nx, nyHead - 10 * u, sz * 0.92, 'rgba(18,16,14,0.82)', '#f3ead8', 8 * u);
+      if (near) {
+        const tip = TIPS[Math.max(0, Math.floor((Number.isFinite(this.time) ? this.time : 0) / 6)) % TIPS.length] || TIPS[0];
+        ctx.font = '700 ' + sz * 0.95 + 'px "Pixelify Sans", ui-monospace, monospace';
+        const maxW = 150 * u;
+        const words = tip.split(' ');
+        const lines: string[] = [];
+        let cur = '';
+        for (const wd of words) {
+          const tt = cur ? cur + ' ' + wd : wd;
+          if (ctx.measureText(tt).width > maxW && cur) { lines.push(cur); cur = wd; } else cur = tt;
+        }
+        if (cur) lines.push(cur);
+        const lh = sz * 1.3;
+        const bw = Math.min(maxW, Math.max(...lines.map((l) => ctx.measureText(l).width))) + 14 * u;
+        const bh = lines.length * lh + 10 * u;
+        const bx = nx - bw / 2;
+        const by = nyHead - 34 * u - bh;
+        ctx.fillStyle = 'rgba(255,255,255,0.96)';
+        this.rrect(bx, by, bw, bh, 8 * u);
+        ctx.fill();
+        ctx.beginPath(); ctx.moveTo(nx - 5 * u, by + bh - 1); ctx.lineTo(nx + 5 * u, by + bh - 1); ctx.lineTo(nx, by + bh + 7 * u); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#2b2118';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        lines.forEach((l, i) => ctx.fillText(l, nx, by + 5 * u + lh * (i + 0.5)));
+      }
+    }
+    // pemain
+    const pr = this.profile;
+    if (pr.title) {
+      const cy = syHead - 46 * u;
+      ctx.font = '700 ' + sz * 0.9 + 'px "Pixelify Sans", ui-monospace, monospace';
+      const tw = ctx.measureText(pr.title).width;
+      const w = tw + 30 * u;
+      const h = sz * 1.6;
+      ctx.fillStyle = 'rgba(30,60,36,0.88)';
+      this.rrect(sxp - w / 2, cy - h / 2, w, h, h / 2.4);
+      ctx.fill();
+      // ikon perahu kecil
+      ctx.fillStyle = '#ff6a5c';
+      ctx.beginPath(); ctx.moveTo(sxp - w / 2 + 8 * u, cy - 5 * u); ctx.lineTo(sxp - w / 2 + 8 * u, cy + 3 * u); ctx.lineTo(sxp - w / 2 + 14 * u, cy + 3 * u); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#c9e7ff';
+      ctx.fillRect(sxp - w / 2 + 6 * u, cy + 4 * u, 10 * u, 2 * u);
+      ctx.fillStyle = '#bff0c4';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(pr.title, sxp - w / 2 + 20 * u, cy + sz * 0.05);
+    }
+    this.outlined((pr.name || 'Tamu') + ' · Lv' + pr.level, sxp, syHead - 24 * u, sz * 1.05, '#ffffff');
+    if (pr.rodName) this.outlined(pr.rodName, sxp, syFeet + 16 * u, sz * 0.95, '#fff6d8');
   }
 
   private drawMeter() {
