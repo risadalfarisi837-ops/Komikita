@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   title: 'Komikita',
   description: 'Baca komik manga, manhwa, manhua gratis dan lengkap',
   manifest: '/manifest.json',
-  themeColor: '#1B1A20',
+  themeColor: '#5E9E48',
   icons: {
     icon: [
       { url: '/favicon.ico', sizes: 'any' },
@@ -27,8 +27,8 @@ export const metadata: Metadata = {
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
     <html lang="id">
-      <body className="font-sans bg-[#1B1A20] text-white flex flex-col min-h-screen items-center" suppressHydrationWarning>
-        <div className="w-full max-w-md bg-[#1B1A20] relative shadow-sm overflow-x-hidden flex flex-col">
+      <body className="font-sans text-white flex flex-col min-h-screen items-center" suppressHydrationWarning>
+        <div className="w-full max-w-md relative overflow-x-hidden flex flex-col">
           
           <main className="w-full relative pb-28">
             <PageScale>{children}</PageScale>
