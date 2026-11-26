@@ -6,7 +6,7 @@ export interface WallpaperItem {
   nama: string;
   rarity: Rarity;
   grad: string;   // background gradient (dipakai kalau url kosong)
-  url?: string;   // gambar sendiri: taruh di /public/wallpapers/ lalu isi '/wallpapers/nama.jpg' (SVG animasi juga bisa)
+  url?: string;   // gambar anime: /public/wallpapers/<key>.webp (SVG lama /<key>.svg dipakai sebagai cadangan kalau webp belum ada)
 }
 
 export const COST_1 = 100;
@@ -28,53 +28,51 @@ export const RARITY_STYLE: Record<Rarity, { color: string; border: string; glow:
 export const WALLPAPER_CATALOG: Record<string, WallpaperItem> = {
   // Semua wallpaper di sini punya gambar (file di /public/wallpapers). Yang tanpa gambar sudah dibuang dari summon.
   // Normal: pemandangan sederhana
-  'senja-kota':      { nama: 'Senja Kota',       rarity: 'Normal', grad: 'linear-gradient(180deg,#3b2a6e,#c2477d 40%,#ffd08a)', url: '/wallpapers/senja-kota.svg' },
-  'padang-hijau':    { nama: 'Padang Hijau',     rarity: 'Normal', grad: 'linear-gradient(180deg,#3a8fe0,#d9f3ff 60%,#3f9a55)', url: '/wallpapers/padang-hijau.svg' },
-  'malam-bintang':   { nama: 'Malam Berbintang', rarity: 'Normal', grad: 'linear-gradient(180deg,#050a24,#2a4a86)',              url: '/wallpapers/malam-bintang.svg' },
-  'pantai-siang':    { nama: 'Pantai Siang',     rarity: 'Normal', grad: 'linear-gradient(180deg,#2f9bf0,#bfeaff 55%,#1fb5d6)',  url: '/wallpapers/pantai-siang.svg' },
-  'hutan-kabut':     { nama: 'Hutan Kabut',      rarity: 'Normal', grad: 'linear-gradient(180deg,#9fb7b0,#2a4a42)',              url: '/wallpapers/hutan-kabut.svg' },
-  'langit-ungu':     { nama: 'Langit Ungu',      rarity: 'Normal', grad: 'linear-gradient(180deg,#1a1146,#5b2f9e 45%,#ffb3b0)',  url: '/wallpapers/langit-ungu.svg' },
+  'senja-kota':      { nama: 'Senja Kota',       rarity: 'Normal', grad: 'linear-gradient(180deg,#3b2a6e,#c2477d 40%,#ffd08a)', url: '/wallpapers/senja-kota.webp' },
+  'padang-hijau':    { nama: 'Padang Hijau',     rarity: 'Normal', grad: 'linear-gradient(180deg,#3a8fe0,#d9f3ff 60%,#3f9a55)', url: '/wallpapers/padang-hijau.webp' },
+  'malam-bintang':   { nama: 'Malam Berbintang', rarity: 'Normal', grad: 'linear-gradient(180deg,#050a24,#2a4a86)',              url: '/wallpapers/malam-bintang.webp' },
+  'pantai-siang':    { nama: 'Pantai Siang',     rarity: 'Normal', grad: 'linear-gradient(180deg,#2f9bf0,#bfeaff 55%,#1fb5d6)',  url: '/wallpapers/pantai-siang.webp' },
+  'hutan-kabut':     { nama: 'Hutan Kabut',      rarity: 'Normal', grad: 'linear-gradient(180deg,#9fb7b0,#2a4a42)',              url: '/wallpapers/hutan-kabut.webp' },
+  'langit-ungu':     { nama: 'Langit Ungu',      rarity: 'Normal', grad: 'linear-gradient(180deg,#1a1146,#5b2f9e 45%,#ffb3b0)',  url: '/wallpapers/langit-ungu.webp' },
   // Rare: lebih detail, banyak lapisan (+ suasana anime populer)
-  'torii-fajar':     { nama: 'Torii Fajar',      rarity: 'Rare', grad: 'linear-gradient(180deg,#2a2d6e,#ff8d6a 55%,#ffe0a0)',   url: '/wallpapers/torii-fajar.svg' },
-  'danau-bulan':     { nama: 'Danau Bulan',      rarity: 'Rare', grad: 'linear-gradient(180deg,#050b2a,#3d6aa8)',                url: '/wallpapers/danau-bulan.svg' },
-  'kota-neon-hujan': { nama: 'Kota Neon Hujan',  rarity: 'Rare', grad: 'linear-gradient(180deg,#0a0620,#7a1f86)',                url: '/wallpapers/kota-neon-hujan.svg' },
-  'bukit-sakura':    { nama: 'Bukit Sakura',     rarity: 'Rare', grad: 'linear-gradient(180deg,#7aa8f0,#f3b8d8 50%,#6fae6b)',    url: '/wallpapers/bukit-sakura.svg' },
-  'pantai-bintang':  { nama: 'Pantai Bintang',   rarity: 'Rare', grad: 'linear-gradient(180deg,#03051c,#5a3a8e)',                url: '/wallpapers/pantai-bintang.svg' },
-  'jembatan-senja':  { nama: 'Jembatan Senja',   rarity: 'Rare', grad: 'linear-gradient(180deg,#35296e,#ff9a5a 60%,#ffd98a)',    url: '/wallpapers/jembatan-senja.svg' },
-  'komet-senja':     { nama: 'Komet Senja',      rarity: 'Rare', grad: 'linear-gradient(180deg,#0a0f33,#c0457f 66%,#ffd0a0)', url: '/wallpapers/komet-senja.svg' },
-  'layar-fajar':     { nama: 'Layar Fajar',      rarity: 'Rare', grad: 'linear-gradient(180deg,#3d95e8,#ffe8bf 60%,#1fa3d8)', url: '/wallpapers/layar-fajar.svg' },
-  'bambu-bulan':     { nama: 'Rimba Bambu',      rarity: 'Rare', grad: 'linear-gradient(180deg,#06141a,#1f6a58)',             url: '/wallpapers/bambu-bulan.svg' },
+  'torii-fajar':     { nama: 'Torii Fajar',      rarity: 'Rare', grad: 'linear-gradient(180deg,#2a2d6e,#ff8d6a 55%,#ffe0a0)',   url: '/wallpapers/torii-fajar.webp' },
+  'danau-bulan':     { nama: 'Danau Bulan',      rarity: 'Rare', grad: 'linear-gradient(180deg,#050b2a,#3d6aa8)',                url: '/wallpapers/danau-bulan.webp' },
+  'kota-neon-hujan': { nama: 'Kota Neon Hujan',  rarity: 'Rare', grad: 'linear-gradient(180deg,#0a0620,#7a1f86)',                url: '/wallpapers/kota-neon-hujan.webp' },
+  'bukit-sakura':    { nama: 'Bukit Sakura',     rarity: 'Rare', grad: 'linear-gradient(180deg,#7aa8f0,#f3b8d8 50%,#6fae6b)',    url: '/wallpapers/bukit-sakura.webp' },
+  'pantai-bintang':  { nama: 'Pantai Bintang',   rarity: 'Rare', grad: 'linear-gradient(180deg,#03051c,#5a3a8e)',                url: '/wallpapers/pantai-bintang.webp' },
+  'jembatan-senja':  { nama: 'Jembatan Senja',   rarity: 'Rare', grad: 'linear-gradient(180deg,#35296e,#ff9a5a 60%,#ffd98a)',    url: '/wallpapers/jembatan-senja.webp' },
+  'komet-senja':     { nama: 'Komet Senja',      rarity: 'Rare', grad: 'linear-gradient(180deg,#0a0f33,#c0457f 66%,#ffd0a0)', url: '/wallpapers/komet-senja.webp' },
+  'layar-fajar':     { nama: 'Layar Fajar',      rarity: 'Rare', grad: 'linear-gradient(180deg,#3d95e8,#ffe8bf 60%,#1fa3d8)', url: '/wallpapers/layar-fajar.webp' },
+  'bambu-bulan':     { nama: 'Rimba Bambu',      rarity: 'Rare', grad: 'linear-gradient(180deg,#06141a,#1f6a58)',             url: '/wallpapers/bambu-bulan.webp' },
   // Epic: adegan dramatis bergaya anime shonen/fantasi
-  'tembok-raksasa':   { nama: 'Tembok Raksasa',   rarity: 'Epic', grad: 'linear-gradient(180deg,#1b2350,#e08a6a 60%,#8a7a6a)', url: '/wallpapers/tembok-raksasa.svg' },
-  'ninja-bulan':      { nama: 'Ninja Bulan',      rarity: 'Epic', grad: 'linear-gradient(180deg,#07072a,#b35a8a)',             url: '/wallpapers/ninja-bulan.svg' },
-  'pasukan-bayangan': { nama: 'Pasukan Bayangan', rarity: 'Epic', grad: 'linear-gradient(180deg,#05020e,#41197a)',             url: '/wallpapers/pasukan-bayangan.svg' },
-  // Legendary: animasi (bergerak)
-  'sakura-gugur':     { nama: 'Sakura Gugur',     rarity: 'Legendary', grad: 'linear-gradient(180deg,#0c0a2e,#a8508f)', url: '/wallpapers/sakura-gugur.svg' },
-  'galaksi-bergerak': { nama: 'Galaksi Bergerak', rarity: 'Legendary', grad: 'linear-gradient(180deg,#03030f,#4a1fb0)', url: '/wallpapers/galaksi-bergerak.svg' },
-  'lentera-langit':   { nama: 'Lentera Langit',   rarity: 'Legendary', grad: 'linear-gradient(180deg,#050a2a,#8a3a7a)', url: '/wallpapers/lentera-langit.svg' },
-  'laut-purnama':     { nama: 'Laut Purnama',     rarity: 'Legendary', grad: 'linear-gradient(180deg,#04061c,#2f4f8e)', url: '/wallpapers/laut-purnama.svg' },
-  'bayangan-penguasa': { nama: 'Bayangan Penguasa', rarity: 'Legendary', grad: 'linear-gradient(180deg,#02010a,#2b1560)', url: '/wallpapers/bayangan-penguasa.svg' },
-  'komet-takdir':      { nama: 'Komet Takdir',      rarity: 'Legendary', grad: 'linear-gradient(180deg,#050818,#a8357f)', url: '/wallpapers/komet-takdir.svg' },
+  'tembok-raksasa':   { nama: 'Tembok Raksasa',   rarity: 'Epic', grad: 'linear-gradient(180deg,#1b2350,#e08a6a 60%,#8a7a6a)', url: '/wallpapers/tembok-raksasa.webp' },
+  'ninja-bulan':      { nama: 'Ninja Bulan',      rarity: 'Epic', grad: 'linear-gradient(180deg,#07072a,#b35a8a)',             url: '/wallpapers/ninja-bulan.webp' },
+  'pasukan-bayangan': { nama: 'Pasukan Bayangan', rarity: 'Epic', grad: 'linear-gradient(180deg,#05020e,#41197a)',             url: '/wallpapers/pasukan-bayangan.webp' },
+  // Legendary
+  'sakura-gugur':     { nama: 'Sakura Gugur',     rarity: 'Legendary', grad: 'linear-gradient(180deg,#0c0a2e,#a8508f)', url: '/wallpapers/sakura-gugur.webp' },
+  'galaksi-bergerak': { nama: 'Galaksi Bergerak', rarity: 'Legendary', grad: 'linear-gradient(180deg,#03030f,#4a1fb0)', url: '/wallpapers/galaksi-bergerak.webp' },
+  'lentera-langit':   { nama: 'Lentera Langit',   rarity: 'Legendary', grad: 'linear-gradient(180deg,#050a2a,#8a3a7a)', url: '/wallpapers/lentera-langit.webp' },
+  'laut-purnama':     { nama: 'Laut Purnama',     rarity: 'Legendary', grad: 'linear-gradient(180deg,#04061c,#2f4f8e)', url: '/wallpapers/laut-purnama.webp' },
+  'bayangan-penguasa': { nama: 'Bayangan Penguasa', rarity: 'Legendary', grad: 'linear-gradient(180deg,#02010a,#2b1560)', url: '/wallpapers/bayangan-penguasa.webp' },
+  'komet-takdir':      { nama: 'Komet Takdir',      rarity: 'Legendary', grad: 'linear-gradient(180deg,#050818,#a8357f)', url: '/wallpapers/komet-takdir.webp' },
 };
 
-/** Gambar diam (ringan) untuk wallpaper Legendary. SVG beranimasinya berat kalau banyak tampil sekaligus. */
-export const wpPoster = (key: string) => '/wallpapers/poster/' + key + '.webp';
-
 /**
- * Nilai CSS `background` untuk wallpaper.
- * Legendary memakai gambar diam, kecuali animated=true (pakai SVG beranimasi; cukup 1 per layar, mis. banner profil).
+ * Nilai CSS `background` untuk wallpaper. Selalu gambar diam (webp) supaya ringan.
+ * Urutan layer: webp anime -> SVG lama (cadangan, hanya kalau webp belum ada) -> gradien.
+ * Parameter `animated` dipertahankan supaya pemanggil lama tidak error, tapi sudah tidak dipakai.
  */
-export function wpBg(key: string | undefined | null, animated = false): string {
+export function wpBg(key: string | undefined | null, _animated = false): string {
   const w = key ? WALLPAPER_CATALOG[key] : undefined;
   if (!w) return '';
   if (!w.url) return w.grad;
-  const src = w.rarity === 'Legendary' && !animated ? wpPoster(key as string) : w.url;
-  return 'url(' + src + ') center/cover, ' + w.grad;
+  const svg = w.url.replace(/\.webp$/, '.svg');
+  return 'url(' + w.url + ') center/cover, url(' + svg + ') center/cover, ' + w.grad;
 }
 
 /** Info yang ditampilkan di panel "Info Rarity" (urut dari terbaik). */
 export const RARITY_INFO: Record<Rarity, { label: string; stars: number; desc: string }> = {
-  Legendary: { label: 'TERBAIK', stars: 4, desc: 'Banner profil bergerak (animasi) dan bingkai emas berkilau di komentar. Paling langka.' },
+  Legendary: { label: 'TERBAIK', stars: 4, desc: 'Banner profil dan bingkai emas berkilau di komentar. Paling langka.' },
   Epic:      { label: 'LANGKA',  stars: 3, desc: 'Adegan dramatis bergaya anime, bingkai ungu berkilau di komentar.' },
   Rare:      { label: 'BAGUS',   stars: 2, desc: 'Ilustrasi berlapis dengan detail lebih banyak, bingkai biru bercahaya.' },
   Normal:    { label: 'UMUM',    stars: 1, desc: 'Pemandangan sederhana tanpa efek tambahan. Paling mudah didapat.' },
