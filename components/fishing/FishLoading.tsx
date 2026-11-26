@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useGameFrame } from '@/components/GameMode';
 
-// Layar muat Wibu Fish (urutan "Lagi bangunin pulaunya..." -> "Masuk ke pulau...").
+// Layar muat Komik Fish (urutan "Lagi bangunin pulaunya..." -> "Masuk ke pulau...").
 // Ukuran dirancang di kanvas 800x360 seperti lobi, lalu diskalakan pas ke layar (diputar kalau HP masih tegak).
 // Ukuran & warna diukur dari rekaman layar referensi.
 const W = 800;
@@ -50,7 +50,7 @@ export default function FishLoading({ pct, label, tips, sub = 'Pulau Pemula' }: 
               padding: '13px 21px 0', textAlign: 'center',
             }}>
               <div style={{ fontSize: 31, fontWeight: 900, lineHeight: '34px', letterSpacing: -0.3 }}>
-                <span style={{ color: '#0f4a96' }}>Wibu</span> <span style={{ color: '#ee8466' }}>Fish</span>
+                <span style={{ color: '#0f4a96' }}>Komik</span> <span style={{ color: '#ee8466' }}>Fish</span>
               </div>
               <div style={{ marginTop: 6, fontSize: 14, fontWeight: 800, lineHeight: '18px', color: '#5c4636' }}>{sub}</div>
               <div style={{ marginTop: 9, height: 12, borderRadius: 6, background: '#ead7ae', overflow: 'hidden' }}>

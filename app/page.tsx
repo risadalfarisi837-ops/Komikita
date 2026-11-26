@@ -174,7 +174,7 @@ function Header({ onSearch }: { onSearch: () => void }) {
 //   Top Pembaca  = poin baca terbanyak musim ini
 // Papan yang belum punya data otomatis disembunyikan.
 const BANNERS = [
-  { id: 'mancing', video: '/banner/wibufish.mp4', poster: '/banner/wibufish.jpg', href: '/komikstore/mancing' },
+  { id: 'mancing', video: '/banner/komikita-fish.mp4', poster: '/banner/komikita-fish.jpg', href: '/komikstore/mancing' },
 ];
 
 type BoardRow = { name: string; photo?: string; value: number; sub?: string };

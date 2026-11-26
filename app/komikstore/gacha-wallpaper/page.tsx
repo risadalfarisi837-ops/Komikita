@@ -96,12 +96,12 @@ const starFat = (cx: number, cy: number, r: number) =>
   `C${cx - 0.117 * r} ${cy + 0.317 * r} ${cx - 0.317 * r} ${cy + 0.117 * r} ${cx - r} ${cy}` +
   `C${cx - 0.317 * r} ${cy - 0.117 * r} ${cx - 0.117 * r} ${cy - 0.317 * r} ${cx} ${cy - r}Z`;
 
-// Banner = ilustrasi diam (public/banner/gacha-wibuku.jpg). Efek bintang membesar + percikan hanya muncul saat opening.
+// Banner = ilustrasi diam (public/banner/gacha-komikita.jpg). Efek bintang membesar + percikan hanya muncul saat opening.
 function Banner({ opening }: { opening: boolean }) {
   return (
     <div className="relative h-full w-full">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/banner/gacha-wibuku.jpg" alt="" draggable={false} className="block h-full w-full select-none object-cover" />
+      <img src="/banner/gacha-komikita.jpg" alt="" draggable={false} className="block h-full w-full select-none object-cover" />
       {opening && (
         <svg viewBox="0 0 996 560" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 h-full w-full" aria-hidden="true">
           <defs>
@@ -253,12 +253,12 @@ export default function GachaWallpaperPage() {
   const summon = async (n: 1 | 10) => {
     if (!fb || !uid || busy || opening || cool > 0) return;
     const cost = n === 1 ? COST_1 : COST_10;
-    if (koin < cost) { say('WibuGem kurang'); return; }
+    if (koin < cost) { say('KomikGem kurang'); return; }
     setBusy(true);
     try {
       // potong saldo pakai transaction supaya nggak bisa dobel dari 2 tab
       const res = await ref().child('koin').transaction((cur: any) => (typeof cur !== 'number' ? cur : cur >= cost ? cur - cost : undefined));
-      if (!res.committed) { say('WibuGem kurang'); setBusy(false); return; }
+      if (!res.committed) { say('KomikGem kurang'); setBusy(false); return; }
       const picks = rollMany(n);
       const counts: Record<string, number> = {};
       picks.forEach((k) => { counts[k] = (counts[k] || 0) + 1; });
@@ -374,7 +374,7 @@ export default function GachaWallpaperPage() {
       <div className="max-w-md mx-auto pb-28">
         <div className="flex items-center gap-[18px] px-7 pt-6 pb-[15px]">
           <button onClick={() => router.back()} className="active:scale-90 transition-transform"><ArrowLeft className="h-8 w-8" /></button>
-          <h1 className="text-[26.5px] font-extrabold leading-tight">Wibuku Gacha</h1>
+          <h1 className="text-[26.5px] font-extrabold leading-tight">Komikita Gacha</h1>
         </div>
 
         {ready && !uid && <p className="px-5 pt-6 text-white/60">Login dulu buat summon wallpaper.</p>}
@@ -395,7 +395,7 @@ export default function GachaWallpaperPage() {
 
             <button onClick={() => setGem(true)} className={card + ' mx-4 mt-5 flex w-[calc(100%-2rem)] items-center gap-3 px-4 py-3 text-left active:scale-[.98] transition-transform'}>
               <Gem size={26} />
-              <span className="text-[13px] font-extrabold">Cara mendapatkan WibuGem</span>
+              <span className="text-[13px] font-extrabold">Cara mendapatkan KomikGem</span>
               <span className="ml-auto flex shrink-0 items-center gap-1 whitespace-nowrap text-[12px] font-medium text-[#3b9cff]">Lihat info <ArrowRight className="w-4 h-4" /></span>
             </button>
 
@@ -559,8 +559,8 @@ export default function GachaWallpaperPage() {
                 Cara Gacha?
                 <span className="rounded-full bg-[#e3effa] px-2 py-0.5 text-[9px] font-black text-[#2a6aa3]">👆 TAP</span>
               </div>
-              <h2 className="mt-3 text-[26px] font-extrabold leading-tight">Cara Mendapatkan<br />WibuGem</h2>
-              <p className="mt-2 text-[13px] font-medium text-white/85">Kumpulkan wibugem untuk gacha di Wibuku.</p>
+              <h2 className="mt-3 text-[26px] font-extrabold leading-tight">Cara Mendapatkan<br />KomikGem</h2>
+              <p className="mt-2 text-[13px] font-medium text-white/85">Kumpulkan komikgem untuk gacha di Komikita.</p>
               <button onClick={() => setGem(false)} aria-label="Tutup" className="absolute right-0 top-0 flex h-12 w-12 items-center justify-center rounded-bl-[22px] bg-[#0b0d14] text-[20px] font-black text-[#ffd21f] active:scale-90 transition-transform">X</button>
             </div>
             <div className="min-h-0 flex-1 space-y-[11px] overflow-y-auto p-2.5">
@@ -618,7 +618,7 @@ export default function GachaWallpaperPage() {
                     </div>
                     <p className="mt-2 text-[13px] font-bold text-white/70">{inf.desc}</p>
                     <p className="mt-1 text-xs font-bold text-white/45">
-                      Rata-rata ±{avg}x summon (±{(avg * COST_1).toLocaleString('id-ID')} WibuGem) · {keys.length} wallpaper · koleksimu {have}/{keys.length}
+                      Rata-rata ±{avg}x summon (±{(avg * COST_1).toLocaleString('id-ID')} KomikGem) · {keys.length} wallpaper · koleksimu {have}/{keys.length}
                     </p>
                     <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
                       {keys.map((k) => (
@@ -634,7 +634,7 @@ export default function GachaWallpaperPage() {
                 );
               })}
             </div>
-            <p className="mt-4 text-center text-xs font-bold text-white/45">Summon 10x dijamin ada minimal 1 Rare. Perkiraan WibuGem dihitung dari peluang; hasil sebenarnya bisa lebih cepat atau lebih lama. Wallpaper yang sudah kamu punya tidak bertambah lagi: duplikatnya otomatis jadi token untuk ditukar di Toko Token.</p>
+            <p className="mt-4 text-center text-xs font-bold text-white/45">Summon 10x dijamin ada minimal 1 Rare. Perkiraan KomikGem dihitung dari peluang; hasil sebenarnya bisa lebih cepat atau lebih lama. Wallpaper yang sudah kamu punya tidak bertambah lagi: duplikatnya otomatis jadi token untuk ditukar di Toko Token.</p>
             <button onClick={() => setInfo(false)} className="mt-4 w-full rounded-2xl bg-violet-500 py-3 font-black">Oke</button>
           </div>
         </div>

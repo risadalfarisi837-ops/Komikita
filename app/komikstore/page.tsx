@@ -221,7 +221,7 @@ export default function KomikStorePage() {
         </h1>
       </div>
 
-      {/* peta ubin (posisi & ukuran mengikuti desain Wibu Play) */}
+      {/* peta ubin (posisi & ukuran mengikuti desain Komikita Play) */}
       <div className="relative" style={{ height: U(192) }}>
         <Diamond cx={25.5} cy={26.1} d={37.5} from="#14171d" to="#101318" edge="#2c313b" title={(name || 'Tamu').split(' ')[0]} tsize={5.4} float={0} enter="p" delay={0} onClick={() => router.push('/profile')}
           art={photo ? (
