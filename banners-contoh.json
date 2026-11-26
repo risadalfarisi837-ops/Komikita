@@ -1,0 +1,200 @@
+{
+  "giveaway": {
+    "all": [
+      {
+        "name": "Risad",
+        "photo": "",
+        "value": 544452
+      },
+      {
+        "name": "Abel",
+        "photo": "",
+        "value": 120819
+      },
+      {
+        "name": "Tante Nika",
+        "photo": "",
+        "value": 117703
+      },
+      {
+        "name": "Clarra",
+        "photo": "",
+        "value": 108482
+      },
+      {
+        "name": "Rino",
+        "photo": "",
+        "value": 78180
+      }
+    ],
+    "d30": [
+      {
+        "name": "Risad",
+        "photo": "",
+        "value": 9000
+      },
+      {
+        "name": "Abel",
+        "photo": "",
+        "value": 7200
+      },
+      {
+        "name": "Tante Nika",
+        "photo": "",
+        "value": 5000
+      },
+      {
+        "name": "Clarra",
+        "photo": "",
+        "value": 3100
+      },
+      {
+        "name": "Rino",
+        "photo": "",
+        "value": 900
+      }
+    ],
+    "d7": [
+      {
+        "name": "Risad",
+        "photo": "",
+        "value": 1200
+      },
+      {
+        "name": "Abel",
+        "photo": "",
+        "value": 800
+      },
+      {
+        "name": "Tante Nika",
+        "photo": "",
+        "value": 640
+      },
+      {
+        "name": "Clarra",
+        "photo": "",
+        "value": 300
+      },
+      {
+        "name": "Rino",
+        "photo": "",
+        "value": 120
+      }
+    ]
+  },
+  "charisma": {
+    "all": [
+      {
+        "name": "Risad",
+        "photo": "",
+        "value": 5453
+      },
+      {
+        "name": "Abel",
+        "photo": "",
+        "value": 2429
+      },
+      {
+        "name": "Tante Nika",
+        "photo": "",
+        "value": 1425
+      },
+      {
+        "name": "Clarra",
+        "photo": "",
+        "value": 1113
+      },
+      {
+        "name": "Rino",
+        "photo": "",
+        "value": 961
+      }
+    ],
+    "d30": [
+      {
+        "name": "Risad",
+        "photo": "",
+        "value": 900
+      },
+      {
+        "name": "Abel",
+        "photo": "",
+        "value": 700
+      },
+      {
+        "name": "Tante Nika",
+        "photo": "",
+        "value": 500
+      },
+      {
+        "name": "Clarra",
+        "photo": "",
+        "value": 300
+      },
+      {
+        "name": "Rino",
+        "photo": "",
+        "value": 100
+      }
+    ],
+    "d7": [
+      {
+        "name": "Risad",
+        "photo": "",
+        "value": 210
+      },
+      {
+        "name": "Abel",
+        "photo": "",
+        "value": 180
+      },
+      {
+        "name": "Tante Nika",
+        "photo": "",
+        "value": 120
+      },
+      {
+        "name": "Clarra",
+        "photo": "",
+        "value": 90
+      },
+      {
+        "name": "Rino",
+        "photo": "",
+        "value": 40
+      }
+    ]
+  },
+  "clan": [
+    {
+      "name": "Nolep Family",
+      "photo": "",
+      "value": 229,
+      "sub": "2143 anggota"
+    },
+    {
+      "name": "Xcellence",
+      "photo": "",
+      "value": 225,
+      "sub": "1800 anggota"
+    },
+    {
+      "name": "YURI NEE",
+      "photo": "",
+      "value": 217,
+      "sub": "1500 anggota"
+    },
+    {
+      "name": "FIVE KAGE",
+      "photo": "",
+      "value": 217,
+      "sub": "1200 anggota"
+    },
+    {
+      "name": "INTROVERT",
+      "photo": "",
+      "value": 214,
+      "sub": "900 anggota"
+    }
+  ]
+}
