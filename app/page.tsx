@@ -186,6 +186,14 @@ const BOARDS: BoardTheme[] = [
   { id: 'reader', title: 'TOP PEMBACA', href: '/ranking', tabs: false, border: '#55545C', bg: 'linear-gradient(160deg, #2E2E34 0%, #4A4A52 55%, #28282D 100%)', accent: '#F5C451', accentText: '#2A2208', glow: 'rgba(255,255,255,.14)', unit: 'poin musim ini', fmt: nf },
 ];
 
+// Cahaya latar di balik banner: berubah halus mengikuti slide yang aktif
+const GLOW: Record<string, string> = {
+  banner: 'rgba(59,155,255,.20)',
+  giveaway: 'rgba(45,212,232,.36)',
+  charisma: 'rgba(255,92,154,.34)',
+  reader: 'rgba(190,196,210,.24)',
+};
+
 const BOARD_CACHE = 'komikita_boards_v2';
 const BOARD_TTL = 10 * 60 * 1000;
 
@@ -386,7 +394,7 @@ function BoardSlide({ theme, rowsByTab, onOpen }: { theme: BoardTheme; rowsByTab
   );
 }
 
-function Hero() {
+function Hero({ onGlow }: { onGlow?: (id: string) => void }) {
   const router = useRouter();
   const ref = useRef<HTMLDivElement>(null);
   const idx = useRef(0);
@@ -405,6 +413,9 @@ function Hero() {
   }).filter(Boolean) as { t: BoardTheme; rowsByTab: Record<string, BoardRow[]> }[];
 
   const total = BANNERS.length + boardSlides.length;
+  const slideIds = [...BANNERS.map(() => 'banner'), ...boardSlides.map(({ t }) => t.id)];
+  const slideKey = slideIds.join('|');
+  useEffect(() => { onGlow?.(slideIds[active] || 'banner'); }, [active, slideKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const goTo = (i: number) => {
     const el = ref.current;
@@ -743,6 +754,7 @@ export default function Home() {
   const [categories, setCategories] = useState<{ category: string; items: any[] }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [glow, setGlow] = useState('');
 
   // Firebase di-load setelah halaman siap (defer supaya tidak memblok render)
   useEffect(() => {
@@ -805,10 +817,16 @@ export default function Home() {
         @keyframes bsTwk { 0%, 100% { opacity: .1; transform: scale(.55) rotate(0deg); } 50% { opacity: .95; transform: scale(1.2) rotate(20deg); } }
         @keyframes bsIn { from { opacity: 0; transform: translateY(8px) scale(.94); } to { opacity: 1; transform: none; } }
         .bs-in { animation: bsIn .42s cubic-bezier(.2,.8,.2,1) both; }
+        @media (prefers-reduced-motion: reduce) { .bs-glow { transition: none !important; } }
         @media (prefers-reduced-motion: reduce) { .bs-in, .bs-twk { animation: none !important; } }
       `}</style>
 
-      <div style={{ background: '#1B1A20', color: '#fff', minHeight: '100vh', paddingBottom: 24 }}>
+      <div style={{ position: 'relative', isolation: 'isolate', background: '#1B1A20', color: '#fff', minHeight: '100vh', paddingBottom: 24 }}>
+        <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 600, zIndex: -1, pointerEvents: 'none' }}>
+          {Object.entries(GLOW).map(([id, c]) => (
+            <div key={id} className="bs-glow" style={{ position: 'absolute', inset: 0, opacity: glow === id ? 1 : 0, transition: 'opacity .8s ease', background: `radial-gradient(130% 62% at 50% 40%, ${c} 0%, transparent 72%)` }} />
+          ))}
+        </div>
         <Header onSearch={goSearch} />
         {loading ? (
           <SkeletonHome />
@@ -816,7 +834,7 @@ export default function Home() {
           <div style={{ padding: 20, textAlign: 'center', color: MUTED }}>{error}</div>
         ) : (
           <>
-            <Hero />
+            <Hero onGlow={setGlow} />
             <PremiumCard />
             <ContinueReading />
 
