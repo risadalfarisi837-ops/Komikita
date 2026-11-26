@@ -86,6 +86,12 @@ export class FishingEngine {
 
   private target: Target | null = null;
   private castT = 0;
+  // lempar berjarak: tahan tombol Joran, lepas saat bar di Normal / Sedang / Jauh
+  private charging = false;
+  private charge = 0;
+  private chargeDir = 1;
+  private castTier = 0;
+  private tierLuck() { return [0, 0.1, 0.25][this.castTier] || 0; }
   private waitT = 0;
   private biteT = 0;
   private fish: Catch | null = null;
@@ -145,9 +151,13 @@ export class FishingEngine {
 
   action(down: boolean) {
     if (this.phase === 'reel') { this.holding = down; return; }
+    if (this.phase === 'idle') {
+      if (down) { if (!this.charging) { this.charging = true; this.charge = 0; this.chargeDir = 1; } }
+      else if (this.charging) { this.charging = false; this.tryCast(this.charge < 0.34 ? 0 : this.charge < 0.67 ? 1 : 2); }
+      return;
+    }
     if (!down) return;
-    if (this.phase === 'idle') this.tryCast();
-    else if (this.phase === 'bite') this.hook();
+    if (this.phase === 'bite') this.hook();
   }
 
   cancel() {
@@ -327,7 +337,7 @@ export class FishingEngine {
     return true;
   }
 
-  private findTarget(): Target | null {
+  private findTarget(tier = 0): Target | null {
     const w = this.world;
     const d = DIRV[this.dir];
     const ptx = Math.floor(this.px / TILE);
@@ -344,7 +354,7 @@ export class FishingEngine {
     }
     if (!found) return null;
     let [tx, ty] = found;
-    const extra = 1 + Math.floor(Math.random() * 2);
+    const extra = tier === 0 ? 1 + Math.floor(Math.random() * 2) : tier === 1 ? 4 : 8;
     for (let k = 0; k < extra; k++) {
       const nx = tx + d.x;
       const ny = ty + d.y;
@@ -479,10 +489,11 @@ export class FishingEngine {
     ctx.beginPath(); ctx.ellipse(sx, sy + 1, 30, 9, 0, 0, Math.PI * 2); ctx.stroke();
   }
 
-  private tryCast() {
+  private tryCast(tier = 0) {
     if (this.bagFull) { this.ev.onToast?.('Tas penuh! Jual ikan dulu.'); return; }
-    const t = this.findTarget();
+    const t = this.findTarget(tier);
     if (!t) { this.ev.onToast?.('Hadapkan karakter ke air dulu'); return; }
+    this.castTier = tier;
     this.target = t;
     this.castT = 0;
     const sh = this.shoal;
@@ -577,11 +588,20 @@ export class FishingEngine {
       if (r.moving) r.step += dt; else r.step = 0;
     }
 
+    if (this.charging) {
+      if (this.phase !== 'idle') this.charging = false;
+      else {
+        this.charge += dt * 0.9 * this.chargeDir;
+        if (this.charge >= 1) { this.charge = 1; this.chargeDir = -1; }
+        else if (this.charge <= 0) { this.charge = 0; this.chargeDir = 1; }
+      }
+    }
+
     // fase mancing
     if (this.phase === 'cast') {
       this.castT += dt;
       if (this.castT >= 0.5 && this.target) {
-        this.waitT = this.instantBite ? 0.2 : (2 + Math.random() * 5) * (this.castInShoal ? 0.45 : 1);
+        this.waitT = this.instantBite ? 0.2 : (2 + Math.random() * 5) * (this.castInShoal ? 0.45 : 1) * [1, 1.2, 1.45][this.castTier];
         this.ripples.push({ x: this.target.wx, y: this.target.wy, t: 0 });
         this.splash(this.target.wx, this.target.wy, 8);
         this.setPhase('wait');
@@ -590,7 +610,7 @@ export class FishingEngine {
       this.waitT -= dt;
       if (Math.random() < dt * 0.7) this.ripples.push({ x: this.target.wx + (Math.random() - 0.5) * 6, y: this.target.wy + (Math.random() - 0.5) * 3, t: 0.55 });
       if (this.waitT <= 0) {
-        let rolled = this.castInShoal && this.castKind === 'raksasa' && Math.random() < Math.min(0.7, 0.25 + this.luck * 0.4 + this.level / 250) ? rollGiant() : this.castInShoal && this.castKind === 'hiu' && Math.random() < Math.min(0.8, 0.15 + this.luck * 0.5 + this.level / 200) ? rollShark() : rollFish(this.level, this.luck + (this.castInShoal ? 2 : 0));
+        let rolled = this.castInShoal && this.castKind === 'raksasa' && Math.random() < Math.min(0.7, 0.25 + (this.luck + this.tierLuck()) * 0.4 + this.level / 250) ? rollGiant() : this.castInShoal && this.castKind === 'hiu' && Math.random() < Math.min(0.8, 0.15 + (this.luck + this.tierLuck()) * 0.5 + this.level / 200) ? rollShark() : rollFish(this.level, (this.luck + this.tierLuck()) + (this.castInShoal ? 2 : 0));
         if (this.forceRarity) rolled = this.rollForced(this.forceRarity);
         if (this.forceSize) rolled = withSize(rolled, this.forceSize);
         this.fish = rolled;
@@ -921,6 +941,25 @@ export class FishingEngine {
     const sxp = this.px * S - ox;
     const syHead = (this.py - 21) * S - oy;
     const syFeet = this.py * S - oy;
+    if (this.charging && this.phase === 'idle') {
+      const bw = 84 * u;
+      const bh = 9 * u;
+      const bx = sxp - bw / 2;
+      const by = syFeet + 12 * u;
+      const segs = ['#5fd66f', '#ffd45a', '#ff6a4d'];
+      ctx.fillStyle = 'rgba(18,16,14,0.82)';
+      this.rrect(bx - 3 * u, by - 3 * u, bw + 6 * u, bh + 6 * u, 5 * u);
+      ctx.fill();
+      for (let i = 0; i < 3; i++) { ctx.fillStyle = segs[i] + '44'; ctx.fillRect(bx + (i * bw) / 3 + u, by, bw / 3 - 2 * u, bh); }
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(bx, by, bw * this.charge, bh);
+      ctx.clip();
+      for (let i = 0; i < 3; i++) { ctx.fillStyle = segs[i]; ctx.fillRect(bx + (i * bw) / 3 + u, by, bw / 3 - 2 * u, bh); }
+      ctx.restore();
+      const tr = this.charge < 0.34 ? 0 : this.charge < 0.67 ? 1 : 2;
+      this.pillText(['Normal', 'Sedang', 'Jauh'][tr], sxp, by + bh + 13 * u, sz * 0.9, 'rgba(18,16,14,0.85)', segs[tr], 8 * u);
+    }
     // label warung dan ikan raksasa
     for (const p of this.world.props) {
       if (p.kind !== 'stall' && p.kind !== 'giantfish') continue;
