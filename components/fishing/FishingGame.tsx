@@ -1078,47 +1078,69 @@ export default function FishingGame(props: Props) {
 
       {/* ransel penuh */}
       {bagOpen && (() => {
-        const NAVY = '#3d4b6e';
-        const stroke = `-1px 0 ${NAVY}, 1px 0 ${NAVY}, 0 -1px ${NAVY}, 0 1px ${NAVY}`;
-        const wb = (extra: CSSProperties = {}): CSSProperties => ({ border: 0, borderRadius: px(12), background: '#fff', color: '#4a3a24', fontFamily: HUD, fontWeight: 700, fontSize: px(13), padding: `${px(6)}px ${px(14)}px`, cursor: 'pointer', boxShadow: '0 2px 0 rgba(0,0,0,0.18)', ...extra });
-        const bc = (r: keyof typeof RARITY) => (r === 'common' ? '#c6d0e0' : r === 'uncommon' ? '#5fd66f' : r === 'rare' ? '#4aa3ff' : r === 'epic' ? '#b48cff' : '#f5c451');
-        const cell = (b: BagItem, h: number, nameSz: number, wSz: number, onClick: () => void, on: boolean) => {
+        const INK = '#2b3447';
+        const stroke = `-1px 0 ${INK}, 1px 0 ${INK}, 0 -1px ${INK}, 0 1px ${INK}, 1px 1px 0 ${INK}, -1px -1px 0 ${INK}, 1px -1px 0 ${INK}, -1px 1px 0 ${INK}`;
+        const SLOT_BG = '#68758f';
+        const SLOT_EDGE = '#c3c7d1';
+        const bc = (r: keyof typeof RARITY) => (r === 'common' ? SLOT_EDGE : r === 'uncommon' ? '#4fc261' : r === 'rare' ? '#4aa3ff' : r === 'epic' ? '#b48cff' : '#f5c451');
+        const nc = (r: keyof typeof RARITY) => (r === 'common' ? '#fff' : r === 'uncommon' ? '#a4f0a4' : r === 'rare' ? '#9ad0ff' : r === 'epic' ? '#d6bfff' : '#ffd96a');
+        const cb = (extra: CSSProperties = {}): CSSProperties => ({ border: `${px(2)}px solid ${CREAM_EDGE}`, borderRadius: px(13), background: CREAM_BG, color: '#6b4a2a', fontFamily: HUD, fontWeight: 700, fontSize: px(13), height: px(34), padding: `0 ${px(14)}px`, cursor: 'pointer', boxShadow: '0 3px 0 #d9c08a', display: 'inline-flex', alignItems: 'center', gap: px(4), boxSizing: 'border-box', whiteSpace: 'nowrap', ...extra });
+        const cell = (b: BagItem, onClick: () => void) => {
           const sp = SPECIES_BY_ID[b.s];
+          const parts = sp.name.split(' ');
+          const nameEl = sp.name.endsWith(' Emas') && parts.length > 1
+            ? <>{parts.slice(0, -1).join(' ')}<br /><span style={{ color: '#ffd96a' }}>Emas</span></>
+            : sp.name;
           return (
-            <button key={b.id} onClick={onClick} style={{ position: 'relative', height: px(h), borderRadius: px(12), background: 'linear-gradient(180deg,#8e9cc4,#7685b0)', border: `${px(3)}px solid ${on ? '#ffb02e' : bc(sp.rarity)}`, boxSizing: 'border-box', padding: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', overflow: 'hidden', boxShadow: '0 2px 0 rgba(30,40,70,0.25)' }}>
-              <span style={{ fontSize: px(nameSz), fontWeight: 700, color: '#fff', marginTop: px(3), textShadow: stroke, lineHeight: 1.05, maxWidth: '94%', textAlign: 'center', fontFamily: HUD }}>{sp.name.split(' ').slice(0, 2).join(' ')}</span>
-              <FishIcon id={sp.id} scale={(h / 66) * 0.78 * u} />
-              <span style={{ fontSize: px(wSz), fontWeight: 700, color: '#fff', marginBottom: px(3), textShadow: stroke, fontFamily: HUD }}>{wl(b.w)}</span>
-              {isShowoff(sp, b.w) && <span style={{ position: 'absolute', right: px(3), bottom: px(h * 0.3), color: '#ffcf3a', fontSize: px(14), textShadow: `0 1px 0 ${NAVY}` }}>★</span>}
+            <button key={b.id} onClick={onClick} style={{ position: 'relative', aspectRatio: '1 / 1', width: '100%', borderRadius: px(14), background: SLOT_BG, border: `${px(3)}px solid ${bc(sp.rarity)}`, boxSizing: 'border-box', padding: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', overflow: 'hidden', boxShadow: sp.rarity === 'legendary' ? '0 0 0 2px rgba(245,196,81,0.35)' : 'none' }}>
+              <span style={{ fontSize: px(9.5), fontWeight: 700, color: nc(sp.rarity), marginTop: px(2), textShadow: stroke, lineHeight: 1.02, maxWidth: '96%', textAlign: 'center', fontFamily: HUD, zIndex: 1 }}>{nameEl}</span>
+              <span style={{ position: 'absolute', left: 0, right: 0, top: '50%', transform: 'translateY(-38%)', display: 'flex', justifyContent: 'center' }}><FishIcon id={sp.id} scale={0.95 * u} /></span>
+              <span style={{ fontSize: px(13), fontWeight: 700, color: '#fff', marginBottom: px(1), textShadow: stroke, fontFamily: HUD, lineHeight: 1.1, zIndex: 1 }}>{wl(b.w)}</span>
             </button>
           );
         };
+        const emptySlot = (key: string, next: boolean) => <div key={key} style={{ aspectRatio: '1 / 1', width: '100%', borderRadius: px(14), background: SLOT_BG, border: `${px(3)}px solid ${SLOT_EDGE}`, boxSizing: 'border-box', ...(next ? { outline: `${px(2.5)}px dashed #1478e8`, outlineOffset: px(1.5) } : {}) }} />;
         const cells: (BagItem | null)[] = Array.from({ length: BAG_MAX }, (_, i) => shownBag[i] || null);
         const dsel = bag.find((x) => x.id === sel);
         const small = bag.filter((x) => !isShowoff(SPECIES_BY_ID[x.s], x.w));
+        const hotCells: (BagItem | null)[] = Array.from({ length: 8 }, (_, i) => recent[i] || null);
         return (
-          <div style={{ ...ov, display: 'flex', flexDirection: 'column', background: '#fff5e1', fontFamily: HUD }} onClick={() => { if (sel) setSel(''); else setBagOpen(false); }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: px(10), background: 'linear-gradient(180deg,#2f9fb5,#237f95)', padding: `${px(7)}px ${px(12)}px`, boxShadow: '0 3px 0 #1c6578' }} onClick={(e) => e.stopPropagation()}>
-              <BagIcon size={px(24)} />
-              <span style={{ color: '#fff', fontWeight: 700, fontSize: px(18) }}>Tas</span>
-              <span style={{ background: '#e8f1f8', color: '#2a4a5a', fontWeight: 700, fontSize: px(15), borderRadius: 99, padding: `${px(1)}px ${px(14)}px` }}>{bag.length}/{BAG_MAX}</span>
-              <span style={{ marginLeft: 'auto' }} />
-              <button onClick={async () => { if (!small.length) { say('Tidak ada ikan biasa'); return; } if (window.confirm('Buang (jual) ' + small.length + ' ikan biasa? Ikan XL/Epik/Legendary aman.')) await sell(small.map((x) => x.id)); }} style={wb()}>🗑️ Buang</button>
-              <button onClick={() => setBagSort(bagSort === 'baru' ? 'nilai' : 'baru')} style={wb()}>⇅ {bagSort === 'baru' ? 'Terbaru' : 'Termahal'}</button>
-              <button onClick={() => setBagOpen(false)} aria-label="Tutup" style={{ width: px(36), height: px(34), borderRadius: px(9), border: 0, background: '#e5484d', boxShadow: '0 3px 0 #a62a2f', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}><Svg d="M6 6l12 12M18 6L6 18" size={px(18)} /></button>
-            </div>
-            <div style={{ padding: `${px(5)}px ${px(12)}px`, fontSize: px(13), fontWeight: 700, color: '#8a6d4a', borderBottom: `${px(2)}px dashed #e3cfa4` }} onClick={(e) => e.stopPropagation()}>Nilai isi tas <b style={{ color: '#1d78c8' }}>💎{formatNum(total)}</b> · jual di Lapak Bang Jaka 🐟</div>
-            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: `${px(8)}px ${px(12)}px`, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(' + px(70) + 'px, 1fr))', gap: px(7), alignContent: 'start' }} onClick={(e) => e.stopPropagation()}>
-              {cells.map((b, i) => b ? cell(b, 72, 9.5, 11, () => setSel(b.id), dsel?.id === b.id) : <div key={'e' + i} style={{ height: px(72), borderRadius: px(12), background: '#aeb4c2', border: `${px(3)}px solid #bfc4d0`, boxSizing: 'border-box' }} />)}
-            </div>
-            <div style={{ borderTop: `${px(2)}px dashed #e3cfa4`, padding: `${px(5)}px ${px(12)}px ${px(8)}px` }} onClick={(e) => e.stopPropagation()}>
-              <div style={{ fontSize: px(16), fontWeight: 700, color: '#6b4a24', marginBottom: px(3) }}>Hotbar</div>
-              <div style={{ display: 'flex', gap: px(7), justifyContent: 'center' }}>
-                <button onClick={() => { setBagOpen(false); setShopOpen(true); }} style={{ position: 'relative', width: px(66), height: px(66), borderRadius: px(12), background: 'linear-gradient(180deg,#8e9cc4,#7685b0)', border: `${px(3)}px solid #ffb02e`, boxSizing: 'border-box', padding: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: px(1) }}>
-                  <RodIcon size={px(28)} color={RARITY[rod.rarity].color} />
-                  <span style={{ fontSize: px(11), fontWeight: 700, color: '#fff', textShadow: stroke }}>Joran</span>
+          <div style={{ ...ov, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: HUD }} onClick={() => { if (sel) setSel(''); else setBagOpen(false); }}>
+            <style>{`.kk-bag{scrollbar-width:thin;scrollbar-color:#1478e8 transparent}.kk-bag::-webkit-scrollbar{width:${px(7)}px}.kk-bag::-webkit-scrollbar-track{background:transparent}.kk-bag::-webkit-scrollbar-thumb{background:#1478e8;border-radius:99px}`}</style>
+            <div style={{ width: `min(96%, ${px(740)}px)`, maxHeight: '96%', display: 'flex', flexDirection: 'column', background: '#fdf5e4', borderRadius: px(20), border: `${px(3)}px solid #173d86`, boxShadow: '0 10px 30px rgba(0,0,0,0.5)', overflow: 'hidden', boxSizing: 'border-box' }} onClick={(e) => e.stopPropagation()}>
+              {/* header biru */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: px(9), background: 'linear-gradient(180deg,#1580ee,#0c66d0)', padding: `${px(7)}px ${px(12)}px`, borderBottom: `${px(3)}px solid #0b4fa8`, flex: '0 0 auto' }}>
+                <span style={{ width: px(32), height: px(32), borderRadius: '50%', background: '#fff2d2', border: `${px(2.5)}px solid ${CREAM_EDGE}`, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto' }}><BagIcon size={px(20)} /></span>
+                <span style={{ color: '#fff', fontWeight: 600, fontSize: px(16), textShadow: '0 1px 0 rgba(0,0,0,0.25)' }}>Tas</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: px(8), background: CREAM_BG, color: '#8a7a64', fontWeight: 700, fontSize: px(15), borderRadius: 99, padding: `${px(3)}px ${px(8)}px ${px(3)}px ${px(15)}px`, boxShadow: '0 2px 0 #d9c08a' }}>
+                  {bag.length}/{BAG_MAX}
+                  <button onClick={() => say('Tambah slot tas segera hadir')} aria-label="Tambah slot" style={{ width: px(22), height: px(22), borderRadius: '50%', border: 0, background: '#1478e8', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}><Svg d="M12 5v14M5 12h14" size={px(13)} w={3.4} /></button>
+                </span>
+                <span style={{ marginLeft: 'auto' }} />
+                <button onClick={() => { const n = bagSort === 'baru' ? 'nilai' : 'baru'; setBagSort(n); say(n === 'nilai' ? 'Urut: termahal' : 'Urut: terbaru'); }} style={cb()}>Urutkan</button>
+                <button onClick={async () => { if (!small.length) { say('Tidak ada ikan biasa'); return; } if (window.confirm('Buang (jual) ' + small.length + ' ikan biasa? Ikan XL/Epik/Legendary aman.')) await sell(small.map((x) => x.id)); }} style={cb()}>
+                  <svg width={px(14)} height={px(15)} viewBox="0 0 24 24" fill="none" stroke="#6b4a2a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6" /></svg>Buang cepat
                 </button>
-                {recent.map((b) => cell(b, 66, 9, 11, () => setSel(b.id), dsel?.id === b.id)).map((el) => <div key={el.key} style={{ width: px(66) }}>{el}</div>)}
+                <button onClick={() => say('Nilai isi tas 💎' + formatNum(total) + ' · jual di Lapak Bang Jaka')} aria-label="Bantuan" style={cb({ width: px(34), padding: 0, justifyContent: 'center', fontSize: px(16), color: '#1478e8' })}>?</button>
+                <button onClick={() => setBagOpen(false)} aria-label="Tutup" style={{ width: px(40), height: px(36), borderRadius: px(11), border: 0, background: 'linear-gradient(180deg,#e5533f,#cc3d2c)', boxShadow: '0 3px 0 #a62a1f', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0, flex: '0 0 auto' }}><Svg d="M6 6l12 12M18 6L6 18" size={px(20)} w={3} /></button>
+              </div>
+              {/* grid tas */}
+              <div style={{ position: 'relative', flex: '1 1 auto', minHeight: 0, padding: `${px(10)}px ${px(10)}px 0 ${px(14)}px`, display: 'flex' }}>
+                <div id="kk-bag-grid" className="kk-bag" style={{ flex: 1, minHeight: 0, maxHeight: px(190), overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(9, 1fr)', gap: px(6), alignContent: 'start', padding: `${px(3)}px ${px(8)}px ${px(40)}px ${px(2)}px` }}>
+                  {cells.map((b, i) => b ? cell(b, () => setSel(b.id)) : emptySlot('e' + i, i === shownBag.length))}
+                </div>
+                <div style={{ position: 'absolute', left: px(14), right: px(20), bottom: 0, height: px(48), background: 'linear-gradient(180deg,rgba(253,245,228,0),#fdf5e4 85%)', pointerEvents: 'none' }} />
+                <button onClick={() => { const el = document.getElementById('kk-bag-grid'); if (!el) return; if (el.scrollTop + el.clientHeight >= el.scrollHeight - 4) el.scrollTo({ top: 0, behavior: 'smooth' }); else el.scrollBy({ top: el.clientHeight * 0.7, behavior: 'smooth' }); }} style={{ position: 'absolute', left: '50%', bottom: px(2), transform: 'translateX(-50%)', border: 0, borderRadius: 99, background: 'linear-gradient(180deg,#1580ee,#0c66d0)', boxShadow: '0 3px 0 #0b4fa8', color: '#fff', fontFamily: HUD, fontWeight: 700, fontSize: px(14), padding: `${px(5)}px ${px(18)}px`, cursor: 'pointer' }}>▼ Lainnya</button>
+              </div>
+              {/* hotbar */}
+              <div style={{ padding: `${px(4)}px ${px(14)}px ${px(10)}px`, flex: '0 0 auto' }}>
+                <div style={{ fontSize: px(14), fontWeight: 700, color: '#8a6a4a', paddingBottom: px(3), borderBottom: `${px(2)}px dashed #e3d3ad`, marginBottom: px(7) }}>Hotbar</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(9, 1fr)', gap: px(6) }}>
+                  <button onClick={() => { setBagOpen(false); setShopOpen(true); }} aria-label="Joran" style={{ position: 'relative', aspectRatio: '1 / 1', width: '100%', borderRadius: px(14), background: SLOT_BG, border: `${px(3.5)}px solid #ffc531`, boxShadow: '0 0 0 2px rgba(255,197,49,0.28)', boxSizing: 'border-box', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <PixelRod id={rod.id} size={px(46)} />
+                  </button>
+                  {hotCells.map((b, i) => b ? cell(b, () => setSel(b.id)) : emptySlot('h' + i, false))}
+                </div>
               </div>
             </div>
             {dsel && (() => {
@@ -1128,7 +1150,7 @@ export default function FishingGame(props: Props) {
               return (
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(20,24,40,0.45)' }} onClick={(e) => { e.stopPropagation(); setSel(''); }}>
                   <div style={{ width: px(230), borderRadius: px(16), border: `${px(3)}px solid ${rar.color}`, background: '#fff9ec', padding: px(10), textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
-                    <div style={{ display: 'flex', justifyContent: 'center', background: '#8e9cc4', borderRadius: px(12) }}><FishIcon id={sp.id} scale={2 * u} /></div>
+                    <div style={{ display: 'flex', justifyContent: 'center', background: SLOT_BG, borderRadius: px(12) }}><FishIcon id={sp.id} scale={2 * u} /></div>
                     <div style={{ fontSize: px(16), fontWeight: 700, color: '#3b2f1a', marginTop: px(5) }}>{sp.name}</div>
                     <div style={{ fontSize: px(12), fontWeight: 700, color: '#8a6d0f' }}>{rar.label} · {formatWeight(dsel.w)}</div>
                     <div style={{ display: 'grid', gap: px(6), marginTop: px(8) }}>
