@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft } from 'lucide-react';
 import PetSvg from '@/components/PetArt';
@@ -53,43 +53,46 @@ const fmt = (ms: number) => {
 };
 
 const CSS = `
-@keyframes kzBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
-@keyframes kzHop{0%,100%{transform:translateY(0) scale(1)}40%{transform:translateY(-16px) scale(1.07)}60%{transform:translateY(0) scale(.96)}}
-@keyframes kzFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
-@keyframes kzDrift{0%{transform:translateX(-14px)}100%{transform:translateX(28px)}}
-@keyframes kzSun{0%,100%{box-shadow:0 0 0 22px rgba(254,249,195,.35)}50%{box-shadow:0 0 0 36px rgba(254,249,195,.15)}}
-@keyframes kzPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
-@keyframes kzWiggle{0%,60%,100%{transform:rotate(0)}70%{transform:rotate(-14deg)}85%{transform:rotate(14deg)}}
+@keyframes kzBob{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(0,-4px,0)}}
+@keyframes kzStep{0%,100%{transform:translate3d(0,0,0) rotate(-2deg)}50%{transform:translate3d(0,-7px,0) rotate(2deg)}}
+@keyframes kzHop{0%,100%{transform:translate3d(0,0,0) scale(1)}40%{transform:translate3d(0,-14px,0) scale(1.06)}60%{transform:translate3d(0,0,0) scale(.97)}}
+@keyframes kzPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
 @keyframes kzPop{0%{transform:scale(.3);opacity:0}60%{transform:scale(1.12);opacity:1}100%{transform:scale(1)}}
 @keyframes kzToast{0%{transform:translate(-50%,10px);opacity:0}15%,80%{transform:translate(-50%,0);opacity:1}100%{transform:translate(-50%,-14px);opacity:0}}
 @keyframes kzSpin{to{transform:rotate(360deg)}}
-@keyframes kzUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
-@keyframes kzTwinkle{0%,100%{opacity:.35}50%{opacity:1}}
-@keyframes kzSway{0%,100%{transform:rotate(-1.2deg)}50%{transform:rotate(1.2deg)}}
+@keyframes kzUp{from{transform:translate3d(0,100%,0)}to{transform:translate3d(0,0,0)}}
+.kzb{animation:kzBob 2.6s ease-in-out infinite;will-change:transform}
+.kzw .kzb{animation:kzStep .55s ease-in-out infinite}
+.kzr .kzb{animation:kzHop 1.1s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.kzb,.kzw .kzb,.kzr .kzb{animation:none}}
 `;
 
+const SPR = new Map<string, boolean>();
 function useSprite(src: string) {
-  const [ok, setOk] = useState(false);
+  const [ok, setOk] = useState(SPR.get(src) === true);
   useEffect(() => {
     if (!SPRITES) return;
+    const c = SPR.get(src);
+    if (c !== undefined) { setOk(c); return; }
     let alive = true;
     const im = new window.Image();
-    im.onload = () => { if (alive) setOk(true); };
+    im.onload = () => { SPR.set(src, true); if (alive) setOk(true); };
+    im.onerror = () => { SPR.set(src, false); };
     im.src = src;
     return () => { alive = false; };
   }, [src]);
   return ok;
 }
 
-function PetArt({ s, size }: { s: Species; size: number }) {
+const PetArt = memo(function PetArt({ s, size }: { s: Species; size: number }) {
   const src = '/pet/' + short(s.name).toLowerCase() + '.png';
   const ok = useSprite(src);
-  if (!ok) return <span style={{ fontSize: size * 0.8, lineHeight: 1, display: 'inline-flex' }}><PetSvg e={s.e} ground={size >= 64} /></span>;
+  if (!ok) return <span style={{ fontSize: size * 0.8, lineHeight: 1, display: 'inline-flex' }}><PetSvg e={s.e} ground={false} still /></span>;
   return (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={src} alt={s.name} draggable={false} style={{ width: size, height: size, objectFit: 'contain' }} />
+    <img src={src} alt={s.name} draggable={false} decoding="async" style={{ width: size, height: size, objectFit: 'contain' }} />
   );
-}
+});
 
 function Gem({ s = 16 }: { s?: number }) {
   return (
@@ -133,7 +136,9 @@ function Tufts({ pts }: { pts: number[][] }) {
   );
 }
 
-function Meadow() {
+const DOTS: [number, number, string][] = [[22, 22, '#f9a8d4'], [28, 24, '#fff'], [66, 20, '#fff'], [72, 26, '#f9a8d4'], [55, 30, '#fde047'], [14, 40, '#f9a8d4'], [88, 38, '#fff'], [40, 56, '#fde047'], [74, 62, '#fff'], [18, 62, '#f9a8d4']];
+
+const Meadow = memo(function Meadow() {
   return (
     <>
       <svg viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 w-full h-full" aria-hidden="true">
@@ -154,14 +159,21 @@ function Meadow() {
         <Tufts pts={[[120, 260], [200, 250], [70, 330], [250, 330], [330, 300], [110, 420], [300, 470], [40, 520]]} />
         <Tree x={68} y={228} k={0.62} />
         <Tree x={392} y={200} k={1.05} flip />
-        <Tree x={352} y={330} k={0.5} />
       </svg>
-      {[[22, 22, '#f9a8d4'], [28, 24, '#fff'], [66, 20, '#fff'], [72, 26, '#f9a8d4'], [55, 30, '#fde047'], [14, 40, '#f9a8d4'], [88, 38, '#fff'], [40, 56, '#fde047'], [74, 62, '#fff'], [18, 62, '#f9a8d4']].map((d, i) => (
-        <span key={i} className="absolute rounded-full" style={{ left: d[0] + '%', top: d[1] + '%', width: 5 + (i % 3) * 2, height: 5 + (i % 3) * 2, background: d[2] as string, animation: 'kzTwinkle 2.6s ease-in-out ' + i * 0.35 + 's infinite' }} />
+      {DOTS.map((d, i) => (
+        <span key={i} className="absolute rounded-full" style={{ left: d[0] + '%', top: d[1] + '%', width: 5 + (i % 3) * 2, height: 5 + (i % 3) * 2, background: d[2], opacity: 0.9 }} />
       ))}
     </>
   );
-}
+});
+
+const FrontTree = memo(function FrontTree() {
+  return (
+    <svg viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 w-full h-full pointer-events-none z-[6]" aria-hidden="true" style={{ opacity: 0.93 }}>
+      <Tree x={352} y={330} k={0.5} />
+    </svg>
+  );
+});
 
 function EggIcon() {
   return (
@@ -183,6 +195,77 @@ function CatalogIcon() {
   );
 }
 
+type WProps = { p: Pet; i: number; W: number; H: number; label: string; ok: boolean; onClaim: (id: number) => void };
+
+// Setiap pet jalan sendiri lewat transform (compositor-only), tanpa re-render React per frame.
+const Wanderer = memo(function Wanderer({ p, i, W, H, label, ok, onClaim }: WProps) {
+  const box = useRef<HTMLDivElement>(null);
+  const flip = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = box.current, fl = flip.current;
+    if (!el || !fl || W < 120 || H < 120) return;
+    const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const [px, py] = POS[i % POS.length];
+    let x = (px / 100) * W, y = (py / 100) * H;
+    let dir = 1;
+    let t1: ReturnType<typeof setTimeout>, t2: ReturnType<typeof setTimeout>;
+    let alive = true;
+    const put = (nx: number, ny: number) => { el.style.transform = 'translate3d(' + nx.toFixed(1) + 'px,' + ny.toFixed(1) + 'px,0)'; el.style.zIndex = String(Math.round(ny)); };
+    el.style.transition = 'none';
+    put(x, y);
+    if (calm) return;
+    const step = () => {
+      if (!alive) return;
+      if (document.hidden) { t1 = setTimeout(step, 1500); return; }
+      const ang = Math.random() * Math.PI * 2;
+      const dist = 60 + Math.random() * 110;
+      const nx = Math.min(W - 44, Math.max(44, x + Math.cos(ang) * dist));
+      const ny = Math.min(H - 56, Math.max(70, y + Math.sin(ang) * dist * 0.6));
+      const d = Math.hypot(nx - x, ny - y);
+      if (d < 20) { t1 = setTimeout(step, 600); return; }
+      const dur = Math.max(1.6, d / 24);
+      if (Math.abs(nx - x) > 8) { dir = nx < x ? -1 : 1; fl.style.transform = 'scaleX(' + dir + ')'; }
+      el.style.transition = 'transform ' + dur.toFixed(2) + 's linear';
+      el.classList.add('kzw');
+      put(nx, ny);
+      x = nx; y = ny;
+      t2 = setTimeout(() => {
+        el.classList.remove('kzw');
+        t1 = setTimeout(step, 900 + Math.random() * 2600);
+      }, dur * 1000);
+    };
+    t1 = setTimeout(step, 500 + i * 400 + Math.random() * 1800);
+    return () => { alive = false; clearTimeout(t1); clearTimeout(t2); };
+  }, [W, H, i]);
+
+  return (
+    <div ref={box} className="absolute left-0 top-0" style={{ willChange: 'transform', transform: 'translate3d(-999px,-999px,0)' }}>
+      <div style={{ transform: 'translate(-50%,-50%)' }}>
+        <div className={ok ? 'kzr' : ''}>
+          <div className="kzb flex flex-col items-center" style={{ animationDelay: (i % 5) * 0.35 + 's' }}>
+            <button
+              onClick={() => ok && onClaim(p.id)}
+              className={'mb-1 rounded-full pl-1.5 pr-3 py-1 text-[13px] font-black flex items-center gap-1 whitespace-nowrap ' + (ok ? 'bg-emerald-500 text-white' : 'bg-white/95 text-slate-800')}
+              style={{ boxShadow: '0 3px 8px rgba(0,0,0,.12)' }}
+            >
+              {ok ? <span className="pl-1.5">Klaim</span> : <><Gem s={17} />{label}</>}
+            </button>
+            <div className="relative" style={{ width: 72, height: 72 }}>
+              <span className="absolute left-1/2 bottom-0 -translate-x-1/2 rounded-full bg-black/15" style={{ width: 44, height: 9 }} />
+              <div ref={flip} style={{ transition: 'transform .2s' }}><PetArt s={p} size={72} /></div>
+            </div>
+            <span className="-mt-1 flex items-center gap-1 rounded-full bg-white/85 pl-0.5 pr-2.5 py-0.5 text-[12px] font-extrabold" style={{ color: '#2f3b4a', boxShadow: '0 2px 6px rgba(0,0,0,.12)' }}>
+              <span className="w-[18px] h-[18px] rounded-full text-[10px] font-black flex items-center justify-center" style={{ background: RAR[p.r].bg, color: RAR[p.r].fg }}>{RAR[p.r].l}</span>
+              {short(p.name)}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+
 export default function PetPage() {
   const router = useRouter();
   const [koin, setKoin] = useState(0);   // Crystal akun (users/{uid}/koin), sama dengan toko lain
@@ -198,6 +281,23 @@ export default function PetPage() {
   const [sheet, setSheet] = useState<'' | 'kelola' | 'katalog'>('');
   const [toast, setToast] = useState<{ m: string; k: number } | null>(null);
   const [reveal, setReveal] = useState<Pet | null>(null);
+  const play = useRef<HTMLDivElement>(null);
+  const [dim, setDim] = useState({ w: 0, h: 0 });
+  const claimRef = useRef<(ids: number[]) => void>(() => {});
+  const onClaim = useCallback((id: number) => claimRef.current([id]), []);
+
+  useEffect(() => {
+    const el = play.current;
+    if (!el) return;
+    const read = () => {
+      const w = Math.round(el.clientWidth / 20) * 20, h = Math.round(el.clientHeight / 20) * 20;
+      setDim(d => (d.w === w && d.h === h ? d : { w, h }));
+    };
+    read();
+    const ro = new ResizeObserver(read);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   useEffect(() => {
     const t = Date.now();
@@ -318,6 +418,7 @@ export default function PetPage() {
     lock.current = false; setBusy(false);
   };
 
+  claimRef.current = claim;
   const owned = (n: string) => pets.filter(p => p.name === n).length;
 
   const flat = '0 3px 0 rgba(0,0,0,.07), 0 8px 14px rgba(0,0,0,.07)';
@@ -344,7 +445,7 @@ export default function PetPage() {
           </button>
         </div>
 
-        <div className="mt-3 rounded-[24px] bg-white/70 backdrop-blur-sm pl-2.5 pr-3 py-2.5 flex items-center gap-3" style={{ boxShadow: flat }}>
+        <div className="mt-3 rounded-[24px] bg-white/70 pl-2.5 pr-3 py-2.5 flex items-center gap-3" style={{ boxShadow: flat }}>
           <div className="w-11 h-11 rounded-full overflow-hidden bg-emerald-100 border-2 border-white shrink-0 flex items-center justify-center text-lg">
             {who.ph
               // eslint-disable-next-line @next/next/no-img-element
@@ -366,38 +467,21 @@ export default function PetPage() {
         </div>
       </div>
 
-      <div className="absolute inset-x-0 z-[5]" style={{ top: 170, bottom: 96 }}>
+      <div ref={play} className="absolute inset-x-0 z-[5]" style={{ top: 170, bottom: 96 }}>
         {pets.map((p, i) => {
-          const [x, y] = POS[i % POS.length];
           const left = p.readyAt - now;
           const ok = !!now && left <= 0;
-          return (
-            <div key={p.id} className="absolute -translate-x-1/2 -translate-y-1/2" style={{ left: x + '%', top: y + '%', zIndex: Math.round(y) }}>
-              <div className="flex flex-col items-center" style={{ animation: (ok ? 'kzHop 1.1s' : 'kzBob 2.6s') + ' ease-in-out ' + (i % 5) * 0.35 + 's infinite' }}>
-                <button
-                  onClick={() => ok && claim([p.id])}
-                  className={'mb-1 rounded-full pl-1.5 pr-3 py-1 text-[13px] font-black flex items-center gap-1 whitespace-nowrap ' + (ok ? 'bg-emerald-500 text-white' : 'bg-white/95 text-slate-800')}
-                  style={{ boxShadow: '0 3px 8px rgba(0,0,0,.12)' }}
-                >
-                  {ok ? <span className="pl-1.5">Klaim</span> : <><Gem s={17} />{now ? fmt(left) : '...'}</>}
-                </button>
-                <span style={{ filter: 'drop-shadow(0 4px 3px rgba(0,0,0,.18))' }}><PetArt s={p} size={72} /></span>
-                <span className="-mt-1 flex items-center gap-1 rounded-full bg-white/85 pl-0.5 pr-2.5 py-0.5 text-[12px] font-extrabold" style={{ color: '#2f3b4a', boxShadow: '0 2px 6px rgba(0,0,0,.12)' }}>
-                  <span className="w-[18px] h-[18px] rounded-full text-[10px] font-black flex items-center justify-center" style={{ background: RAR[p.r].bg, color: RAR[p.r].fg }}>{RAR[p.r].l}</span>
-                  {short(p.name)}
-                </span>
-              </div>
-            </div>
-          );
+          return <Wanderer key={p.id} p={p} i={i} W={dim.w} H={dim.h} label={now ? fmt(left) : '...'} ok={ok} onClaim={onClaim} />;
         })}
       </div>
+      <FrontTree />
 
       {toast && <div key={toast.k} className="fixed top-24 left-1/2 z-40 rounded-full bg-slate-900/85 text-white px-4 py-2 text-sm font-bold" style={{ animation: 'kzToast 2.4s ease forwards' }}>{toast.m}</div>}
 
       {sheet && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setSheet('')} />
-          <div className="fixed left-0 right-0 top-[128px] bottom-[84px] max-w-md mx-auto z-10 rounded-t-[28px] bg-white/85 backdrop-blur-md overflow-y-auto px-4 pb-8" style={{ animation: 'kzUp .25s ease-out', boxShadow: '0 -6px 24px rgba(0,0,0,.08)' }}>
+          <div className="fixed left-0 right-0 top-[128px] bottom-[84px] max-w-md mx-auto z-10 rounded-t-[28px] bg-white/85 overflow-y-auto px-4 pb-8" style={{ animation: 'kzUp .25s ease-out', boxShadow: '0 -6px 24px rgba(0,0,0,.08)' }}>
             <div className="sticky top-0 z-10 -mx-4 px-4 pt-2.5 pb-3" style={{ background: 'linear-gradient(180deg,rgba(255,255,255,.96) 70%,rgba(255,255,255,0))' }}>
               <div className="mx-auto w-14 h-1.5 rounded-full bg-slate-300/90 mb-2.5" />
               <div className="flex items-center justify-between">
