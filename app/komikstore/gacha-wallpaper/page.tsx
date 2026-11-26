@@ -5,9 +5,6 @@ import { ArrowLeft, Search, Sparkles, Check, RefreshCw, Info, Coins, ShoppingBag
 import { getFirebase } from '@/lib/firebase-client';
 import { WALLPAPER_CATALOG, RARITY_STYLE, RARITY_INFO, RARITIES, RATES, COST_1, COST_10, TOKEN_DUP, TOKEN_PRICE, rollMany, wpBg, type Rarity } from '@/lib/wallpapers';
 import WallpaperBg from '@/components/WallpaperBg';
-import ProfileEffect from '@/components/ProfileEffect';
-import { Confetti } from '@/components/GiftEffect';
-import type { EffectItem } from '@/lib/effects';
 
 const fmt = (n: number) => (n >= 1e3 ? (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'K' : String(n));
 const rank = (k: string) => RARITIES.indexOf(WALLPAPER_CATALOG[k].rarity);
@@ -20,15 +17,10 @@ function Pill({ r }: { r: Rarity }) {
 
 const KFX = `
 @keyframes kgFade{from{opacity:0}to{opacity:1}}
-@keyframes kgRing{0%{transform:scale(.6);opacity:.9}100%{transform:scale(3.2);opacity:0}}
-@keyframes kgOrb{0%,100%{transform:scale(.9) rotate(0)}50%{transform:scale(1.15) rotate(180deg)}}
 @keyframes kgBlink{0%,100%{opacity:.35}50%{opacity:1}}
 @keyframes kgFlash{from{opacity:0}to{opacity:1}}
-@keyframes kgCard{0%{transform:scale(.2) translateY(30px) rotate(-8deg);opacity:0}100%{transform:scale(1) translateY(0) rotate(0);opacity:1}}
-@keyframes kgPulse{0%,100%{opacity:.25}50%{opacity:1}}
 `;
 
-const FX_ITEMS = Object.fromEntries(RARITIES.map((r) => [r, { nama: '', harga: 0, tier: 'Premium', kind: 'sparkle', color: RARITY_STYLE[r].color, color2: '#ffffff' }])) as Record<Rarity, EffectItem>;
 const FX_MS: Record<Rarity, number> = { Normal: 1600, Rare: 1600, Epic: 2000, Legendary: 2400 };
 
 export default function GachaWallpaperPage() {
@@ -188,7 +180,6 @@ export default function GachaWallpaperPage() {
   const total = Object.keys(owned).filter((k) => WALLPAPER_CATALOG[k]).length;
   const card = 'rounded-3xl border border-white/10 bg-[#111a2e]';
   const last = result && result[0];
-  const bestR = last ? WALLPAPER_CATALOG[last.key].rarity : null;
   const fxc = fx ? RARITY_STYLE[fx].color : '#ffffff';
   const fxDur = fx ? FX_MS[fx] / 1000 : 1.6;
 
@@ -227,7 +218,7 @@ export default function GachaWallpaperPage() {
             </button>
 
             <div className="mx-4 mt-4 rounded-3xl border border-white/10 overflow-hidden relative h-60 flex flex-col items-center justify-center text-center px-5"
-              style={{ background: last ? wpBg(last.key, true) : 'radial-gradient(circle at 50% 40%,#2c3f8f,#0a0f1e 70%)' }}>
+              style={{ background: last ? wpBg(last.key) : 'radial-gradient(circle at 50% 40%,#2c3f8f,#0a0f1e 70%)' }}>
               <div className="absolute inset-0 bg-black/35" />
               <div className="relative">
                 <h2 className="text-3xl font-black drop-shadow">{last ? WALLPAPER_CATALOG[last.key].nama : 'Wallpaper Summon'}</h2>
@@ -318,13 +309,7 @@ export default function GachaWallpaperPage() {
 
       {fx && (
         <div className="fixed inset-0 z-[55] flex items-center justify-center overflow-hidden" style={{ background: 'radial-gradient(circle at 50% 45%,rgba(10,15,30,.75),#05070f 75%)', animation: 'kgFade .25s ease-out' }}>
-          <ProfileEffect item={FX_ITEMS[fx]} min={24} lite />
-          <div className="relative flex items-center justify-center">
-            {[0, 1, 2].map((i) => (
-              <span key={i} className="absolute rounded-full border-2" style={{ width: 140, height: 140, borderColor: fxc, animation: 'kgRing 1.4s ease-out ' + i * 0.45 + 's infinite' }} />
-            ))}
-            <div className="w-36 h-36 rounded-full" style={{ background: 'radial-gradient(circle at 35% 30%,#fff,' + fxc + ' 45%,transparent 72%)', boxShadow: '0 0 60px ' + fxc, animation: 'kgOrb 1.2s ease-in-out infinite' }} />
-          </div>
+          <div className="w-36 h-36 rounded-full" style={{ background: 'radial-gradient(circle at 35% 30%,#fff,' + fxc + ' 45%,transparent 72%)', animation: 'kgBlink 1s ease-in-out infinite' }} />
           <p className="absolute bottom-[22%] text-lg font-black tracking-widest text-white/80" style={{ animation: 'kgBlink 1s ease-in-out infinite' }}>SUMMONING...</p>
           <div className="absolute inset-0 bg-white" style={{ opacity: 0, animation: 'kgFlash .35s ease-in ' + (fxDur - 0.35) + 's forwards' }} />
         </div>
@@ -332,7 +317,6 @@ export default function GachaWallpaperPage() {
 
       {result && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70" onClick={() => setResult(null)}>
-          {(bestR === 'Epic' || bestR === 'Legendary') && <Confetti colors={bestR === 'Legendary' ? ['#fde68a', '#fbbf24', '#f59e0b', '#ffffff'] : ['#e9d5ff', '#c084fc', '#a855f7', '#ffffff']} />}
           <div className="w-full max-w-md rounded-t-3xl bg-[#1a2238] p-5" onClick={(e) => e.stopPropagation()}>
             <p className="text-center text-xl font-black">Hasil Summon</p>
             <div className={'mt-4 grid gap-2 ' + (result.length > 1 ? 'grid-cols-5' : 'grid-cols-1 w-40 mx-auto')}>
@@ -341,10 +325,7 @@ export default function GachaWallpaperPage() {
                 const st = RARITY_STYLE[w.rarity];
                 return (
                   <div key={i} className="relative rounded-xl overflow-hidden aspect-[3/4]"
-                    style={{ background: wpBg(it.key), border: '2px solid ' + st.border, boxShadow: st.glow, animation: 'kgCard .5s cubic-bezier(.2,1.4,.4,1) both ' + i * 0.09 + 's' }}>
-                    {(w.rarity === 'Legendary' || w.rarity === 'Epic') && (
-                      <span className="pointer-events-none absolute inset-0" style={{ boxShadow: 'inset 0 0 14px ' + st.color, animation: 'kgPulse 1.6s ease-in-out ' + (0.6 + i * 0.09) + 's infinite' }} />
-                    )}
+                    style={{ background: wpBg(it.key), border: '2px solid ' + st.border, animation: 'kgFade .3s ease-out both' }}>
                     {it.isNew && <span className="absolute left-0 top-0 bg-rose-500 px-1.5 text-[9px] font-black">BARU</span>}
                     {it.dup ? <span className="absolute left-0 top-0 bg-amber-400 px-1.5 text-[9px] font-black text-black">+{it.dup} Token</span> : null}
                     <span className="absolute bottom-0 inset-x-0 bg-black/60 text-center text-[9px] font-black truncate px-0.5" style={{ color: st.color }}>{w.nama}</span>
