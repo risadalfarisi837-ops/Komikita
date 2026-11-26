@@ -682,19 +682,19 @@ function line(ctx: CanvasRenderingContext2D, x0: number, y0: number, x1: number,
 }
 
 // ---------- skin joran (tampil di tangan karakter) ----------
-export type RodStyle = 'wood' | 'stripe' | 'weave' | 'shine' | 'gem' | 'crystal' | 'moon' | 'dragon';
+export type RodStyle = 'wood' | 'stripe' | 'weave' | 'shine' | 'gem' | 'crystal' | 'moon' | 'dragon' | 'tentacle';
 export interface RodSkin { shaft: string; shaftD: string; grip: string; tip: string; ring: string; glow?: string; spark?: string; style?: RodStyle; reel?: string; accent?: string }
 export const ROD_SKINS: Record<string, RodSkin> = {
-  default: { shaft: '#8a5a2b', shaftD: '#5e3a18', grip: '#3d2610', tip: '#e8d9b0', ring: '#b88a4a' },
-  fiber: { shaft: '#3fb7a6', shaftD: '#26857a', grip: '#1f4a45', tip: '#d8fff6', ring: '#8ff0df' },
-  karbon: { shaft: '#2b2f3a', shaftD: '#14171f', grip: '#c0392b', tip: '#ff6b5e', ring: '#5a6073' },
-  perak: { shaft: '#c9d3df', shaftD: '#8c99ab', grip: '#3e5a8a', tip: '#ffffff', ring: '#eaf2ff', glow: '#bcd8ff' },
-  emas: { shaft: '#f2c230', shaftD: '#b8860b', grip: '#6b3f12', tip: '#fff3b0', ring: '#ffe27a', glow: '#ffd24a', spark: '#fff6c8' },
-  kristal: { shaft: '#58d6ff', shaftD: '#2b8fc9', grip: '#2a3f7a', tip: '#e6fbff', ring: '#a8ecff', glow: '#7df9ff', spark: '#ffffff' },
-  bulan: { shaft: '#d9d2ff', shaftD: '#8f86d6', grip: '#3a2f78', tip: '#fffbe0', ring: '#f0ecff', glow: '#c9bfff', spark: '#fff7c2' },
-  naga: { shaft: '#c0392b', shaftD: '#7a1d14', grip: '#1f3b2a', tip: '#ffcf5a', ring: '#ffa14a', glow: '#ff6a3a', spark: '#ffd27a' },
-  sisik: { shaft: '#d9482b', shaftD: '#7a1d14', grip: '#2a1a10', tip: '#ffe27a', ring: '#ffb347', glow: '#ff7a3a', spark: '#ffd27a' },
-  tentakel: { shaft: '#8e44d6', shaftD: '#4a1d7a', grip: '#1a1030', tip: '#f0b8ff', ring: '#c58bff', glow: '#b05cff', spark: '#f6d6ff' },
+  default: { shaft: '#8a5a2b', shaftD: '#5e3a18', grip: '#3d2610', tip: '#e8d9b0', ring: '#b88a4a', style: 'wood' },
+  fiber: { shaft: '#3fb7a6', shaftD: '#26857a', grip: '#1f4a45', tip: '#d8fff6', ring: '#8ff0df', style: 'stripe' },
+  karbon: { shaft: '#2b2f3a', shaftD: '#14171f', grip: '#c0392b', tip: '#ff6b5e', ring: '#5a6073', style: 'weave' },
+  perak: { shaft: '#c9d3df', shaftD: '#8c99ab', grip: '#3e5a8a', tip: '#ffffff', ring: '#eaf2ff', glow: '#bcd8ff', style: 'shine' },
+  emas: { shaft: '#f2c230', shaftD: '#b8860b', grip: '#6b3f12', tip: '#fff3b0', ring: '#ffe27a', glow: '#ffd24a', spark: '#fff6c8', style: 'gem' },
+  kristal: { shaft: '#58d6ff', shaftD: '#2b8fc9', grip: '#2a3f7a', tip: '#e6fbff', ring: '#a8ecff', glow: '#7df9ff', spark: '#ffffff', style: 'crystal' },
+  bulan: { shaft: '#d9d2ff', shaftD: '#8f86d6', grip: '#3a2f78', tip: '#fffbe0', ring: '#f0ecff', glow: '#c9bfff', spark: '#fff7c2', style: 'moon' },
+  naga: { shaft: '#c0392b', shaftD: '#7a1d14', grip: '#1f3b2a', tip: '#ffcf5a', ring: '#ffa14a', glow: '#ff6a3a', spark: '#ffd27a', style: 'dragon' },
+  sisik: { shaft: '#d9482b', shaftD: '#7a1d14', grip: '#2a1a10', tip: '#ffe27a', ring: '#ffb347', glow: '#ff7a3a', spark: '#ffd27a', style: 'dragon' },
+  tentakel: { shaft: '#8e44d6', shaftD: '#4a1d7a', grip: '#1a1030', tip: '#f0b8ff', ring: '#c58bff', glow: '#b05cff', spark: '#f6d6ff', style: 'tentacle' },
 };
 
 // Posisi joran saat dipegang santai (belum dilempar): tegak di samping badan
@@ -751,6 +751,7 @@ export function drawRodSkin(ctx: CanvasRenderingContext2D, g: RodGeo, rodId: str
         break;
       }
       case 'gem': if (k > 0.3 && i % 4 === 0) R(ctx, px, py, 1, 1, '#fff3b0'); break;
+      case 'tentacle': if (k > 0.3 && i % 3 === 0) R(ctx, px + (i % 6 === 0 ? 1 : 0), py, 1, 1, i % 6 === 0 ? acc : '#4a1d7a'); break;
       case 'dragon': if (k > 0.3 && i % 3 === 0) R(ctx, px, py, 1, 1, i % 6 === 0 ? acc : '#7a1d14'); break;
       default: break;
     }
