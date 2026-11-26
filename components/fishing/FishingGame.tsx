@@ -237,6 +237,16 @@ const SPARKS: { x: number; y: number; s: number; d: number }[] = [
 ];
 // <<< kartu-tangkapan
 
+// Keluar dari game: layar dikembalikan tegak (portrait), keluar layar penuh, lalu rotasi bebas lagi
+async function leaveLandscape() {
+  try {
+    const o = screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void>; unlock?: () => void };
+    try { await o.lock?.('portrait'); } catch { /* browser menolak, cukup di-unlock */ }
+    try { if (document.fullscreenElement) await document.exitFullscreen(); } catch { /* abaikan */ }
+    setTimeout(() => { try { o.unlock?.(); } catch { /* abaikan */ } }, 600);
+  } catch { /* abaikan */ }
+}
+
 export default function FishingGame(props: Props) {
   const { name, photo, crystal, xp, bag, rods, equippedRod } = props;
   const rod = RODS_BY_ID[equippedRod] || RODS_BY_ID[DEFAULT_ROD];
@@ -556,6 +566,8 @@ export default function FishingGame(props: Props) {
     await sell(bag.map((b) => b.id));
     setBagOpen(false);
   };
+  // saat komponen dilepas (tombol keluar / tombol back), layar kembali tegak
+  useEffect(() => () => { leaveLandscape(); }, []);
   // tombol menu "Layar penuh landscape": fullscreen dulu (pesan sistem Android muncul sebentar)
   const landscape = async () => {
     const o = screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> };
