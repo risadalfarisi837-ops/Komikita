@@ -5,7 +5,7 @@ import type { Rarity, SizeTier, Species } from '@/lib/fishing';
 import {
   TILE, generateWorld, drawPlayer, drawPalm, drawRock, drawLamp, drawBobber, drawRipple, drawLine,
   drawBubbleAlert, drawFish, drawShowFish, rodGeometry, PAL_PLAYER, drawFountain, drawBench, drawTable, drawStool, drawSign, drawBush, drawNpc,
-  drawStall, drawFlowers, drawBarrel, drawCrate, drawNet, drawUmbrella, drawBoat, drawGiantFish, drawShop, palForId, mulberry32,
+  drawStall, drawFlowers, drawPine, drawLighthouse, drawBigTree, drawBarrel, drawCrate, drawNet, drawUmbrella, drawBoat, drawGiantFish, drawShop, palForId, mulberry32,
 } from './art';
 import type { Dir, Pal, World } from './art';
 
@@ -203,11 +203,11 @@ export class FishingEngine {
   }
 
   // ---------- zoom ----------
-  static readonly ZOOM_MIN = 0.6;
+  static readonly ZOOM_MIN = 0.18;
   static readonly ZOOM_MAX = 2.6;
 
   private calcScale() {
-    return Math.max(2, Math.round(this.baseS * this.zoom));
+    return Math.max(1, Math.round(this.baseS * this.zoom));
   }
 
   getZoom() { return this.zoom; }
@@ -835,6 +835,9 @@ export class FishingEngine {
         case 'boat': ents.push({ y: byp + 12, f: () => drawBoat(ctx, p, t) }); break;
         case 'giantfish': ents.push({ y: byp + 20, f: () => drawGiantFish(ctx, p, t) }); break;
         case 'shop': ents.push({ y: byp + ph2 - 2, f: () => drawShop(ctx, p, t) }); break;
+        case 'pine': ents.push({ y: byp + 15, f: () => drawPine(ctx, p) }); break;
+        case 'lighthouse': ents.push({ y: byp + 30, f: () => drawLighthouse(ctx, p, t) }); break;
+        case 'bigtree': ents.push({ y: byp + 44, f: () => drawBigTree(ctx, p) }); break;
         default: ents.push({ y: byp + 15, f: () => drawLamp(ctx, p, t) });
       }
     }

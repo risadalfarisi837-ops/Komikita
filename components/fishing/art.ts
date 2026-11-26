@@ -5,7 +5,7 @@ import type { Species } from '@/lib/fishing';
 export const TILE = 16;
 export type Dir = 'down' | 'up' | 'left' | 'right';
 export type Tile = 'deep' | 'shallow' | 'sand' | 'grass' | 'plank' | 'dirt';
-export type PropKind = 'palm' | 'rock' | 'lamp' | 'fountain' | 'bench' | 'table' | 'stool' | 'sign' | 'bush' | 'npc' | 'shop' | 'stall' | 'flowers' | 'barrel' | 'crate' | 'net' | 'umbrella' | 'boat' | 'giantfish';
+export type PropKind = 'palm' | 'rock' | 'lamp' | 'fountain' | 'bench' | 'table' | 'stool' | 'sign' | 'bush' | 'npc' | 'shop' | 'stall' | 'flowers' | 'barrel' | 'crate' | 'net' | 'umbrella' | 'boat' | 'giantfish' | 'pine' | 'lighthouse' | 'bigtree';
 export interface Prop { kind: PropKind; x: number; y: number; v: number; w?: number; h?: number; name?: string; role?: string }
 export interface World {
   w: number;
@@ -132,7 +132,7 @@ export const MAP_W = 36;
 export const MAP_H = 40; // lebih tinggi: ada dek pamer dan ikan raksasa di selatan pulau
 const WATER_COLORS = ['#6fd0ea', '#5cc2e4', '#4cb1dc', '#3c9fd3', '#2f88c5', '#2872b4'];
 
-export function generateWorld(seed = 11): World {
+export function generateWorldOld(seed = 11): World {
   const rnd = mulberry32(seed);
   const W = MAP_W;
   const H = MAP_H;
@@ -439,6 +439,408 @@ export function generateWorld(seed = 11): World {
   return world;
 }
 
+
+// ---------- pulau besar (mengikuti peta di game referensi) ----------
+export const WORLD_W = 100;
+export const WORLD_H = 58;
+// koordinat gambar ringkasan referensi (gx, gy) -> petak
+const G = (gx: number, gy: number): [number, number] => [gx / 17.4 + 4.67, gy / 17.4 + 5.5];
+const ISLAND_G: [number, number][] = [
+  [395, 115], [440, 78], [520, 62], [620, 68], [720, 82], [810, 80], [900, 92], [980, 112], [1060, 135], [1120, 170], [1190, 215],
+  [1270, 262], [1340, 300], [1420, 322], [1472, 380], [1440, 425], [1370, 428], [1310, 442], [1250, 475], [1200, 525], [1150, 575],
+  [1100, 640], [1060, 690], [980, 712], [900, 708], [820, 702], [700, 702], [600, 692], [520, 655], [440, 640], [350, 640], [290, 612],
+  [200, 592], [130, 562], [80, 535], [52, 470], [55, 420], [90, 380], [160, 345], [240, 325], [320, 275], [375, 225], [385, 165],
+];
+function inPoly(x: number, y: number, pts: [number, number][]): boolean {
+  let inside = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const [xi, yi] = pts[i];
+    const [xj, yj] = pts[j];
+    if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+function segDist(px: number, py: number, ax: number, ay: number, bx: number, by: number): number {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const l2 = dx * dx + dy * dy || 1;
+  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l2));
+  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+}
+
+export function generateWorld(seed = 11): World {
+  const rnd = mulberry32(seed);
+  const W = WORLD_W;
+  const H = WORLD_H;
+  const poly = ISLAND_G.map(([a, b]) => G(a, b));
+  const lakeC = G(470, 470);
+  const lakeRx = 105 / 17.4;
+  const lakeRy = 52 / 17.4;
+  const pondC = G(500, 190);
+  const bayC = G(750, 690);
+  const streamPts = [G(395, 500), G(355, 550), G(325, 585), G(300, 625)];
+  const ell2 = (x: number, y: number, c: [number, number], rx: number, ry: number) => ((x - c[0]) / rx) ** 2 + ((y - c[1]) / ry) ** 2 < 1;
+
+  const land: boolean[][] = [];
+  const pond: boolean[][] = [];
+  const bay: boolean[][] = [];
+  for (let y = 0; y < H; y++) {
+    land[y] = [];
+    pond[y] = [];
+    bay[y] = [];
+    for (let x = 0; x < W; x++) {
+      const hx = (vnoise(x / 4.5, y / 4.5, seed) - 0.5) * 1.6;
+      const hy = (vnoise(x / 4.5 + 50, y / 4.5 + 50, seed) - 0.5) * 1.6;
+      const inside = inPoly(x + 0.5 + hx, y + 0.5 + hy, poly);
+      const cx0 = x + 0.5;
+      const cy0 = y + 0.5;
+      let isPond = ell2(cx0, cy0, lakeC, lakeRx, lakeRy) || ell2(cx0, cy0, pondC, 2.2, 1.3);
+      for (let i = 0; i + 1 < streamPts.length && !isPond; i++) {
+        if (segDist(cx0, cy0, streamPts[i][0], streamPts[i][1], streamPts[i + 1][0], streamPts[i + 1][1]) < 0.62) isPond = true;
+      }
+      pond[y][x] = isPond && inside;
+      bay[y][x] = ell2(cx0, cy0, bayC, 3.4, 2.3);
+      land[y][x] = inside && !pond[y][x] && !bay[y][x];
+    }
+  }
+
+  // jarak ke daratan (warna air), ke air apa pun (pasir/jarak aman), dan ke LAUT saja (pantai; tepi danau tetap rumput)
+  const INF = 99;
+  const dl: number[][] = [];
+  const dw: number[][] = [];
+  const ds: number[][] = [];
+  for (let y = 0; y < H; y++) { dl[y] = Array(W).fill(INF); dw[y] = Array(W).fill(INF); ds[y] = Array(W).fill(INF); }
+  const bfs = (dist: number[][], src: (x: number, y: number) => boolean) => {
+    const q: [number, number][] = [];
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (src(x, y)) { dist[y][x] = 0; q.push([x, y]); }
+    for (let i = 0; i < q.length; i++) {
+      const [x, y] = q[i];
+      for (const [ax, ay] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = x + ax;
+        const ny = y + ay;
+        if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+        if (dist[ny][nx] > dist[y][x] + 1) { dist[ny][nx] = dist[y][x] + 1; q.push([nx, ny]); }
+      }
+    }
+  };
+  bfs(dl, (x, y) => land[y][x]);
+  bfs(dw, (x, y) => !land[y][x]);
+  bfs(ds, (x, y) => !land[y][x] && !pond[y][x]);
+
+  const sandZone = (x: number, y: number) => {
+    const gx = (x - 4.67) * 17.4;
+    const gy = (y - 5.5) * 17.4;
+    return gx > 1230 || (gy < 135 && gx < 720) || (gy < 165 && gx > 1000 && gx < 1230);
+  };
+  const tiles: Tile[][] = [];
+  for (let y = 0; y < H; y++) {
+    tiles[y] = [];
+    for (let x = 0; x < W; x++) {
+      if (land[y][x]) {
+        const n = (Math.sin(x * 12.9898 + y * 78.233) * 43758.5453) % 1;
+        const frac = n < 0 ? n + 1 : n;
+        const beach = ds[y][x] <= 1 || (ds[y][x] === 2 && frac < 0.45);
+        const grassy = !beach && !sandZone(x, y) && (ds[y][x] >= 4 || vnoise(x / 4.2, y / 4.2, seed) > 0.25);
+        tiles[y][x] = grassy ? 'grass' : 'sand';
+      } else {
+        tiles[y][x] = dl[y][x] <= 2 ? 'shallow' : 'deep';
+      }
+    }
+  }
+
+  // titik mulai: di plaza, selatan air mancur
+  const start = { x: 47, y: 33 };
+
+  // jalan tanah yang menyebar dari plaza (kemerahan, berkelok)
+  const roads: [number, number][][] = [
+    // jalan lingkar mengelilingi plaza dan danau
+    Array.from({ length: 29 }, (_, k) => {
+      const a = (k / 28) * Math.PI * 2 + 0.25;
+      return [745 + Math.cos(a) * 250, 425 + Math.sin(a) * 175] as [number, number];
+    }),
+    [[690, 420], [600, 380], [500, 365], [400, 385], [330, 430], [300, 490], [335, 548]],
+    [[760, 380], [770, 300], [765, 200], [772, 112]],
+    [[740, 330], [660, 300], [570, 290]],
+    [[830, 400], [930, 330], [1030, 320], [1150, 330], [1260, 370], [1370, 415]],
+    [[760, 480], [770, 560], [752, 645]],
+    [[820, 470], [940, 520], [1030, 590], [1075, 650]],
+    [[700, 470], [620, 540], [540, 600], [480, 632]],
+  ];
+  roads.forEach((r, ri) => {
+    const pathPts = r.map(([a, b]) => G(a, b));
+    for (let i = 0; i + 1 < pathPts.length; i++) {
+      const [x0, y0] = pathPts[i];
+      const [x1, y1] = pathPts[i + 1];
+      const steps = Math.ceil(Math.hypot(x1 - x0, y1 - y0) * 4);
+      for (let k = 0; k <= steps; k++) {
+        const f = k / steps;
+        const wob = Math.sin(ri * 5 + i * 7 + f * 5) * 0.3;
+        const px = x0 + (x1 - x0) * f;
+        const py = y0 + (y1 - y0) * f + wob;
+        const rad = 0.8 + 0.22 * Math.sin(f * 6 + i + ri);
+        for (let ty = Math.floor(py - 2); ty <= Math.ceil(py + 2); ty++) {
+          for (let tx = Math.floor(px - 2); tx <= Math.ceil(px + 2); tx++) {
+            if (tx < 2 || ty < 2 || tx >= W || ty >= H || !land[ty][tx] || dw[ty][tx] < 2) continue;
+            if ((tx + 0.5 - px) ** 2 + (ty + 0.5 - py) ** 2 < rad * rad) tiles[ty][tx] = 'dirt';
+          }
+        }
+      }
+    }
+  });
+
+  // dermaga: ke arah (dx,dy) dari titik di darat sampai air, lalu 6 papan (lebar 2 petak)
+  const pierTiles: [number, number][] = [];
+  const mkPier = (sx0: number, sy0: number, dx: number, dy: number, len = 6): [number, number] => {
+    let x = sx0;
+    let y = sy0;
+    while (x > 1 && y > 1 && x < W - 2 && y < H - 2 && land[y][x]) { x += dx; y += dy; }
+    for (let i = 0; i < len; i++) {
+      for (const w of [0, 1]) {
+        const xx = x + dx * i + (dy !== 0 ? w : 0);
+        const yy = y + dy * i + (dx !== 0 ? w : 0);
+        if (xx > 0 && yy > 0 && xx < W && yy < H && !land[yy][xx]) { tiles[yy][xx] = 'plank'; pierTiles.push([xx, yy]); }
+      }
+    }
+    return [x, y];
+  };
+  const south = mkPier(47, 40, 0, 1, 8);
+  const eastP = mkPier(80, 30, 1, 0, 6);
+  // jembatan kayu di atas sungai kecil (barat daya danau)
+  const brC = G(355, 552);
+  for (let y = 2; y < H; y++) {
+    for (let x = 2; x < W; x++) {
+      if (pond[y][x] && Math.hypot(x + 0.5 - brC[0], y + 0.5 - brC[1]) < 1.9) { tiles[y][x] = 'plank'; pierTiles.push([x, y]); }
+    }
+  }
+  const near = (x: number, y: number, ax: number, ay: number, r: number) => Math.abs(x - ax) + Math.abs(y - ay) <= r;
+
+  // properti
+  const props: Prop[] = [];
+  const occ: boolean[][] = [];
+  for (let y = 0; y < H; y++) occ[y] = Array(W).fill(false);
+  const place = (kind: Prop['kind'], x: number, y: number) => {
+    props.push({ kind, x, y, v: rnd() });
+    occ[y][x] = true;
+  };
+  const walkable = (x: number, y: number) => x > 1 && y > 1 && x < W - 1 && y < H - 1 && (tiles[y][x] === 'sand' || tiles[y][x] === 'grass' || tiles[y][x] === 'dirt') && !occ[y][x];
+  const putBlock = (kind: Prop['kind'], cands: [number, number][], w: number, h: number, extra: Partial<Prop> = {}): [number, number] | null => {
+    for (const [bx, by] of cands) {
+      let ok = true;
+      for (let yy = by; yy < by + h && ok; yy++) {
+        for (let xx = bx; xx < bx + w; xx++) {
+          if (!walkable(xx, yy) || near(xx, yy, start.x, start.y, 1)) { ok = false; break; }
+        }
+      }
+      if (!ok) continue;
+      props.push({ kind, x: bx, y: by, v: rnd(), w, h, ...extra });
+      for (let yy = by; yy < by + h; yy++) for (let xx = bx; xx < bx + w; xx++) occ[yy][xx] = true;
+      return [bx, by];
+    }
+    return null;
+  };
+
+  // air mancur + plaza batu bundar
+  const fountainAt = putBlock('fountain', [[46, 28], [45, 28], [47, 28], [46, 27], [46, 29]], 4, 3);
+  const plaza = new Set<string>();
+  const pcx = (fountainAt ? fountainAt[0] : 46) + 2;
+  const pcy = (fountainAt ? fountainAt[1] : 28) + 1.5;
+  for (let yy = 2; yy < H; yy++) {
+    for (let xx = 2; xx < W; xx++) {
+      const ex = (xx + 0.5 - pcx) / 5.9;
+      const ey = (yy + 0.5 - pcy) / 5.0;
+      if (ex * ex + ey * ey >= 1 || !land[yy][xx] || dw[yy][xx] < 2) continue;
+      const tt = tiles[yy][xx];
+      if (tt === 'sand' || tt === 'grass' || tt === 'dirt') { tiles[yy][xx] = 'dirt'; plaza.add(xx + ',' + yy); }
+    }
+  }
+  putBlock('npc', [[pcx - 0.5, pcy - 3] as [number, number], [47, 26], [48, 26], [46, 26]].map(([a, b]) => [Math.round(a), Math.round(b)] as [number, number]), 1, 1, { name: 'Marina', role: 'Pemandu Pulau' });
+  // papan penunjuk arah mengelilingi plaza
+  for (const c of [[41, 29], [54, 29], [44, 24], [51, 35]] as [number, number][]) putBlock('sign', [c, [c[0] + 1, c[1]], [c[0], c[1] + 1]], 1, 1);
+  // lampu mengelilingi plaza
+  for (let k = 0; k < 8; k++) {
+    const a = (k / 8) * Math.PI * 2 + 0.3;
+    const lx = Math.round(pcx + Math.cos(a) * 6.4);
+    const ly = Math.round(pcy + Math.sin(a) * 5.4);
+    putBlock('lamp', [[lx, ly], [lx + 1, ly], [lx, ly + 1]], 1, 1);
+  }
+  putBlock('bench', [[42, 25], [43, 25], [42, 26]], 3, 1);
+  putBlock('bench', [[51, 33], [52, 33], [51, 34]], 3, 1);
+  // toko utama (pembeli ikan) di timur laut plaza
+  putBlock('shop', [[55, 22], [56, 22], [54, 22], [55, 21], [57, 21], [53, 21], [56, 23], [58, 22]], 4, 3, { name: 'Toko Mancing', role: 'Umpan · Joran · Jual Ikan' });
+  putBlock('npc', [[86, 32], [86, 31], [85, 32], [85, 31], [87, 32]], 1, 1, { name: 'Pak Bayu', role: 'Pemancing' });
+  // mercusuar di tanjung timur + pohon raksasa di barat
+  putBlock('lighthouse', [[84, 27], [84, 28], [83, 28], [85, 28], [83, 27]], 2, 2);
+  putBlock('bigtree', [[13, 28], [14, 28], [13, 29], [12, 28], [14, 29]], 4, 3);
+  // perkemahan di hutan
+  const camp = putBlock('table', [[36, 21], [37, 21], [36, 22]], 2, 1);
+  if (camp) {
+    putBlock('stool', [[camp[0] - 1, camp[1]]], 1, 1);
+    putBlock('stool', [[camp[0] + 2, camp[1]]], 1, 1);
+    putBlock('barrel', [[camp[0] + 3, camp[1] + 1], [camp[0] + 3, camp[1]]], 1, 1);
+    putBlock('crate', [[camp[0] - 2, camp[1] + 1], [camp[0] - 2, camp[1]]], 1, 1);
+  }
+
+  // ---------- warung ----------
+  const spotOk = (bx: number, by: number, w: number, h: number) => {
+    for (let yy = by; yy < by + h; yy++) {
+      for (let xx = bx; xx < bx + w; xx++) {
+        if (xx < 3 || yy < 3 || xx >= W - 1 || yy >= H - 1 || !walkable(xx, yy) || dw[yy][xx] < 2 || near(xx, yy, start.x, start.y, 2)) return false;
+      }
+    }
+    return true;
+  };
+  const stalls: Prop[] = [];
+  const bestSpot = (tx: number, ty: number, w: number, h: number, minFar: number): [number, number] | null => {
+    let best: [number, number] | null = null;
+    let bd = 1e9;
+    const y0 = Math.max(3, Math.floor(ty - 14));
+    const y1 = Math.min(H - 3, Math.ceil(ty + 14));
+    const x0 = Math.max(3, Math.floor(tx - 14));
+    const x1 = Math.min(W - 3, Math.ceil(tx + 14));
+    for (let by = y0; by < y1; by++) {
+      for (let bx = x0; bx < x1; bx++) {
+        if (!spotOk(bx, by, w, h)) continue;
+        const cxx = bx + w / 2;
+        const cyy = by + h / 2;
+        // jangan menutup plaza batu
+        if (((cxx - pcx) / 6.4) ** 2 + ((cyy - pcy) / 5.5) ** 2 < 1) continue;
+        let far = true;
+        for (const o of [...stalls, ...props.filter((q) => q.kind === 'shop' || q.kind === 'fountain')]) {
+          if (Math.hypot(cxx - (o.x + (o.w || 1) / 2), cyy - (o.y + (o.h || 1) / 2)) < minFar) { far = false; break; }
+        }
+        if (!far) continue;
+        const d = Math.hypot(cxx - tx, cyy - ty);
+        if (d < bd) { bd = d; best = [bx, by]; }
+      }
+    }
+    return best;
+  };
+  const stallDefs = [
+    { name: 'Warung Ikan Bakar', role: 'Makanan', t: G(600, 400), variant: 0 },
+    { name: 'Toko Umpan', role: 'Cacing · Udang', t: G(830, 330), variant: 1 },
+    { name: 'Toko Hiasan', role: 'Lentera · Kerang', t: G(690, 530), variant: 2 },
+    { name: 'Kedai Kelapa', role: 'Minuman', t: G(1010, 430), variant: 3 },
+  ];
+  for (const d of stallDefs) {
+    const at = bestSpot(d.t[0], d.t[1], 3, 2, 6);
+    if (!at) continue;
+    const pr: Prop = { kind: 'stall', x: at[0], y: at[1], v: d.variant + rnd() * 0.9, w: 3, h: 2, name: d.name, role: d.role };
+    props.push(pr);
+    stalls.push(pr);
+    for (let yy = at[1]; yy < at[1] + 2; yy++) for (let xx = at[0]; xx < at[0] + 3; xx++) occ[yy][xx] = true;
+    if (spotOk(at[0] + 3, at[1] + 1, 1, 1)) place('barrel', at[0] + 3, at[1] + 1);
+    if (spotOk(at[0] - 1, at[1] + 1, 1, 1)) place('crate', at[0] - 1, at[1] + 1);
+  }
+  // jaring jemuran dekat dermaga timur
+  for (const c of [[eastP[0] - 6, eastP[1] - 3], [eastP[0] - 6, eastP[1] + 3], [eastP[0] - 8, eastP[1] - 3]] as [number, number][]) {
+    if (spotOk(c[0], c[1], 2, 1)) { putBlock('net', [c], 2, 1); break; }
+  }
+  // payung pantai di pasir
+  let umb = 0;
+  const umbs: [number, number][] = [];
+  for (let k = 0; k < 900 && umb < 9; k++) {
+    const ux = 3 + Math.floor(rnd() * (W - 8));
+    const uy = 3 + Math.floor(rnd() * (H - 8));
+    if (tiles[uy][ux] !== 'sand' || ds[uy][ux] < 2 || ds[uy][ux] > 3 || !spotOk(ux, uy, 1, 1)) continue;
+    if (umbs.some(([a, b]) => Math.hypot(a - ux, b - uy) < 9)) continue;
+    umbs.push([ux, uy]);
+    place('umbrella', ux, uy);
+    umb++;
+  }
+  // hutan pinus di barat laut (kotak gambar referensi 420..770 x 85..300) + sedikit pinus di tempat lain
+  const inForest = (x: number, y: number) => {
+    const gx = (x - 4.67) * 17.4;
+    const gy = (y - 5.5) * 17.4;
+    return gx > 410 && gx < 770 && gy > 80 && gy < 300;
+  };
+  const campC = camp ? [camp[0] + 1, camp[1]] : [36, 21];
+  const noDirtNear = (x: number, y: number) => tiles[y][x - 1] !== 'dirt' && tiles[y][x + 1] !== 'dirt' && tiles[y - 1][x] !== 'dirt' && tiles[y + 1][x] !== 'dirt' && tiles[y][x] !== 'dirt';
+  for (let y = 3; y < H - 3; y++) {
+    for (let x = 3; x < W - 3; x++) {
+      if (tiles[y][x] !== 'grass' || occ[y][x] || !noDirtNear(x, y)) continue;
+      if (near(x, y, start.x, start.y, 3) || ds[y][x] < 3 || dw[y][x] < 2) continue;
+      if (Math.hypot(x - pcx, y - pcy) < 7.5) continue;
+      if (Math.hypot(x - campC[0], y - campC[1]) < 3.2) continue;
+      const neighOcc = occ[y][x - 1] || occ[y - 1][x] || occ[y - 1][x + 1] || occ[y - 1][x - 1];
+      const lr = occ[y][x - 1] || occ[y - 1][x];
+      const gx = (x - 4.67) * 17.4;
+      const gy = (y - 5.5) * 17.4;
+      const grove = (gx > 860 && gx < 1140 && gy > 400 && gy < 650) || (gx > 230 && gx < 570 && gy > 530 && gy < 650) || (gx > 880 && gx < 1180 && gy > 120 && gy < 240);
+      if (inForest(x, y)) {
+        if (!lr && rnd() < 0.55) place('pine', x, y);
+      } else if (grove) {
+        if (!lr && rnd() < 0.42) {
+          if (rnd() < 0.5) place('pine', x, y);
+          else { place('palm', x, y); if (rnd() < 0.8) props[props.length - 1].role = 'fruit'; }
+        }
+      } else if (!neighOcc && rnd() < 0.07) {
+        place('palm', x, y);
+        if (rnd() < 0.8) props[props.length - 1].role = 'fruit';
+      } else if (!neighOcc && rnd() < 0.012) {
+        place('pine', x, y);
+      }
+    }
+  }
+  // semak dan bunga di rumput
+  let bu = 0;
+  for (let k = 0; k < 1500 && bu < 40; k++) {
+    const bx = 3 + Math.floor(rnd() * (W - 8));
+    const by = 3 + Math.floor(rnd() * (H - 8));
+    if (tiles[by][bx] !== 'grass' || occ[by][bx] || ds[by][bx] < 3 || !noDirtNear(bx, by)) continue;
+    place('bush', bx, by);
+    bu++;
+  }
+  let fl = 0;
+  for (let k = 0; k < 3000 && fl < 110; k++) {
+    const fx = 3 + Math.floor(rnd() * (W - 8));
+    const fy = 3 + Math.floor(rnd() * (H - 8));
+    if (tiles[fy][fx] !== 'grass' || occ[fy][fx] || ds[fy][fx] < 3) continue;
+    props.push({ kind: 'flowers', x: fx, y: fy, v: rnd() });
+    fl++;
+  }
+  // batu & pohon di pasir
+  for (let y = 3; y < H - 3; y++) {
+    for (let x = 3; x < W - 3; x++) {
+      if (tiles[y][x] !== 'sand' || occ[y][x] || ds[y][x] < 3) continue;
+      const neighOcc = occ[y][x - 1] || occ[y - 1][x] || occ[y - 1][x + 1] || occ[y - 1][x - 1];
+      if (neighOcc || near(x, y, start.x, start.y, 3)) continue;
+      if (rnd() < 0.03) place('palm', x, y);
+      else if (rnd() < 0.03) place('rock', x, y);
+    }
+  }
+  // perahu kecil di air dangkal
+  const boats: [number, number][] = [];
+  for (let by = H - 12; by > 6 && boats.length < 3; by--) {
+    for (let bx = 4; bx < W - 6 && boats.length < 3; bx++) {
+      if (tiles[by][bx] === 'shallow' && tiles[by][bx + 1] === 'shallow' && tiles[by][bx + 2] === 'shallow' && dl[by][bx] <= 2 && !pierTiles.some(([a, b]) => Math.abs(a - bx) < 4 && Math.abs(b - by) < 3) && !boats.some(([a, b]) => Math.hypot(a - bx, b - by) < 14)) {
+        boats.push([bx, by]);
+        props.push({ kind: 'boat', x: bx, y: by, v: rnd(), w: 2, h: 1 });
+      }
+    }
+  }
+  // ikan raksasa pamer di selatan dermaga selatan
+  const fishW = 16;
+  const fishH = 6;
+  props.push({ kind: 'giantfish', x: Math.max(1, south[0] - 7), y: Math.min(H - fishH - 1, south[1] + 9), v: rnd(), w: fishW, h: fishH, name: 'Ikan Raksasa Pulau', role: 'Pamer di sini!' });
+  // lampu di pangkal dermaga
+  for (const [lx, ly] of [[south[0] - 1, south[1] - 2], [south[0] + 2, south[1] - 2], [eastP[0] - 2, eastP[1] - 1], [eastP[0] - 2, eastP[1] + 2]] as [number, number][]) {
+    if (ly > 0 && ly < H && lx > 0 && lx < W && (tiles[ly][lx] === 'sand' || tiles[ly][lx] === 'grass') && !occ[ly][lx]) place('lamp', lx, ly);
+  }
+
+  const blocked: boolean[][] = [];
+  for (let y = 0; y < H; y++) {
+    blocked[y] = [];
+    for (let x = 0; x < W; x++) {
+      const t = tiles[y][x];
+      blocked[y][x] = (t === 'deep' || t === 'shallow') || occ[y][x] || x === 0 || y === 0;
+    }
+  }
+
+  const world: World = { w: W, h: H, tiles, blocked, props, start, terrain: mk(W * TILE, H * TILE) };
+  renderTerrain(world, dl, pond, pierTiles, seed, plaza);
+  return world;
+}
+
 // noise halus (value noise) untuk bercak warna alami di pasir & rumput
 function hash2(x: number, y: number, s: number): number {
   let h = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(s | 0, 982451653);
@@ -579,11 +981,11 @@ function renderTerrain(world: World, dl: number[][], pond: boolean[][], pier: [n
         const d = Math.min(5, Math.max(0, dl[ty][tx] - 1));
         R(ctx, X, Y, TILE, TILE, WATER_COLORS[d]);
         if (pond[ty][tx]) {
-          R(ctx, X, Y, TILE, TILE, '#5fc9d6');
+          R(ctx, X, Y, TILE, TILE, '#3a8cbf');
           if (rnd() < 0.14) {
             const lx = X + 3 + Math.floor(rnd() * 8);
             const ly = Y + 4 + Math.floor(rnd() * 7);
-            R(ctx, lx, ly, 4, 3, '#3f9d55'); R(ctx, lx + 1, ly - 1, 2, 1, '#3f9d55'); R(ctx, lx + 3, ly + 1, 1, 1, '#5fc9d6');
+            R(ctx, lx, ly, 4, 3, '#3f9d55'); R(ctx, lx + 1, ly - 1, 2, 1, '#3f9d55'); R(ctx, lx + 3, ly + 1, 1, 1, '#3a8cbf');
             if (rnd() < 0.5) R(ctx, lx + 1, ly, 1, 1, '#ffb7d5');
           }
         }
@@ -1827,6 +2229,111 @@ export function drawTable(ctx: CanvasRenderingContext2D, p: Prop, t: number) {
   drawBaked(ctx, p, 'table', [64, 64, 16, 32], tableRaw);
   tableGlow(ctx, p, t);
 }
+
+
+// ---------- properti baru untuk pulau besar: pinus, mercusuar, pohon raksasa ----------
+function discR(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number, col: string) {
+  for (let yy = -r; yy <= r; yy++) {
+    const w = Math.floor(Math.sqrt(r * r - yy * yy + 0.5));
+    R(ctx, cx - w, cy + yy, w * 2 + 1, 1, col);
+  }
+}
+
+function pineRaw(ctx: CanvasRenderingContext2D, p: Prop) {
+  const bx = p.x * TILE + 8;
+  const by = p.y * TILE + 15;
+  drawShadow(ctx, bx + 1, by, 7, 2.5);
+  R(ctx, bx - 1, by - 5, 3, 5, '#6b4423');
+  R(ctx, bx - 1, by - 5, 1, 5, '#8a5a2e');
+  const dark = p.v > 0.5 ? '#1f5a3a' : '#22603a';
+  const light = p.v > 0.5 ? '#35874f' : '#3a8c52';
+  for (let k = 0; k < 4; k++) {
+    const bottom = by - 4 - k * 7;
+    const hw = 8 - k * 1.5;
+    for (let r = 0; r < 10; r++) {
+      const w = Math.max(0, Math.round(hw * (r + 1) / 10));
+      const y = bottom - 10 + r;
+      R(ctx, bx - w, y, w * 2 + 1, 1, dark);
+      R(ctx, bx - w, y, Math.max(1, Math.ceil(w * 0.9)), 1, light);
+    }
+  }
+  R(ctx, bx - 2, by - 31, 1, 1, '#7fc08a');
+}
+export function drawPine(ctx: CanvasRenderingContext2D, p: Prop) { drawBaked(ctx, p, p.v > 0.5 ? 'pineA' : 'pineB', [48, 64, 16, 48], pineRaw); }
+
+function lighthouseRaw(ctx: CanvasRenderingContext2D, p: Prop) {
+  const X = p.x * TILE;
+  const Y = p.y * TILE; // 32x32 alas
+  const cx = X + 16;
+  const gy = Y + 29;
+  drawShadow(ctx, cx + 2, gy, 15, 4, 0.3);
+  // batu karang di dasar
+  R(ctx, cx - 13, gy - 6, 26, 6, '#7d838d');
+  R(ctx, cx - 11, gy - 9, 22, 4, '#a3a9b2');
+  R(ctx, cx - 13, gy - 3, 26, 3, '#656b75');
+  const top = gy - 94;
+  const bot = gy - 9;
+  for (let y = top; y < bot; y++) {
+    const f = (y - top) / (bot - top);
+    const hw = Math.round(5 + f * 3);
+    const red = Math.floor((y - top) / 12) % 2 === 0;
+    R(ctx, cx - hw, y, hw * 2, 1, red ? '#e24a35' : '#f6f1e4');
+    R(ctx, cx + hw - 3, y, 3, 1, red ? '#b83422' : '#d4cdbb');
+    R(ctx, cx - hw, y, 2, 1, red ? '#f06a52' : '#ffffff');
+  }
+  R(ctx, cx - 2, bot - 9, 4, 9, '#5a3a22');
+  R(ctx, cx - 1, bot - 8, 2, 1, '#8a5a2e');
+  R(ctx, cx - 1, top + 28, 2, 4, '#2b3a55');
+  R(ctx, cx - 1, top + 52, 2, 4, '#2b3a55');
+  // balkon + ruang lampu
+  R(ctx, cx - 10, top - 2, 20, 3, '#3a3f4a');
+  R(ctx, cx - 10, top - 3, 20, 1, '#7b8290');
+  for (let i = 0; i < 5; i++) R(ctx, cx - 9 + i * 4, top - 7, 1, 5, '#3a3f4a');
+  R(ctx, cx - 6, top - 14, 12, 12, '#ffe58a');
+  R(ctx, cx - 6, top - 14, 12, 1, '#3a3f4a');
+  R(ctx, cx - 1, top - 14, 2, 12, '#3a3f4a');
+  R(ctx, cx - 5, top - 13, 3, 3, '#fff6c8');
+  for (let r = 0; r < 7; r++) R(ctx, cx - 7 + r, top - 21 + r, 14 - r * 2, 1, r < 6 ? '#c8322a' : '#e24a35');
+  R(ctx, cx - 1, top - 24, 2, 3, '#3a3f4a');
+}
+export function drawLighthouse(ctx: CanvasRenderingContext2D, p: Prop, t: number) {
+  blit(ctx, p, bakeLayers('lighthouse', [64, 192, 16, 144], p, [lighthouseRaw], true)[0]);
+  const X = p.x * TILE + 16;
+  const Y = p.y * TILE + 29 - 94 - 8;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  const a = 0.32 + 0.1 * Math.sin(t * 3);
+  const g = ctx.createRadialGradient(X, Y, 1, X, Y, 34);
+  g.addColorStop(0, 'rgba(255,225,130,' + a + ')');
+  g.addColorStop(1, 'rgba(255,225,130,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(X - 36, Y - 36, 72, 72);
+  ctx.restore();
+}
+
+function bigTreeRaw(ctx: CanvasRenderingContext2D, p: Prop) {
+  const X = p.x * TILE;
+  const Y = p.y * TILE; // 64x48 alas
+  const cx = X + 32;
+  const gy = Y + 42;
+  drawShadow(ctx, cx + 3, gy, 28, 6, 0.26);
+  R(ctx, cx - 7, gy - 28, 14, 28, '#7a4a21');
+  R(ctx, cx - 7, gy - 28, 3, 28, '#98602d');
+  R(ctx, cx + 4, gy - 28, 3, 28, '#5d3a18');
+  R(ctx, cx - 11, gy - 4, 22, 4, '#7a4a21');
+  const top = gy - 52;
+  const blobs: [number, number, number][] = [[-26, 8, 14], [26, 8, 14], [0, -8, 19], [-15, -9, 14], [15, -9, 14], [-31, 18, 10], [31, 18, 10], [0, 12, 16], [-14, 14, 13], [14, 14, 13]];
+  for (const [dx, dy, r] of blobs) discR(ctx, cx + dx, top + dy, r, '#2c7a3a');
+  for (const [dx, dy, r] of blobs) discR(ctx, cx + dx, top + dy - 1, r - 1, '#3f9f4a');
+  for (const [dx, dy, r] of blobs) discR(ctx, cx + dx - 1, top + dy - 3, Math.max(2, r - 4), '#62c45a');
+  for (let i = 0; i < 14; i++) R(ctx, cx - 36 + ((i * 11 + 5) % 72), top - 10 + ((i * 7) % 40), 3, 1, '#2c7a3a');
+  for (let i = 0; i < 9; i++) {
+    const fx = cx - 30 + ((i * 13 + 3) % 60);
+    const fy = top - 6 + ((i * 9) % 38);
+    R(ctx, fx, fy, 2, 2, i % 2 ? '#e8483c' : '#f59a2a');
+  }
+}
+export function drawBigTree(ctx: CanvasRenderingContext2D, p: Prop) { drawBaked(ctx, p, 'bigtree', [160, 160, 48, 112], bigTreeRaw); }
 
 // ---------- karakter dengan garis tepi ----------
 // Digambar dulu ke kanvas sementara, lalu ditempel 4x bergeser (bayangan gelap) dan sekali lagi normal = garis tepi 1 piksel.

@@ -486,7 +486,7 @@ export default function FishingGame(props: Props) {
     engineRef.current = engine;
     try {
       const sz = parseFloat(localStorage.getItem('komikita-fish-zoom') || '');
-      if (Number.isFinite(sz)) engine.setZoom(sz);
+      engine.setZoom(Number.isFinite(sz) ? sz : 0.55);
     } catch { /* abaikan */ }
     const saveZoom = () => { try { localStorage.setItem('komikita-fish-zoom', String(engine.getZoom())); } catch { /* abaikan */ } };
     const applyZoom = (z: number) => engine.setZoom(z);
