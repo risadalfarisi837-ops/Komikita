@@ -333,7 +333,7 @@ export default function FishingGame(props: Props) {
   // HP masih portrait (kunci landscape tidak diizinkan browser) → game diputar 90° sendiri,
   // tanpa layar penuh & tanpa pesan sistem. Tinggal putar HP. Kalau layar sudah landscape, tidak ada rotasi.
   const [vp, setVp] = useState({ w: 0, h: 0, touch: false });
-  const rot = vp.touch && vp.h > vp.w;
+  const rot = vp.h > vp.w && Math.min(vp.w, vp.h) < 900;
   const rotRef = useRef(false);
   rotRef.current = rot;
   useEffect(() => {
