@@ -30,32 +30,32 @@ type IconProps = { color: string; filled: boolean };
 const svg = { width: 26, height: 26, viewBox: '0 0 24 24', fill: 'none', strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
 
 const HomeIcon = ({ color, filled }: IconProps) => (
-  <svg {...svg} fill={filled ? color : 'none'} stroke={color} strokeWidth={2.4}>
+  <svg {...svg} fill={filled ? color : 'none'} stroke={color} strokeWidth={2}>
     <path d="M12 3L3.5 10.2V20a1 1 0 001 1H9v-6h6v6h4.5a1 1 0 001-1v-9.8L12 3z" />
   </svg>
 );
 const CompassIcon = ({ color, filled }: IconProps) => (
-  <svg {...svg} stroke={color} strokeWidth={2.4}>
+  <svg {...svg} stroke={color} strokeWidth={2}>
     <circle cx="12" cy="12" r="9.5" />
     <polygon points="16 8 14 14 8 16 10 10 16 8" fill={filled ? color : 'none'} />
   </svg>
 );
 const RankingIcon = ({ color }: IconProps) => (
-  <svg {...svg} stroke={color} strokeWidth={2.4}>
+  <svg {...svg} stroke={color} strokeWidth={2}>
     <rect x="3" y="12" width="5" height="9" rx="1" />
     <rect x="9.5" y="3" width="5" height="18" rx="1" />
     <rect x="16" y="8" width="5" height="13" rx="1" />
   </svg>
 );
 const LibraryIcon = ({ color }: IconProps) => (
-  <svg {...svg} stroke={color} strokeWidth={2.4}>
+  <svg {...svg} stroke={color} strokeWidth={2}>
     <rect x="3" y="4" width="4" height="16" rx="1" />
     <rect x="9" y="4" width="4" height="16" rx="1" />
     <path d="M15.5 5.2l3.8-1 3 14.6-3.8 1z" />
   </svg>
 );
 const PersonIcon = ({ color }: IconProps) => (
-  <svg {...svg} stroke={color} strokeWidth={2.4}>
+  <svg {...svg} stroke={color} strokeWidth={2}>
     <circle cx="12" cy="8" r="4" />
     <path d="M4 21v-1a6 6 0 016-6h4a6 6 0 016 6v1" />
   </svg>
@@ -81,26 +81,25 @@ function BottomNavInner() {
         position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50,
         display: 'flex', justifyContent: 'center',
         background: 'var(--nav)',
-        borderTop: '3px solid var(--card-line)',
-        boxShadow: '0 -4px 0 var(--card-edge), 0 -8px 14px rgba(0,0,0,.18)',
+        borderTop: '1px solid rgba(255,255,255,0.06)',
         paddingBottom: 'max(env(safe-area-inset-bottom), 6px)',
       }}
     >
       <div style={{ display: 'flex', width: '100%', maxWidth: 448, padding: '8px 6px 0' }}>
         {links.map(({ href, Icon, label }) => {
           const active = pathname === href;
-          const color = active ? '#fff' : '#7C6847';
+          const color = active ? '#fff' : 'var(--muted)';
           const isProfile = href === '/profile';
           return (
             <Link key={href} href={href} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, textDecoration: 'none' }}>
-              <div style={{ width: 58, height: 38, borderRadius: 19, display: 'flex', alignItems: 'center', justifyContent: 'center', background: active ? 'var(--accent)' : 'transparent', border: active ? '3px solid #fff' : '3px solid transparent', boxShadow: active ? '0 3px 0 var(--accent-edge)' : 'none', transform: active ? 'translateY(-4px)' : 'none', transition: 'transform .12s' }}>
+              <div style={{ width: 62, height: 36, borderRadius: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', background: active ? 'rgba(255,107,107,0.28)' : 'transparent', transition: 'background .2s' }}>
                 {isProfile && photoURL ? (
-                  <img src={photoURL} alt="" style={{ width: 26, height: 26, borderRadius: '50%', objectFit: 'cover', outline: active ? '2px solid #fff' : 'none', opacity: active ? 1 : 0.85 }} />
+                  <img src={photoURL} alt="" style={{ width: 26, height: 26, borderRadius: '50%', objectFit: 'cover', outline: active ? '2px solid #fff' : 'none', opacity: active ? 1 : 0.7 }} />
                 ) : (
                   <Icon color={color} filled={active} />
                 )}
               </div>
-              <span className="pixel" style={{ fontSize: 12.5, fontWeight: 700, color: active ? '#1655B0' : '#7C6847', paddingBottom: 6, marginTop: active ? -2 : 0 }}>{label}</span>
+              <span style={{ fontSize: 11.5, fontWeight: active ? 800 : 700, color, paddingBottom: 6 }}>{label}</span>
             </Link>
           );
         })}

@@ -38,7 +38,7 @@ function MangaCardInner({ title, link, thumb, desc, score, flag, chapterCount }:
 
   return (
     <Link href={`/manga?url=${encodeURIComponent(link)}`} className="group flex flex-col w-full flex-shrink-0 snap-start relative">
-      <div className="k-cover relative aspect-[4/5] w-full" style={{ borderRadius: 20 }}>
+      <div className="relative aspect-[4/5] w-full overflow-hidden rounded-3xl bg-[#2A2931] shadow-sm">
         <Image
           src={thumb}
           alt={title}
@@ -54,23 +54,23 @@ function MangaCardInner({ title, link, thumb, desc, score, flag, chapterCount }:
 
         <button
           onClick={handleFavorite}
-          className="absolute top-2 right-2 z-10 w-8 h-8 rounded-full bg-[var(--card)] border-2 border-[var(--card-line)] flex items-center justify-center" style={{ boxShadow: '0 2px 0 var(--card-edge)' }}
+          className="absolute top-2 right-2 z-10 w-7 h-7 rounded-full bg-[#2A2931]/60 backdrop-blur-md flex items-center justify-center shadow-sm"
         >
           <Heart
-            className={`w-4 h-4 ${mounted && isFav ? 'fill-[#E5484D] text-[#E5484D]' : 'text-[#7C6847]'}`}
-            strokeWidth={mounted && isFav ? 0 : 2.4}
+            className={`w-3.5 h-3.5 ${mounted && isFav ? 'fill-gray-500 text-gray-500' : 'text-gray-300'}`}
+            strokeWidth={mounted && isFav ? 0 : 2}
           />
         </button>
 
-        <div className="k-card-flat absolute inset-x-2 bottom-2 p-2">
-          <ScrollingTitle text={title} className="font-black text-[#3B2A18] text-sm" />
+        <div className="absolute inset-x-2 bottom-2 bg-[#2A2931]/80 backdrop-blur-lg rounded-2xl p-2.5 border border-white/5">
+          <ScrollingTitle text={title} className="font-bold text-white text-sm" />
           {/* Rating + Chapter count */}
           <div className="flex items-center justify-between mt-1 gap-1">
-            <span className="text-[11px] text-[#D98A0B] font-extrabold flex items-center gap-0.5">
+            <span className="text-[10px] text-yellow-400 font-bold flex items-center gap-0.5">
               ⭐ {displayScore !== 'N/A' ? displayScore : '—'}
             </span>
             {chapterCount !== undefined && chapterCount > 0 && (
-              <span className="pixel text-[11px] text-[#7C6847] font-semibold">
+              <span className="text-[10px] text-gray-400 font-medium">
                 {chapterCount} Ch
               </span>
             )}

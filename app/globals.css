@@ -1,28 +1,14 @@
-@import url("https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=Pixelify+Sans:wght@500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&display=swap");
 @import "tailwindcss";
 
 :root {
-  /* ── Tema "Pulau": krem + rumput + biru tebal (mengacu ke UI game mancing) ── */
-  --bg: #5E9E48;          /* rumput */
-  --bg-deep: #4A8A3A;
-  --card: #FBF3DE;        /* krem pil/kartu */
-  --card-edge: #E2CF9F;   /* tepi bawah krem (efek tebal) */
-  --card-line: #C9B27A;
-  --ink: #3B2A18;         /* teks cokelat tua */
-  --ink-soft: #7C6847;
-  --nav: #FBF3DE;
-  --accent: #2A7BE8;      /* tombol biru utama */
-  --accent-edge: #1655B0;
-  --accent-soft: #D6E8FF;
-  --pine: #1F5C4F;        /* header panel hijau tua */
-  --pine-edge: #143D34;
-  --wood: #8A5A2B;
-  --gold: #F5B82E;
-  --danger: #E5484D;
-  --muted: #7C6847;
-  --font-pixel: "Pixelify Sans", "Nunito", system-ui, sans-serif;
+  --bg: #1B1A20;
+  --card: #2A2931;
+  --nav: #212027;
+  --accent: #FF6B6B;
+  --muted: #8F8D9B;
 }
-body { font-family: "Nunito", system-ui, sans-serif; letter-spacing: 0; color: var(--ink); }
+body { font-family: "Plus Jakarta Sans", system-ui, sans-serif; letter-spacing: -0.2px; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { scrollbar-width: none; }
 
@@ -32,12 +18,7 @@ body { font-family: "Nunito", system-ui, sans-serif; letter-spacing: 0; color: v
 }
 
 html, body {
-  background-color: var(--bg);
-  background-image:
-    radial-gradient(rgba(255,255,255,.10) 1.5px, transparent 1.6px),
-    radial-gradient(rgba(0,0,0,.06) 1.5px, transparent 1.6px);
-  background-size: 28px 28px, 28px 28px;
-  background-position: 0 0, 14px 14px;
+  background-color: #1B1A20;
 }
 
 .animate-marquee-text {
@@ -100,57 +81,3 @@ html, body {
 
 /* Halaman yang dikecilkan lewat PageScale: lebar maksimum bawaan halaman dilepas supaya tetap penuh */
 .ui-scale .max-w-md { max-width: none; }
-
-
-/* ══ Komponen tema Pulau (dipakai semua halaman) ══════════════════════════ */
-.pixel { font-family: var(--font-pixel); letter-spacing: .2px; }
-
-/* Pil / kartu krem dengan tepi bawah tebal */
-.k-card {
-  background: var(--card); color: var(--ink);
-  border: 2px solid var(--card-line); border-radius: 22px;
-  box-shadow: 0 4px 0 var(--card-edge), 0 6px 10px rgba(0,0,0,.18);
-}
-.k-pill { border-radius: 999px; }
-.k-card-flat { background: var(--card); color: var(--ink); border: 2px solid var(--card-line); border-radius: 16px; }
-
-/* Panel berjudul (seperti papan "Rilis Awal") */
-.k-panel { background: var(--card); border: 3px solid var(--wood); border-radius: 14px; overflow: hidden; box-shadow: 0 4px 0 #5D3A18, 0 8px 12px rgba(0,0,0,.2); color: var(--ink); }
-.k-panel-head { background: var(--pine); color: #FFF6D8; font-family: var(--font-pixel); font-weight: 700; text-align: center; padding: 6px 12px; border-bottom: 3px solid var(--pine-edge); text-shadow: 0 2px 0 rgba(0,0,0,.35); }
-
-/* Tombol biru bulat tebal (seperti tombol "Pegang") */
-.k-btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  background: var(--accent); color: #fff; font-family: var(--font-pixel); font-weight: 700;
-  border: 3px solid #fff; border-radius: 999px; padding: 9px 20px;
-  box-shadow: 0 4px 0 var(--accent-edge), 0 6px 10px rgba(0,0,0,.25);
-  text-shadow: 0 2px 0 rgba(0,0,0,.3); transition: transform .08s, box-shadow .08s;
-}
-.k-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--accent-edge); }
-.k-btn-gold { background: var(--gold); color: #4A3200; text-shadow: none; box-shadow: 0 4px 0 #B07F0A, 0 6px 10px rgba(0,0,0,.25); }
-.k-btn-gold:active { box-shadow: 0 1px 0 #B07F0A; }
-
-/* Tombol ikon persegi krem (seperti deretan ikon chat/mic) */
-.k-icon-btn { width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; background: var(--card); border: 2px solid var(--card-line); border-radius: 14px; box-shadow: 0 3px 0 var(--card-edge); color: var(--ink); }
-.k-icon-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--card-edge); }
-
-/* Label pill kecil (tipe komik, BARU, dll) */
-.k-tag { display: inline-flex; align-items: center; gap: 3px; font-family: var(--font-pixel); font-weight: 700; font-size: 11px; padding: 2px 8px; border-radius: 8px; border: 2px solid var(--pine-edge); background: var(--pine); color: #FFF6D8; }
-.k-tag-new { background: var(--danger); border-color: #A82A2E; }
-.k-tag-gold { background: var(--gold); border-color: #B07F0A; color: #4A3200; }
-
-/* Chip filter (aktif = biru tebal) */
-.k-chip { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px; border-radius: 999px; font-weight: 800; font-size: 14px; background: var(--card); color: var(--ink); border: 2px solid var(--card-line); box-shadow: 0 3px 0 var(--card-edge); }
-.k-chip[data-on="true"] { background: var(--accent); color: #fff; border-color: #fff; box-shadow: 0 3px 0 var(--accent-edge); }
-
-/* Bar progres (seperti bar level 7/160) */
-.k-bar { height: 8px; border-radius: 99px; background: #E4D7B4; overflow: hidden; border: 1px solid var(--card-line); }
-.k-bar > i { display: block; height: 100%; background: linear-gradient(#59B7F5,#2A7BE8); border-radius: 99px; }
-
-/* Judul di atas rumput: putih dengan tepi gelap supaya kebaca */
-.k-title { font-family: var(--font-pixel); font-weight: 700; color: #fff; text-shadow: 0 2px 0 rgba(31,60,24,.8), 0 0 8px rgba(31,60,24,.5); }
-
-/* Sampul komik: bingkai kayu */
-.k-cover { border: 3px solid #fff; border-radius: 14px; box-shadow: 0 4px 0 rgba(0,0,0,.25); background: var(--card-edge); overflow: hidden; }
-
-@media (prefers-reduced-motion: reduce) { .k-btn, .k-icon-btn { transition: none; } }
