@@ -5,7 +5,7 @@ import type { Rarity, SizeTier, Species } from '@/lib/fishing';
 import {
   TILE, generateWorld, drawPlayer, drawPalm, drawRock, drawLamp, drawBobber, drawRipple, drawLine,
   drawBubbleAlert, drawFish, drawShowFish, rodGeometry, PAL_PLAYER, drawFountain, drawBench, drawTable, drawStool, drawSign, drawBush, drawNpc,
-  drawStall, drawFlowers, drawBarrel, drawCrate, drawNet, drawUmbrella, drawBoat, drawGiantFish, palForId, mulberry32,
+  drawStall, drawFlowers, drawBarrel, drawCrate, drawNet, drawUmbrella, drawBoat, drawGiantFish, drawShop, palForId, mulberry32,
 } from './art';
 import type { Dir, Pal, World } from './art';
 
@@ -815,6 +815,7 @@ export class FishingEngine {
         case 'umbrella': ents.push({ y: byp + 14, f: () => drawUmbrella(ctx, p) }); break;
         case 'boat': ents.push({ y: byp + 12, f: () => drawBoat(ctx, p, t) }); break;
         case 'giantfish': ents.push({ y: byp + 20, f: () => drawGiantFish(ctx, p, t) }); break;
+        case 'shop': ents.push({ y: byp + ph2 - 2, f: () => drawShop(ctx, p, t) }); break;
         default: ents.push({ y: byp + 15, f: () => drawLamp(ctx, p, t) });
       }
     }
