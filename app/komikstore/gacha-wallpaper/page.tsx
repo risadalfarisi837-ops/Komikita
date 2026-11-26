@@ -302,8 +302,7 @@ export default function GachaWallpaperPage() {
               <section className="mt-6 px-4">
                 <SecHead title="Sedang Dipakai" pill={'+' + SEC[WALLPAPER_CATALOG[active].rarity].bonus + '% EXP aktif'} border="rgba(255,255,255,.85)" bg="#1c1824" pillBg="#6b6b73" />
                 <div className="relative mt-2 aspect-[996/526] overflow-hidden rounded-2xl" style={{ background: wpBg(active) }}>
-                  <div className="absolute inset-0 bg-black/15" />
-                  <p className="absolute left-3.5 top-3 text-[17px] font-extrabold drop-shadow">{WALLPAPER_CATALOG[active].nama}</p>
+                  <p className="absolute left-3.5 top-3 text-[17px] font-extrabold">{WALLPAPER_CATALOG[active].nama}</p>
                   <button onClick={() => equip('')} disabled={busy} className="absolute bottom-3.5 right-3.5 rounded-full bg-black/45 px-5 py-2.5 text-[16px] font-extrabold active:scale-95 transition-transform">Lepas</button>
                 </div>
               </section>
@@ -315,8 +314,7 @@ export default function GachaWallpaperPage() {
                 <div className="mt-2 grid grid-cols-2 gap-3">
                   {mine.map((k) => (
                     <div key={k} className="relative aspect-[482/273] overflow-hidden rounded-2xl" style={{ background: wpBg(k) }}>
-                      <div className="absolute inset-0 bg-black/45" />
-                      <p className="absolute left-3.5 top-3 text-[16px] font-extrabold drop-shadow">{WALLPAPER_CATALOG[k].nama}</p>
+                      <p className="absolute left-3.5 top-3 text-[16px] font-extrabold">{WALLPAPER_CATALOG[k].nama}</p>
                       <button onClick={() => equip(k)} disabled={busy} className="absolute bottom-3 right-3 rounded-full bg-black/45 px-4 py-2 text-[15px] font-extrabold text-[#2f9bff] active:scale-95 transition-transform">Pakai</button>
                     </div>
                   ))}
