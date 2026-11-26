@@ -11,7 +11,7 @@ const rank = (k: string) => RARITIES.indexOf(WALLPAPER_CATALOG[k].rarity);
 const INFO_ORDER = [...RARITIES].reverse().map((r) => ({ r, keys: Object.keys(WALLPAPER_CATALOG).filter((k) => WALLPAPER_CATALOG[k].rarity === r) }));
 
 function Pill({ r }: { r: Rarity }) {
-  return <span className="rounded-full bg-black/70 border border-white/15 px-3 py-1 text-xs font-black" style={{ color: RARITY_STYLE[r].color }}>{r}</span>;
+  return <span className="rounded-full bg-black/70 border border-white/15 px-2 py-0.5 text-[10px] font-black" style={{ color: RARITY_STYLE[r].color }}>{r}</span>;
 }
 
 function Gem({ size = 24, dim = false }: { size?: number; dim?: boolean }) {
@@ -27,6 +27,27 @@ function Gem({ size = 24, dim = false }: { size?: number; dim?: boolean }) {
   );
 }
 
+function Banner() {
+  const stars = [[60,70],[150,200],[260,90],[330,300],[120,420],[700,80],[820,190],[900,330],[760,450],[640,520],[210,520],[930,60],[40,300],[560,40]];
+  return (
+    <svg viewBox="0 0 996 560" preserveAspectRatio="xMidYMid slice" className="mx-4 block w-[calc(100%-2rem)] rounded-3xl" style={{ aspectRatio: '996 / 560' }}>
+      <defs>
+        <linearGradient id="gbBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#0a1236" /><stop offset="0.6" stopColor="#1b2d6b" /><stop offset="1" stopColor="#0a1030" /></linearGradient>
+        <radialGradient id="gbOrb" cx="50%" cy="50%" r="50%"><stop offset="0" stopColor="#ffffff" /><stop offset="0.55" stopColor="#dbe8ff" /><stop offset="1" stopColor="#6e8fe0" stopOpacity="0.55" /></radialGradient>
+        <radialGradient id="gbGlow" cx="50%" cy="50%" r="50%"><stop offset="0" stopColor="#9ec2ff" stopOpacity="0.7" /><stop offset="1" stopColor="#9ec2ff" stopOpacity="0" /></radialGradient>
+      </defs>
+      <rect width="996" height="560" fill="url(#gbBg)" />
+      {stars.map(([x, y], i) => <circle key={i} cx={x} cy={y} r={i % 3 === 0 ? 3 : 2} fill="#cfe0ff" opacity={0.75} />)}
+      <circle cx="498" cy="270" r="330" fill="url(#gbGlow)" />
+      <circle cx="498" cy="270" r="195" fill="url(#gbOrb)" />
+      <path d="M498 150 C512 232 536 256 618 270 C536 284 512 308 498 390 C484 308 460 284 378 270 C460 256 484 232 498 150Z" fill="#2f8bff" stroke="#e8f2ff" strokeWidth="6" />
+      <path d="M390 120 C396 150 406 160 436 166 C406 172 396 182 390 212 C384 182 374 172 344 166 C374 160 384 150 390 120Z" fill="#fff" opacity="0.95" />
+      <path d="M640 380 C645 402 652 409 674 414 C652 419 645 426 640 448 C635 426 628 419 606 414 C628 409 635 402 640 380Z" fill="#fff" opacity="0.9" />
+      <path d="M0 560 L0 470 Q250 430 498 450 Q750 430 996 470 L996 560Z" fill="#070b22" opacity="0.7" />
+    </svg>
+  );
+}
+
 // Bonus EXP sesuai tampilan (hanya wallpaper yang sedang dipakai yang memberi bonus)
 const EXP_BONUS: { name: string; pct: number; color: string; bg: string; border: string }[] = [
   { name: 'Mythic', pct: 25, color: '#f5d0fe', bg: '#3b0f3a', border: '#ec4899' },
@@ -36,7 +57,7 @@ const EXP_BONUS: { name: string; pct: number; color: string; bg: string; border:
   { name: 'Normal', pct: 5, color: '#ffffff', bg: '#0b0d14', border: '#ffffff' },
 ];
 const bonusPill = (b: (typeof EXP_BONUS)[number]) => (
-  <span className="rounded-xl border-2 px-3.5 py-1 text-[19px] font-extrabold" style={{ color: b.color, background: b.bg, borderColor: b.border }}>{b.name}</span>
+  <span className="rounded-lg border-[1.5px] px-2.5 py-0.5 text-[13px] font-extrabold" style={{ color: b.color, background: b.bg, borderColor: b.border }}>{b.name}</span>
 );
 
 const KFX = `
@@ -211,64 +232,64 @@ export default function GachaWallpaperPage() {
   return (
     <div className="fixed inset-0 overflow-y-auto text-white" style={{ background: '#131418' }}>
       <style>{KFX}</style>
-      <div className="max-w-md mx-auto pb-32">
-        <div className="flex items-center gap-5 px-5 pt-8 pb-5">
-          <button onClick={() => router.back()} className="active:scale-90 transition-transform"><ArrowLeft className="w-7 h-7" /></button>
-          <h1 className="text-[28px] font-extrabold">Wibuku Gacha</h1>
+      <div className="max-w-md mx-auto pb-28">
+        <div className="flex items-center gap-4 px-4 pt-6 pb-4">
+          <button onClick={() => router.back()} className="active:scale-90 transition-transform"><ArrowLeft className="w-6 h-6" /></button>
+          <h1 className="text-[22px] font-extrabold">Wibuku Gacha</h1>
         </div>
 
         {ready && !uid && <p className="px-5 pt-6 text-white/60">Login dulu buat summon wallpaper.</p>}
 
         {uid && (
           <>
-            <img src="/gacha/banner.jpg" alt="" className="mx-4 block w-[calc(100%-2rem)] rounded-[28px] object-cover" style={{ aspectRatio: '996 / 560' }} />
+            <Banner />
 
-            <div className="mx-4 mt-9 grid grid-cols-2 gap-4">
+            <div className="mx-4 mt-5 grid grid-cols-2 gap-3">
               <button onClick={() => summon(1)} disabled={busy}
-                className="rounded-[20px] p-[3px] active:scale-95 transition-transform disabled:opacity-60"
+                className="rounded-2xl p-[2px] active:scale-95 transition-transform disabled:opacity-60"
                 style={{ background: 'linear-gradient(180deg,#4ea9ff,#2f86e8)', filter: koin < COST_1 ? 'brightness(.55)' : 'none' }}>
-                <div className="rounded-[17px] px-3 pt-3 pb-3 text-center" style={{ background: 'linear-gradient(180deg,#8fd0ff,#5fb3fb 55%,#4a9fee)', boxShadow: 'inset 0 0 0 2px rgba(255,255,255,.35)' }}>
-                  <div className="text-[27px] font-extrabold leading-tight" style={{ color: '#12305a' }}>Summon 1x</div>
-                  <div className="mt-1.5 flex items-center justify-center gap-2 rounded-full py-1.5 text-[20px] font-extrabold text-white" style={{ background: 'rgba(38,52,72,.85)', border: '2px solid rgba(255,255,255,.35)' }}><Gem size={20} />{COST_1}</div>
+                <div className="rounded-[14px] px-2.5 py-2.5 text-center" style={{ background: 'linear-gradient(180deg,#8fd0ff,#5fb3fb 55%,#4a9fee)', boxShadow: 'inset 0 0 0 1.5px rgba(255,255,255,.35)' }}>
+                  <div className="whitespace-nowrap text-[18px] font-extrabold leading-tight" style={{ color: '#12305a' }}>Summon 1x</div>
+                  <div className="mt-1 flex items-center justify-center gap-1.5 rounded-full py-1 text-[14px] font-extrabold text-white" style={{ background: 'rgba(38,52,72,.85)', border: '1.5px solid rgba(255,255,255,.35)' }}><Gem size={15} />{COST_1}</div>
                 </div>
               </button>
               <button onClick={() => summon(10)} disabled={busy}
-                className="rounded-[20px] p-[3px] active:scale-95 transition-transform disabled:opacity-60"
+                className="rounded-2xl p-[2px] active:scale-95 transition-transform disabled:opacity-60"
                 style={{ background: 'linear-gradient(180deg,#f2b94d,#c98a1f)', filter: koin < COST_10 ? 'brightness(.5) saturate(.85)' : 'none' }}>
-                <div className="rounded-[17px] px-3 pt-3 pb-3 text-center" style={{ background: 'linear-gradient(180deg,#ffd886,#f0b448 55%,#dd9a2c)', boxShadow: 'inset 0 0 0 2px rgba(255,255,255,.35)' }}>
-                  <div className="text-[27px] font-extrabold leading-tight" style={{ color: '#4a2f0a' }}>Summon 10x</div>
-                  <div className="mt-1.5 flex items-center justify-center gap-2 rounded-full py-1.5 text-[20px] font-extrabold text-white" style={{ background: 'rgba(52,44,34,.85)', border: '2px solid rgba(255,255,255,.35)' }}><Gem size={20} />{COST_10}</div>
+                <div className="rounded-[14px] px-2.5 py-2.5 text-center" style={{ background: 'linear-gradient(180deg,#ffd886,#f0b448 55%,#dd9a2c)', boxShadow: 'inset 0 0 0 1.5px rgba(255,255,255,.35)' }}>
+                  <div className="whitespace-nowrap text-[18px] font-extrabold leading-tight" style={{ color: '#4a2f0a' }}>Summon 10x</div>
+                  <div className="mt-1 flex items-center justify-center gap-1.5 rounded-full py-1 text-[14px] font-extrabold text-white" style={{ background: 'rgba(52,44,34,.85)', border: '1.5px solid rgba(255,255,255,.35)' }}><Gem size={15} />{COST_10}</div>
                 </div>
               </button>
             </div>
 
-            <button onClick={() => setInfo(true)} className={card + ' mx-4 mt-8 flex w-[calc(100%-2rem)] items-center gap-4 px-5 py-4 text-left active:scale-[.98] transition-transform'}>
-              <Gem size={34} />
-              <span className="text-[17px] font-extrabold">Cara mendapatkan WibuGem</span>
-              <span className="ml-auto flex items-center gap-1.5 text-[16px] font-medium text-[#3b9cff]">Lihat info <ArrowRight className="w-5 h-5" /></span>
+            <button onClick={() => setInfo(true)} className={card + ' mx-4 mt-4 flex w-[calc(100%-2rem)] items-center gap-3 px-4 py-3 text-left active:scale-[.98] transition-transform'}>
+              <Gem size={26} />
+              <span className="text-[13px] font-extrabold">Cara mendapatkan WibuGem</span>
+              <span className="ml-auto flex shrink-0 items-center gap-1 whitespace-nowrap text-[12px] font-medium text-[#3b9cff]">Lihat info <ArrowRight className="w-4 h-4" /></span>
             </button>
 
-            <div className="mx-4 mt-7 rounded-2xl border bg-[#171c2b] p-5" style={{ borderColor: '#3a3a42' }}>
-              <h2 className="text-[22px] font-extrabold">Bonus EXP Wallpaper</h2>
-              <p className="mt-1 text-[16px] text-white/70">Hanya wallpaper yang sedang dipakai yang memberi bonus.</p>
-              <div className="mt-4 space-y-3">
-                <div className="flex items-center justify-between rounded-2xl border border-white/20 bg-[#0b0d17] px-6 py-3.5">
-                  {bonusPill(EXP_BONUS[0])}<span className="text-[21px] font-extrabold">+{EXP_BONUS[0].pct}%</span>
+            <div className="mx-4 mt-4 rounded-2xl border bg-[#171c2b] p-4" style={{ borderColor: '#3a3a42' }}>
+              <h2 className="text-[15px] font-extrabold">Bonus EXP Wallpaper</h2>
+              <p className="mt-0.5 text-[12px] text-white/65">Hanya wallpaper yang sedang dipakai yang memberi bonus.</p>
+              <div className="mt-3 space-y-2">
+                <div className="flex items-center justify-between rounded-xl border border-white/20 bg-[#0b0d17] px-3 py-2">
+                  {bonusPill(EXP_BONUS[0])}<span className="text-[14px] font-extrabold">+{EXP_BONUS[0].pct}%</span>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2">
                   {EXP_BONUS.slice(1).map((b) => (
-                    <div key={b.name} className="flex items-center justify-between rounded-2xl border border-white/20 bg-[#0b0d17] px-4 py-3.5">
-                      {bonusPill(b)}<span className="text-[21px] font-extrabold">+{b.pct}%</span>
+                    <div key={b.name} className="flex items-center justify-between rounded-xl border border-white/20 bg-[#0b0d17] px-3 py-2">
+                      {bonusPill(b)}<span className="text-[14px] font-extrabold">+{b.pct}%</span>
                     </div>
                   ))}
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center justify-between px-5 pt-9 pb-4">
-              <h2 className="text-[28px] font-extrabold">Koleksi</h2>
-              <button onClick={() => setShowLocked((v) => !v)} className="flex items-center gap-3 rounded-2xl bg-[#1c2336] px-5 py-3.5 text-[17px] font-extrabold active:scale-95 transition-transform">
-                {showLocked ? <EyeOff className="w-7 h-7" /> : <Eye className="w-7 h-7" />}Tampilkan terkunci
+            <div className="flex items-center justify-between px-4 pt-6 pb-3">
+              <h2 className="text-[18px] font-extrabold">Koleksi</h2>
+              <button onClick={() => setShowLocked((v) => !v)} className="flex items-center gap-2 rounded-xl bg-[#1c2336] px-3.5 py-2 text-[12px] font-extrabold active:scale-95 transition-transform">
+                {showLocked ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}Tampilkan terkunci
               </button>
             </div>
 
@@ -286,29 +307,29 @@ export default function GachaWallpaperPage() {
               </div>
             )}
 
-            <div className={card + ' mx-4 flex items-center gap-3 px-5 py-4'}>
-              <Search className="w-5 h-5 text-white/50" />
-              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari koleksi wallpaper" className="flex-1 bg-transparent text-[18px] outline-none placeholder:text-white/60" />
+            <div className={card + ' mx-4 flex items-center gap-2.5 px-4 py-3'}>
+              <Search className="w-4 h-4 text-white/50" />
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari koleksi wallpaper" className="flex-1 bg-transparent text-[13px] outline-none placeholder:text-white/60" />
             </div>
 
-            {list.length === 0 && <p className="px-5 pt-8 text-center text-white/40 font-bold">{total === 0 ? 'Belum ada wallpaper. Summon dulu!' : 'Tidak ditemukan.'}</p>}
+            {list.length === 0 && <p className="px-5 pt-8 text-center text-[13px] text-white/40 font-bold">{total === 0 ? 'Belum ada wallpaper. Summon dulu!' : 'Tidak ditemukan.'}</p>}
 
-            <div className="grid grid-cols-2 gap-3 px-4 pt-4">
+            <div className="grid grid-cols-2 gap-3 px-4 pt-3">
               {list.map((k) => {
                 const w = WALLPAPER_CATALOG[k];
                 const have = !!owned[k];
                 const on = active === k;
                 return (
                   <button key={k} onClick={() => have && !on && equip(k)} disabled={busy || !have}
-                    className={card + ' p-2.5 text-left active:scale-95 transition-transform'}
+                    className={card + ' p-2 text-left active:scale-95 transition-transform'}
                     style={on ? { border: '2px solid #fcd34d' } : undefined}>
-                    <div className="relative h-28 rounded-xl overflow-hidden" style={{ background: wpBg(k), filter: have ? 'none' : 'grayscale(1) brightness(.45)' }}>
-                      <span className="absolute left-2 top-2"><Pill r={w.rarity} /></span>
-                      {on && <span className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-amber-300 px-3 py-1 text-xs font-black text-black">★ Aktif</span>}
-                      {!have && <span className="absolute inset-0 flex items-center justify-center"><Lock className="w-7 h-7 text-white/80" /></span>}
-                      {have && !on && <span className="absolute bottom-2 right-2 rounded-full bg-emerald-600/80 p-1"><Check className="w-3.5 h-3.5" /></span>}
+                    <div className="relative h-24 rounded-xl overflow-hidden" style={{ background: wpBg(k), filter: have ? 'none' : 'grayscale(1) brightness(.45)' }}>
+                      <span className="absolute left-1.5 top-1.5"><Pill r={w.rarity} /></span>
+                      {on && <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 rounded-full bg-amber-300 px-2.5 py-0.5 text-[11px] font-black text-black">★ Aktif</span>}
+                      {!have && <span className="absolute inset-0 flex items-center justify-center"><Lock className="w-6 h-6 text-white/80" /></span>}
+                      {have && !on && <span className="absolute bottom-1.5 right-1.5 rounded-full bg-emerald-600/80 p-0.5"><Check className="w-3 h-3" /></span>}
                     </div>
-                    <p className="mt-2 text-center font-black truncate">{w.nama}{owned[k] > 1 ? ' x' + owned[k] : ''}</p>
+                    <p className="mt-1.5 text-center text-[13px] font-black truncate">{w.nama}{owned[k] > 1 ? ' x' + owned[k] : ''}</p>
                   </button>
                 );
               })}
@@ -318,10 +339,10 @@ export default function GachaWallpaperPage() {
       </div>
 
       {uid && (
-        <div className="pointer-events-none fixed inset-x-0 bottom-6 z-40">
+        <div className="pointer-events-none fixed inset-x-0 bottom-5 z-40">
           <div className="mx-auto flex max-w-md justify-end px-4">
-            <div className="pointer-events-auto flex items-center gap-4 rounded-2xl bg-[#1c2233] px-6 py-3 shadow-lg shadow-black/40">
-              <Gem size={34} /><span className="text-[26px] font-extrabold">{koin.toLocaleString('id-ID')}</span>
+            <div className="pointer-events-auto flex items-center gap-2.5 rounded-xl bg-[#1c2233] px-4 py-2 shadow-lg shadow-black/40">
+              <Gem size={22} /><span className="text-[17px] font-extrabold">{koin.toLocaleString('id-ID')}</span>
             </div>
           </div>
         </div>
