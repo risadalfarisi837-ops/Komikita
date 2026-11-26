@@ -267,11 +267,11 @@ function useBoards() {
 }
 
 function Sparkles({ color }: { color: string }) {
-  const dots: [number, number, number][] = [[12, 8, 10], [38, 4, 6], [66, 10, 8], [92, 22, 5], [84, 86, 6], [8, 70, 5]];
+  const dots: [number, number, number][] = [[12, 8, 10], [38, 4, 6], [66, 10, 8], [92, 22, 5], [84, 86, 6], [8, 70, 5], [52, 92, 7], [26, 46, 5], [74, 58, 6], [96, 62, 5]];
   return (
     <>
       {dots.map(([l, t, z], i) => (
-        <svg key={i} aria-hidden width={z} height={z} viewBox="0 0 24 24" style={{ position: 'absolute', left: l + '%', top: t + '%', opacity: 0.55, pointerEvents: 'none' }}><path d="M12 0l2.6 9.4L24 12l-9.4 2.6L12 24l-2.6-9.4L0 12l9.4-2.6z" fill={color} /></svg>
+        <svg key={i} aria-hidden className="bs-twk" width={z} height={z} viewBox="0 0 24 24" style={{ position: 'absolute', left: l + '%', top: t + '%', opacity: 0.55, pointerEvents: 'none', animation: `bsTwk ${2.4 + (i % 4) * 0.45}s ease-in-out ${(i * 0.37) % 2.2}s infinite` }}><path d="M12 0l2.6 9.4L24 12l-9.4 2.6L12 24l-2.6-9.4L0 12l9.4-2.6z" fill={color} /></svg>
       ))}
     </>
   );
@@ -298,16 +298,33 @@ const Heart = ({ size = 14, color = '#FF5C9A' }: { size?: number; color?: string
 
 function BoardSlide({ theme, rowsByTab, onOpen }: { theme: BoardTheme; rowsByTab: Record<string, BoardRow[]>; onOpen: () => void }) {
   const [tab, setTab] = useState<'all' | 'd30' | 'd7'>('all');
+  const [shown, setShown] = useState<'all' | 'd30' | 'd7'>('all'); // isi yang tampil (menyusul tab setelah fade-out)
+  const [fading, setFading] = useState(false);
+  const swapTimer = useRef<any>(null);
+  const btnRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const [pill, setPill] = useState({ l: 0, w: 0 });
+  useEffect(() => () => { if (swapTimer.current) clearTimeout(swapTimer.current); }, []);
+  useEffect(() => {
+    const b = btnRefs.current[tab];
+    if (b) setPill({ l: b.offsetLeft, w: b.offsetWidth });
+  }, [tab, theme.tabs]);
+  const pick = (k: 'all' | 'd30' | 'd7') => {
+    if (k === tab) return;
+    setTab(k);
+    setFading(true);
+    if (swapTimer.current) clearTimeout(swapTimer.current);
+    swapTimer.current = setTimeout(() => { setShown(k); setFading(false); }, 170);
+  };
   const labels = theme.tabLabels || ['ALL', '30D', '7D'];
-  const rows = (theme.tabs ? rowsByTab[tab] : rowsByTab.all) || [];
+  const rows = (theme.tabs ? rowsByTab[shown] : rowsByTab.all) || [];
   const [r1, r2, r3, r4, r5] = rows;
   const val = (r: BoardRow) => (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: theme.accent, fontWeight: 800 }}>
       {theme.id === 'charisma' && <Heart />}{theme.fmt(r.value)}
     </span>
   );
-  const TabBtn = ({ k, label }: { k: 'all' | 'd30' | 'd7'; label: string }) => (
-    <button onClick={(e) => { e.stopPropagation(); setTab(k); }} style={{ border: 0, borderRadius: 99, padding: '5px 11px', fontSize: 11, fontWeight: 800, background: tab === k ? theme.accent : 'transparent', color: tab === k ? theme.accentText : '#9AA6B2' }}>{label}</button>
+  const tabBtn = (k: 'all' | 'd30' | 'd7', label: string) => (
+    <button key={k} ref={(el) => { btnRefs.current[k] = el; }} onClick={(e) => { e.stopPropagation(); pick(k); }} style={{ position: 'relative', zIndex: 1, border: 0, borderRadius: 99, padding: '5px 11px', fontSize: 11, fontWeight: 800, background: 'transparent', color: tab === k ? theme.accentText : '#9AA6B2', transition: 'color .25s' }}>{label}</button>
   );
   const TitleIcon = theme.id === 'charisma' ? <Heart size={15} color={theme.accent} /> : theme.id === 'reader'
     ? <svg width={15} height={15} viewBox="0 0 24 24" fill={theme.accent} aria-hidden><path d="M7 3h10v3h3v3a4 4 0 01-4 4 5 5 0 01-3 2.9V18h3v3H8v-3h3v-2.1A5 5 0 018 13a4 4 0 01-4-4V6h3z" /></svg>
@@ -322,15 +339,16 @@ function BoardSlide({ theme, rowsByTab, onOpen }: { theme: BoardTheme; rowsByTab
           <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#9AA6B2" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"><path d="M9 5l7 7-7 7" /></svg>
         </div>
         {theme.tabs && (
-          <div style={{ display: 'flex', background: 'rgba(0,0,0,.28)', borderRadius: 99, padding: 2 }}>
-            <TabBtn k="all" label={labels[0]} /><TabBtn k="d30" label={labels[1]} /><TabBtn k="d7" label={labels[2]} />
+          <div style={{ position: 'relative', display: 'flex', background: 'rgba(0,0,0,.28)', borderRadius: 99, padding: 2 }}>
+            <span aria-hidden style={{ position: 'absolute', top: 2, bottom: 2, left: pill.l, width: pill.w, borderRadius: 99, background: theme.accent, transition: pill.w ? 'left .3s cubic-bezier(.3,1.25,.4,1), width .3s ease' : 'none' }} />
+            {tabBtn('all', labels[0])}{tabBtn('d30', labels[1])}{tabBtn('d7', labels[2])}
           </div>
         )}
       </div>
 
-      <div style={{ position: 'relative', flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '38% 1fr', gap: '2.5%' }}>
+      <div key={shown} style={{ position: 'relative', flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '38% 1fr', gap: '2.5%', opacity: fading ? 0 : 1, transition: 'opacity .17s ease' }}>
         {r1 ? (
-          <div style={{ borderRadius: 16, border: '2px solid #B98B2B', background: 'rgba(0,0,0,.28)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, padding: '6px 4px', minWidth: 0 }}>
+          <div className="bs-in" style={{ animationDelay: '0s', borderRadius: 16, border: '2px solid #B98B2B', background: 'rgba(0,0,0,.28)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, padding: '6px 4px', minWidth: 0 }}>
             <BoardAvatar row={r1} size={58} ring={theme.accent} rank={1} crown />
             <div style={{ fontSize: 14, fontWeight: 800, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 4 }}>{r1.name}</div>
             <div style={{ fontSize: 20, lineHeight: 1 }}>{val(r1)}</div>
@@ -340,7 +358,7 @@ function BoardSlide({ theme, rowsByTab, onOpen }: { theme: BoardTheme; rowsByTab
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4%', minWidth: 0 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
             {[r2, r3].map((r, i) => r ? (
-              <div key={i} style={{ borderRadius: 14, border: `2px solid ${i === 0 ? '#C9D1DA' : '#B98B2B'}`, background: 'rgba(0,0,0,.24)', padding: '6px 8px', minWidth: 0 }}>
+              <div key={i} className="bs-in" style={{ animationDelay: `${0.12 + i * 0.1}s`, borderRadius: 14, border: `2px solid ${i === 0 ? '#C9D1DA' : '#B98B2B'}`, background: 'rgba(0,0,0,.24)', padding: '6px 8px', minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
                   <BoardAvatar row={r} size={30} ring={i === 0 ? '#C9D1DA' : '#B98B2B'} rank={i + 2} />
                   <span style={{ fontSize: 14 }}>{val(r)}</span>
@@ -350,7 +368,7 @@ function BoardSlide({ theme, rowsByTab, onOpen }: { theme: BoardTheme; rowsByTab
             ) : <div key={i} />)}
           </div>
           {[r4, r5].map((r, i) => r ? (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, borderTop: i === 1 ? '1px solid rgba(255,255,255,.12)' : 0, paddingTop: i === 1 ? 4 : 0 }}>
+            <div key={i} className="bs-in" style={{ animationDelay: `${0.34 + i * 0.1}s`, display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, borderTop: i === 1 ? '1px solid rgba(255,255,255,.12)' : 0, paddingTop: i === 1 ? 4 : 0 }}>
               <span style={{ width: 14, color: '#9AA6B2', fontWeight: 800 }}>{i + 4}</span>
               <div style={{ width: 22, height: 22, flex: '0 0 22px', borderRadius: '50%', overflow: 'hidden', background: '#2A2931', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800 }}>
                 {r.photo
@@ -784,6 +802,10 @@ export default function Home() {
         button { font-family: inherit; cursor: pointer; }
         ::-webkit-scrollbar { display: none; }
         @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        @keyframes bsTwk { 0%, 100% { opacity: .1; transform: scale(.55) rotate(0deg); } 50% { opacity: .95; transform: scale(1.2) rotate(20deg); } }
+        @keyframes bsIn { from { opacity: 0; transform: translateY(8px) scale(.94); } to { opacity: 1; transform: none; } }
+        .bs-in { animation: bsIn .42s cubic-bezier(.2,.8,.2,1) both; }
+        @media (prefers-reduced-motion: reduce) { .bs-in, .bs-twk { animation: none !important; } }
       `}</style>
 
       <div style={{ background: '#1B1A20', color: '#fff', minHeight: '100vh', paddingBottom: 24 }}>
