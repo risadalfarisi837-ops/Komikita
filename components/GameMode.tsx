@@ -76,11 +76,10 @@ function isApp() {
   try { return window.matchMedia('(display-mode: fullscreen)').matches || window.matchMedia('(display-mode: standalone)').matches; } catch { return false; }
 }
 
-// harus dipanggil dari dalam sentuhan pemain
+// TIDAK lagi memanggil requestFullscreen: Chrome Android selalu memunculkan toast
+// "Tarik dari atas dan geser dari tepi ... untuk keluar dari layar penuh" dan toast itu tidak bisa dimatikan dari web.
+// Layar penuh tanpa notif = pasang sebagai aplikasi (PWA, manifest sudah display fullscreen).
 async function enterFullscreenLandscape() {
-  try {
-    if (!document.fullscreenElement && !isApp()) await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
-  } catch { /* ditolak (mis. iPhone): cukup pakai rotasi sendiri */ }
   await lockLandscape();
 }
 
@@ -107,10 +106,8 @@ export default function GameMode() {
     enterGameMode();
     // Sentuhan yang membuka halaman ini biasanya masih berlaku (± 5 detik): langsung masuk layar penuh + landscape.
     // Kalau ditolak (mis. dibuka lewat refresh), tampilkan "Ketuk untuk mulai" supaya jelas apa yang harus dilakukan.
-    const canFs = typeof document.documentElement.requestFullscreen === 'function';
-    const coarse = window.matchMedia('(pointer: coarse)').matches;
     if (!document.fullscreenElement) {
-      enterFullscreenLandscape().then(() => { if (!document.fullscreenElement && canFs && coarse && !isApp()) setNeedTap(true); });
+      enterFullscreenLandscape();
     }
     let armed = false;
     const onTap = () => {

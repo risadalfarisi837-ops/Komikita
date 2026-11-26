@@ -21,7 +21,7 @@ export default function AutoLandscape() {
     const enter = async () => {
       if (busy || locked) return;
       busy = true;
-      try { if (!document.fullscreenElement) await document.documentElement.requestFullscreen({ navigationUI: 'hide' }); } catch { /* ditolak */ }
+      // tanpa requestFullscreen (menghindari toast sistem "keluar dari layar penuh")
       try { await o?.lock?.('landscape'); locked = true; } catch { /* ditolak */ }
       busy = false;
     };
