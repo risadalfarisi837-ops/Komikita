@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { CSSProperties, PointerEvent as RPointerEvent } from 'react';
+import type { CSSProperties, PointerEvent as RPointerEvent, ReactNode } from 'react';
 import { FishingEngine } from './engine';
 import type { Catch, EngineStatus, Phase } from './engine';
 import { FISH_H, FISH_W, drawFish } from './art';
@@ -142,6 +142,20 @@ function GearIcon({ size }: { size: number }) {
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"><circle cx="12" cy="12" r="3.2" /><path d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3M5.5 5.5l2.1 2.1M16.4 16.4l2.1 2.1M18.5 5.5l-2.1 2.1M7.6 16.4l-2.1 2.1" /></svg>
   );
 }
+// ikon garis cokelat untuk tombol krem (tata letak HUD mengikuti referensi)
+const INKI = (size: number, kids: ReactNode) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#5a3b1e" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">{kids}</svg>
+);
+const ChatInk = ({ size }: { size: number }) => INKI(size, <><path d="M4 5h16a2 2 0 012 2v8a2 2 0 01-2 2h-7l-5 4v-4H4a2 2 0 01-2-2V7a2 2 0 012-2z" /><path d="M8 11h.01M12 11h.01M16 11h.01" strokeWidth="3" /></>);
+const MicInk = ({ size }: { size: number }) => INKI(size, <><rect x="9" y="2.5" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0014 0M12 18v3.5M8.5 21.5h7" /></>);
+const HeadsetInk = ({ size }: { size: number }) => INKI(size, <><path d="M4 15v-3a8 8 0 0116 0v3" /><rect x="2.5" y="14" width="4.5" height="6.5" rx="2" /><rect x="17" y="14" width="4.5" height="6.5" rx="2" /></>);
+const SmileInk = ({ size }: { size: number }) => INKI(size, <><circle cx="12" cy="12" r="9.5" /><path d="M8 14.5c1.2 1.8 2.6 2.6 4 2.6s2.8-.8 4-2.6M9 9.5h.01M15 9.5h.01" strokeWidth="2.8" /></>);
+const GearInk = ({ size }: { size: number }) => INKI(size, <><circle cx="12" cy="12" r="3.2" /><path d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3M5.5 5.5l2.1 2.1M16.4 16.4l2.1 2.1M18.5 5.5l-2.1 2.1M7.6 16.4l-2.1 2.1" /></>);
+const GridInk = ({ size }: { size: number }) => INKI(size, <path d="M5 5h.01M12 5h.01M19 5h.01M5 12h.01M12 12h.01M19 12h.01M5 19h.01M12 19h.01M19 19h.01" strokeWidth="3.6" />);
+const StoreInk = ({ size }: { size: number }) => INKI(size, <><path d="M3.5 9l1.5-5h14l1.5 5M3.5 9c0 1.7 1.3 2.8 2.8 2.8S9 10.7 9 9c0 1.7 1.3 2.8 3 2.8s3-1.1 3-2.8c0 1.7 1.3 2.8 2.8 2.8S20.5 10.7 20.5 9M5 12v8h14v-8M10 20v-4h4v4" /></>);
+const PeopleBlue = ({ size }: { size: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="#2b7fc2"><circle cx="8.5" cy="8" r="3.6" /><circle cx="16.5" cy="9" r="3" opacity="0.85" /><path d="M2 20c0-3.6 3-6 6.5-6s6.5 2.4 6.5 6z" /><path d="M15.5 14.2c3.2 0 6.5 1.8 6.5 5.8h-5.2" opacity="0.85" /></svg>
+);
 function BoatIcon({ size }: { size: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16"><path d="M8 1.5v9L3 10.5z" fill="#ff6a5c" /><path d="M9 3.5v7h4.5z" fill="#ffd2c9" /><path d="M2 12h12l-1.6 2.4H3.6z" fill="#c9e7ff" /></svg>
@@ -708,6 +722,11 @@ export default function FishingGame(props: Props) {
     width: px(33), height: px(33), borderRadius: '50%', boxSizing: 'border-box', background: CREAM_BG, border: `${px(2)}px solid ${CREAM_EDGE}`,
     boxShadow: `0 ${px(3)}px 0 ${ring}`, color: CREAM_INK, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0, flex: '0 0 auto', margin: px(2),
   });
+  const sqBtn: CSSProperties = {
+    width: px(40), height: px(40), borderRadius: px(12), boxSizing: 'border-box', background: CREAM_BG, border: `${px(2)}px solid ${CREAM_EDGE}`,
+    boxShadow: `0 ${px(3)}px 0 #d9c08a`, color: CREAM_INK, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0, flex: '0 0 auto',
+  };
+  const soon = () => say('Fitur ini segera hadir');
   const dockPill = (accent: string): CSSProperties => ({
     ...pillBox, display: 'flex', alignItems: 'center', gap: px(6), height: px(32), boxSizing: 'border-box', borderRadius: px(16), border: `${px(2)}px solid ${CREAM_EDGE}`,
     boxShadow: `0 ${px(3)}px 0 ${accent}`, marginBottom: px(3),
@@ -726,35 +745,39 @@ export default function FishingGame(props: Props) {
     <div ref={wrapRef} style={{ position: 'fixed', ...(rot ? { top: 0, left: vp.w, width: vp.h, height: vp.w, transform: 'rotate(90deg)', transformOrigin: 'top left' } : { inset: 0 }), zIndex: 70, userSelect: 'none', overflow: 'hidden', background: '#2872b4', color: '#fff', touchAction: 'none', fontFamily: HUD }}>
       <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0 }} />
 
-      {/* kiri atas: kartu pemain + pulau / chat / menu */}
-      <div style={{ position: 'absolute', left: `calc(env(safe-area-inset-left, 0px) + ${px(6)}px)`, top: `calc(env(safe-area-inset-top, 0px) + ${px(6)}px)`, display: fishing ? 'none' : 'flex', alignItems: 'center', gap: px(7) }}>
-        <div style={{ ...pillBox, display: 'flex', alignItems: 'center', gap: px(7), width: px(205), height: px(64), boxSizing: 'border-box', padding: `${px(5)}px ${px(8)}px ${px(5)}px ${px(7)}px`, borderRadius: px(17), marginRight: px(2) }}>
-          <div style={{ width: px(42), height: px(42), borderRadius: px(10), overflow: 'hidden', border: `${px(3)}px solid #5ee0e0`, boxSizing: 'border-box', background: '#35405c', flex: '0 0 auto' }}>
-            {photo ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={photo} alt="" referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            ) : null}
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: px(5) }}>
-              <span style={{ background: '#23a3b5', border: `${px(1.5)}px solid #7fe3ee`, boxSizing: 'border-box', borderRadius: '50%', minWidth: px(20), height: px(20), display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: px(12), fontWeight: 700, color: '#fff', flex: '0 0 auto' }}>{lv.level}</span>
-              <span style={{ fontSize: px(14), fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.1 }}>{name || 'Tamu'}</span>
+      {/* kiri atas: kartu pemain + pulau, lalu deretan tombol (chat, mic, headset, emoji) */}
+      <div style={{ position: 'absolute', left: `calc(env(safe-area-inset-left, 0px) + ${px(6)}px)`, top: `calc(env(safe-area-inset-top, 0px) + ${px(6)}px)`, display: fishing ? 'none' : 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: px(8) }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: px(8) }}>
+          <div style={{ ...pillBox, display: 'flex', alignItems: 'center', gap: px(8), width: px(215), height: px(64), boxSizing: 'border-box', padding: `${px(5)}px ${px(10)}px ${px(5)}px ${px(7)}px`, borderRadius: px(32) }}>
+            <div style={{ width: px(44), height: px(44), borderRadius: '50%', overflow: 'hidden', border: `${px(2.5)}px solid ${CREAM_EDGE}`, boxSizing: 'border-box', background: '#35405c', flex: '0 0 auto' }}>
+              {photo ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={photo} alt="" referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : null}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: px(3), fontSize: px(11.5), fontWeight: 700, color: '#a07f52', marginTop: px(2), lineHeight: 1.1 }}><BoatIcon size={px(12)} />{titleFor(lv.level)}</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: px(6), marginTop: px(3) }}>
-              <div style={{ flex: 1, height: px(5), borderRadius: px(3), background: '#eadfc4', overflow: 'hidden' }}>
-                <div style={{ width: Math.min(100, (lv.into / lv.need) * 100) + '%', height: '100%', background: 'linear-gradient(90deg,#2fbf8a,#6fdc8c)' }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: px(14.5), fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.1 }}>{name || 'Tamu'}</div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: px(3), marginTop: px(2), padding: `0 ${px(7)}px`, borderRadius: 99, background: '#e6f6df', border: `${px(1.5)}px solid #5fbf6a`, fontSize: px(11.5), fontWeight: 800, color: '#1f7a35', lineHeight: 1.35, whiteSpace: 'nowrap', maxWidth: '100%' }}><BoatIcon size={px(12)} />{titleFor(lv.level)}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: px(5), marginTop: px(2) }}>
+                <span style={{ fontSize: px(11.5), fontWeight: 800, color: '#2b7fc2' }}>Lv{lv.level}</span>
+                <div style={{ flex: 1, height: px(5), borderRadius: px(3), background: '#eadfc4', overflow: 'hidden' }}>
+                  <div style={{ width: Math.min(100, (lv.into / lv.need) * 100) + '%', height: '100%', background: 'linear-gradient(90deg,#2fbf8a,#6fdc8c)' }} />
+                </div>
+                <span style={{ fontSize: px(11), fontWeight: 700, color: '#9a7a4e', whiteSpace: 'nowrap' }}>{lv.into}/{lv.need}</span>
               </div>
-              <span style={{ fontSize: px(11), fontWeight: 700, color: '#9a7a4e', whiteSpace: 'nowrap' }}>{lv.into}/{lv.need}</span>
             </div>
           </div>
+          <button onClick={() => say('Pemain online: ' + online)} aria-label="Pulau" style={{ ...pillBox, display: 'flex', alignItems: 'center', gap: px(6), height: px(42), boxSizing: 'border-box', padding: `0 ${px(6)}px 0 ${px(10)}px`, borderRadius: px(21), cursor: 'pointer', fontSize: px(15), fontWeight: 800 }}>
+            <IslandIcon size={px(24)} />Pulau
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: px(4), background: '#f1e6c8', borderRadius: 99, padding: `${px(3)}px ${px(9)}px`, color: '#2b7fc2', fontSize: px(15) }}><PeopleBlue size={px(15)} />{online}</span>
+          </button>
         </div>
-        <div style={{ position: 'relative' }}>
-          <button onClick={() => say('Pemain online: ' + online)} aria-label="Pulau" style={{ ...ringBtn('#3fd6c8'), marginTop: px(8) }}><IslandIcon size={px(22)} /></button>
-          <span style={{ position: 'absolute', top: px(-5), left: px(-3), display: 'flex', alignItems: 'center', gap: px(3), padding: `${px(1.5)}px ${px(7)}px`, borderRadius: 99, background: 'linear-gradient(180deg,#38d58b,#1fa56a)', border: `${px(1.5)}px solid #1b1818`, fontSize: px(12), fontWeight: 700, color: '#fff', lineHeight: 1.2 }}><PeopleIcon size={px(12)} />{online}</span>
+        <div style={{ display: 'flex', gap: px(8) }}>
+          <button onClick={() => setChatOpen((o) => !o)} aria-label="Chat" style={sqBtn}><ChatInk size={px(22)} /></button>
+          <button onClick={soon} aria-label="Mikrofon" style={sqBtn}><MicInk size={px(22)} /></button>
+          <button onClick={soon} aria-label="Suara" style={sqBtn}><HeadsetInk size={px(22)} /></button>
+          <button onClick={soon} aria-label="Emoji" style={sqBtn}><SmileInk size={px(22)} /></button>
         </div>
-        <button onClick={() => setChatOpen((o) => !o)} aria-label="Chat" style={ringBtn('#ffd36a')}><ChatIcon size={px(18)} /></button>
-        <button onClick={() => setMenu2((o) => !o)} aria-label="Menu" style={ringBtn('#ffd36a')}><Svg d="M4 7h16M4 12h16M4 17h16" size={px(18)} /></button>
       </div>
 
       {/* menu utama (tombol tiga garis) */}
@@ -775,9 +798,9 @@ export default function FishingGame(props: Props) {
         return (
           <>
             <div onClick={() => setMenu2(false)} style={{ position: 'absolute', inset: 0, zIndex: 25 }} />
-            <div style={{ position: 'absolute', zIndex: 26, right: `calc(env(safe-area-inset-right, 0px) + ${px(7)}px)`, top: `calc(env(safe-area-inset-top, 0px) + ${px(46)}px)`, width: `min(${px(600)}px, calc(100% - ${px(120)}px))`, boxSizing: 'border-box', padding: px(8), display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: px(6), background: 'rgba(30,28,28,0.84)', backdropFilter: `blur(${px(10)}px)`, WebkitBackdropFilter: `blur(${px(10)}px)`, border: `${px(1.5)}px solid rgba(255,255,255,0.14)`, borderRadius: px(20), boxShadow: '0 6px 22px rgba(0,0,0,0.4)' }}>
+            <div style={{ position: 'absolute', zIndex: 26, right: `calc(env(safe-area-inset-right, 0px) + ${px(7)}px)`, top: `calc(env(safe-area-inset-top, 0px) + ${px(56)}px)`, width: `min(${px(600)}px, calc(100% - ${px(120)}px))`, boxSizing: 'border-box', padding: px(8), display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: px(6), background: CREAM_BG, border: `${px(3)}px solid ${CREAM_EDGE}`, borderRadius: px(20), boxShadow: `0 ${px(4)}px 0 #d9c08a, 0 8px 22px rgba(0,0,0,0.35)` }}>
               {items.map((it) => (
-                <button key={it.k} onClick={() => { setMenu2(false); it.act(); }} style={{ height: px(70), boxSizing: 'border-box', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', gap: px(3), padding: `${px(8)}px ${px(2)}px 0`, borderRadius: px(14), border: `${px(1.5)}px solid rgba(255,255,255,0.12)`, background: 'linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))', color: '#fff', fontFamily: HUD, fontWeight: 700, fontSize: px(13.5), lineHeight: 1.1, cursor: 'pointer' }}>
+                <button key={it.k} onClick={() => { setMenu2(false); it.act(); }} style={{ height: px(70), boxSizing: 'border-box', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', gap: px(3), padding: `${px(8)}px ${px(2)}px 0`, borderRadius: px(14), border: `${px(2)}px solid ${CREAM_EDGE}`, background: '#fff8e8', boxShadow: '0 2px 0 #d9c08a', color: CREAM_INK, fontFamily: HUD, fontWeight: 800, fontSize: px(13.5), lineHeight: 1.1, cursor: 'pointer' }}>
                   <span style={{ fontSize: px(24), lineHeight: 1 }}>{it.icon}</span>
                   <span>{it.label}</span>
                 </button>
@@ -790,7 +813,7 @@ export default function FishingGame(props: Props) {
       {/* chat */}
       {!fishing && (() => {
         const last = chat[chat.length - 1];
-        const box: CSSProperties = { position: 'absolute', left: `calc(env(safe-area-inset-left, 0px) + ${px(6)}px)`, top: `calc(env(safe-area-inset-top, 0px) + ${px(74)}px)`, maxWidth: px(277), boxSizing: 'border-box', background: 'transparent', padding: 0, fontSize: px(13), fontWeight: 700, textShadow: '0 1px 2px rgba(0,0,0,0.7)' };
+        const box: CSSProperties = { position: 'absolute', left: `calc(env(safe-area-inset-left, 0px) + ${px(6)}px)`, top: `calc(env(safe-area-inset-top, 0px) + ${px(126)}px)`, maxWidth: px(277), boxSizing: 'border-box', background: 'transparent', padding: 0, fontSize: px(13), fontWeight: 700, textShadow: '0 1px 2px rgba(0,0,0,0.7)' };
         const line = (m: { who: string; msg: string }, i: number) => (
           <div key={i} style={{ display: 'block', width: 'fit-content', maxWidth: '100%', boxSizing: 'border-box', background: 'rgba(24,30,22,0.46)', borderRadius: px(13), padding: `${px(3)}px ${px(10)}px`, marginBottom: px(3), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#fff' }}><span style={{ color: '#ffe9a8' }}>{m.who}</span> : {m.msg}</div>
         );
@@ -811,36 +834,47 @@ export default function FishingGame(props: Props) {
         return null;
       })()}
 
-      {/* kanan atas: mata uang, hadiah, pengaturan, lokasi */}
-      <div style={{ position: 'absolute', right: `calc(env(safe-area-inset-right, 0px) + ${px(10)}px)`, top: `calc(env(safe-area-inset-top, 0px) + ${px(6)}px)`, display: fishing ? 'none' : 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: px(5) }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: px(4) }}>
-          <div style={{ ...dockPill('#b08cff'), padding: `0 ${px(14)}px 0 ${px(10)}px` }}>
-            <SparkIcon size={px(18)} />
-            <span style={{ fontSize: px(15), fontWeight: 700, color: '#7a3fd0' }}>{formatNum(xp)}</span>
+      {/* kanan atas: mata uang + pengaturan; di bawahnya kartu lokasi dan kolom tombol (menu, toko, hadiah) */}
+      <div style={{ position: 'absolute', right: `calc(env(safe-area-inset-right, 0px) + ${px(10)}px)`, top: `calc(env(safe-area-inset-top, 0px) + ${px(6)}px)`, display: fishing ? 'none' : 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: px(8) }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: px(6) }}>
+          <div style={{ ...dockPill('#b08cff'), padding: `0 ${px(14)}px 0 ${px(10)}px`, marginBottom: 0, height: px(40), borderRadius: px(20) }}>
+            <SparkIcon size={px(20)} />
+            <span style={{ fontSize: px(16), fontWeight: 800, color: '#7a3fd0' }}>{formatNum(xp)}</span>
           </div>
-          <div style={{ ...dockPill('#3fe08a'), padding: `0 ${px(5)}px 0 ${px(11)}px`, gap: px(7) }}>
-            <GemIcon size={px(18)} />
-            <span style={{ fontSize: px(15), fontWeight: 700, color: '#1f8a45' }}>{formatNum(crystal)}</span>
-            <button onClick={() => setShopOpen(true)} aria-label="Tambah" style={{ width: px(22), height: px(22), borderRadius: '50%', background: 'radial-gradient(circle at 35% 30%,#58e89a,#1fa85a)', border: `${px(1.5)}px solid #1b1818`, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}><Svg d="M12 5v14M5 12h14" size={px(13)} w={3.4} /></button>
+          <div style={{ ...dockPill('#3fe08a'), padding: `0 ${px(5)}px 0 ${px(11)}px`, gap: px(7), marginBottom: 0, height: px(40), borderRadius: px(20) }}>
+            <GemIcon size={px(20)} />
+            <span style={{ fontSize: px(16), fontWeight: 800, color: '#1f8a45' }}>{formatNum(crystal)}</span>
+            <button onClick={() => setShopOpen(true)} aria-label="Tambah" style={{ width: px(26), height: px(26), borderRadius: '50%', background: 'radial-gradient(circle at 35% 30%,#58e89a,#1fa85a)', border: `${px(2)}px solid #fff`, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}><Svg d="M12 5v14M5 12h14" size={px(14)} w={3.4} /></button>
           </div>
-          <button onClick={() => say('Belum ada hadiah hari ini 🎁')} aria-label="Hadiah" style={{ ...ringBtn('#ffb02e'), marginBottom: px(5) }}><GiftIcon size={px(20)} /></button>
-          <button onClick={() => setMenuOpen(true)} aria-label="Pengaturan" style={{ ...ringBtn('#8fdcf0'), marginBottom: px(5) }}><GearIcon size={px(19)} /></button>
+          <button onClick={() => setMenuOpen(true)} aria-label="Pengaturan" style={sqBtn}><GearInk size={px(22)} /></button>
         </div>
-        <div style={{ ...pillBox, boxSizing: 'border-box', minWidth: px(154), padding: `${px(5)}px ${px(11)}px`, textAlign: 'right', borderRadius: px(14), marginTop: px(2) }}>
-          <div style={{ fontSize: px(14), fontWeight: 700, color: '#2b7fc2', lineHeight: 1.15 }}>Pulau Tengah Laut</div>
-          <div style={{ fontSize: px(12.5), fontWeight: 600, color: '#9a7a4e', marginTop: px(1), whiteSpace: 'nowrap' }}>{dateStr} · <b style={{ color: CREAM_INK }}>{timeStr}</b> {tz}</div>
-        </div>
-        {guide && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: px(8), background: 'rgba(255,252,242,0.96)', color: '#1a3a22', borderRadius: px(14), padding: `${px(6)}px ${px(14)}px ${px(6)}px ${px(6)}px`, boxShadow: '0 2px 10px rgba(0,0,0,0.25)', marginTop: px(2) }}>
-            <div style={{ width: px(34), height: px(34), borderRadius: '50%', background: '#2fb35a', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto' }}>
-              <svg width={px(20)} height={px(20)} viewBox="0 0 24 24" style={{ transform: `rotate(${rotate}deg)` }}><path d="M12 3l7 16-7-4-7 4z" fill="#fff" /></svg>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: px(8) }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: px(8) }}>
+            <div style={{ ...pillBox, display: 'flex', alignItems: 'center', gap: px(9), boxSizing: 'border-box', minWidth: px(168), padding: `${px(6)}px ${px(14)}px ${px(6)}px ${px(8)}px`, borderRadius: px(18) }}>
+              <IslandIcon size={px(28)} />
+              <div>
+                <div style={{ fontSize: px(14.5), fontWeight: 800, lineHeight: 1.15, whiteSpace: 'nowrap' }}>Pulau Tengah Laut</div>
+                <div style={{ fontSize: px(12.5), fontWeight: 600, color: '#9a7a4e', marginTop: px(1), whiteSpace: 'nowrap' }}>{dateStr} · <b style={{ color: CREAM_INK }}>{timeStr}</b> {tz}</div>
+              </div>
             </div>
-            <div>
-              <div style={{ fontSize: px(15), fontWeight: 700, color: guide.kind === 'raksasa' ? '#7c3aed' : guide.kind === 'hiu' ? '#c2410c' : '#1f8a45', lineHeight: 1.1 }}>{guide.kind === 'raksasa' ? '🐋 Bayangan Raksasa!' : guide.kind === 'hiu' ? '🦈 Hiu Legendary!' : 'Ada Gerombolan Ikan!'}</div>
-              <div style={{ fontSize: px(12.5), fontWeight: 600 }}>{guide.dist} m · 🍀+200% · {mmss(guide.left)}</div>
-            </div>
+            {guide && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: px(8), background: 'rgba(255,252,242,0.96)', color: '#1a3a22', borderRadius: px(14), padding: `${px(6)}px ${px(14)}px ${px(6)}px ${px(6)}px`, boxShadow: '0 2px 10px rgba(0,0,0,0.25)' }}>
+                <div style={{ width: px(34), height: px(34), borderRadius: '50%', background: '#2fb35a', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto' }}>
+                  <svg width={px(20)} height={px(20)} viewBox="0 0 24 24" style={{ transform: `rotate(${rotate}deg)` }}><path d="M12 3l7 16-7-4-7 4z" fill="#fff" /></svg>
+                </div>
+                <div>
+                  <div style={{ fontSize: px(15), fontWeight: 700, color: guide.kind === 'raksasa' ? '#7c3aed' : guide.kind === 'hiu' ? '#c2410c' : '#1f8a45', lineHeight: 1.1 }}>{guide.kind === 'raksasa' ? '🐋 Bayangan Raksasa!' : guide.kind === 'hiu' ? '🦈 Hiu Legendary!' : 'Ada Gerombolan Ikan!'}</div>
+                  <div style={{ fontSize: px(12.5), fontWeight: 600 }}>{guide.dist} m · 🍀+200% · {mmss(guide.left)}</div>
+                </div>
+              </div>
+            )}
           </div>
-        )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: px(8) }}>
+            <button onClick={() => setMenu2((o) => !o)} aria-label="Menu" style={sqBtn}><GridInk size={px(22)} /></button>
+            <button onClick={() => { setShopTab('toko'); setShopOpen(true); }} aria-label="Toko" style={sqBtn}><StoreInk size={px(22)} /></button>
+            <button onClick={() => say('Belum ada hadiah hari ini 🎁')} aria-label="Hadiah" style={sqBtn}><GiftIcon size={px(22)} /></button>
+          </div>
+        </div>
       </div>
 
       {/* petunjuk */}
