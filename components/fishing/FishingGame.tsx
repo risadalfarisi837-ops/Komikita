@@ -180,6 +180,52 @@ function FishRodIcon({ size }: { size: number }) {
   );
 }
 
+// ikon menu gaya piksel (16 kolom), digambar sebagai kotak-kotak SVG supaya tajam
+const PIX: Record<string, { pal: Record<string, string>; rows: string[] }> = {
+  rumahku: { pal: { O: '#6b3f2a', R: '#e0553d', W: '#f7ecd0', B: '#6fb4ea', D: '#9a5f2e' }, rows: [
+    '......OOOO......', '....OORRRROO....', '...ORRRRRRRRO...', '..ORRRRRRRRRRO..', '.ORRRRRRRRRRRRO.', 'OOOOOOOOOOOOOOOO',
+    '..OWWWWWWWWWWO..', '..OWBBWWWWBBWO..', '..OWBBWWWWBBWO..', '..OWWWWDDWWWWO..', '..OWWWWDDWWWWO..', '..OWWWWDDWWWWO..', '..OOOOOOOOOOOO..'] },
+  misi: { pal: { O: '#7a5326', S: '#d9ac5f', P: '#f6e3b0', L: '#a98253' }, rows: [
+    '..OOOOOOOOOOOO..', '.OSSSSSSSSSSSSO.', '.OOOOOOOOOOOOOO.', '..OPPPPPPPPPPO..', '..OPLLLLLLLLPO..', '..OPPPPPPPPPPO..', '..OPLLLLLLPPPO..',
+    '..OPPPPPPPPPPO..', '..OPLLLLLLLLPO..', '..OPPPPPPPPPPO..', '..OPLLLLPPPPPO..', '..OPPPPPPPPPPO..', '.OOOOOOOOOOOOOO.', '.OSSSSSSSSSSSSO.', '..OOOOOOOOOOOO..'] },
+  hadiah: { pal: { O: '#6b2a1a', R: '#d93a3a', Y: '#f5a63a' }, rows: [
+    '....OOO..OOO....', '...ORRRORORRRO..', '....OORRRROO....', '..OOOOOOOOOOOO..', '..OYYYYRRYYYYO..', '..OYYYYRRYYYYO..', '..OOOOOOOOOOOO..',
+    '...OYYYRRYYYO...', '...OYYYRRYYYO...', '...OYYYRRYYYO...', '...OYYYRRYYYO...', '...OYYYRRYYYO...', '...OOOOOOOOOO...'] },
+  buku: { pal: { O: '#14305e', B: '#2f86f0', L: '#8cc8ff', D: '#1b55b8', W: '#f7f1de' }, rows: [
+    '..OOOOOOOOOOOO..', '.ODBBBBBBBBBBBO.', '.ODBBBBBBBBBBBO.', '.ODBBLLLLLLBBBO.', '.ODBBLLLLLLBBBO.', '.ODBBBBBBBBBBBO.',
+    '.ODBBBBBBBBBBBO.', '.ODBBBBBBBBBBBO.', '.ODBBBBBBBBBBBO.', '.OOOOOOOOOOOOOO.', '..OWWWWWWWWWWO..', '..OOOOOOOOOOOO..'] },
+  peringkat: { pal: { O: '#8a5a10', G: '#f6c32b', H: '#fff0a0', N: '#c8801e' }, rows: [
+    '...OOOOOOOOOO...', 'OOOGGGGGGGGGGOOO', 'OGOGGHHGGGGGGOGO', 'OGOGGHHGGGGGGOGO', '.OOGGHGGGGGGGOO.', '...OGGGGGGGGO...',
+    '....OGGGGGGO....', '.....OOGGOO.....', '......OGGO......', '......OGGO......', '.....OOOOOO.....', '....ONNNNNNO....', '....OOOOOOOO....'] },
+  lemari: { pal: { O: '#3a6f94', C: '#8fd4f0' }, rows: [
+    '....OOO..OOO....', '..OOCCCOOCCCOO..', '.OCCCCCCCCCCCCO.', 'OCCCCCCCCCCCCCCO', 'OCCCCCCCCCCCCCCO', '.OOCCCCCCCCCCOO.',
+    '...OCCCCCCCCO...', '...OCCCCCCCCO...', '...OCCCCCCCCO...', '...OCCCCCCCCO...', '...OCCCCCCCCO...', '...OOOOOOOOOO...'] },
+  skill: { pal: { O: '#1f5a24', G: '#4fb04a', H: '#8be07a', T: '#9a6a3a' }, rows: [
+    '....OOOOOOOO....', '..OOGGGGGGGGOO..', '.OGGGGHHGGGGGGO.', '.OGGGHHGGGGGGGO.', 'OGGGGGGGGGGGGGGO', 'OGGGGGGGGGGGGGGO',
+    '.OGGGGGGGGGGGGO.', '..OOGGGGGGGGOO..', '....OOOTTOOO....', '.....OTTTTO.....', '......OTTO......', '......OTTO......', '.....OTTTTO.....', '....OOOOOOOO....'] },
+  surat: { pal: { O: '#5b8fc4', W: '#f4f9ff' }, rows: [
+    '.OOOOOOOOOOOOOO.', '.OOWWWWWWWWWWOO.', '.OWOWWWWWWWWOWO.', '.OWWOWWWWWWOWWO.', '.OWWWOWWWWOWWWO.', '.OWWWWOOOOWWWWO.',
+    '.OWWOWWWWWWOWWO.', '.OWOWWWWWWWWOWO.', '.OOWWWWWWWWWWOO.', '.OOOOOOOOOOOOOO.'] },
+};
+function PixIcon({ k, size }: { k: string; size: number }) {
+  const d = PIX[k];
+  if (!d) return null;
+  const rects: ReactNode[] = [];
+  d.rows.forEach((row, y) => {
+    let x = 0;
+    while (x < row.length) {
+      const c = row[x];
+      if (c === '.') { x++; continue; }
+      let e = x;
+      while (e < row.length && row[e] === c) e++;
+      rects.push(<rect key={y + '-' + x} x={x} y={y} width={e - x} height={1} fill={d.pal[c]} />);
+      x = e;
+    }
+  });
+  const h = d.rows.length;
+  return <svg width={size} height={(size * h) / 16} viewBox={`0 0 16 ${h}`} shapeRendering="crispEdges" style={{ display: 'block' }}>{rects}</svg>;
+}
+
 const Svg = ({ d, size = 22, stroke = '#fff', w = 2.4 }: { d: string; size?: number; stroke?: string; w?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>
 );
@@ -750,15 +796,15 @@ export default function FishingGame(props: Props) {
       {/* kiri atas: kartu pemain + pulau, lalu deretan tombol (chat, mic, headset, emoji) */}
       <div style={{ position: 'absolute', left: `calc(env(safe-area-inset-left, 0px) + ${hx(6)}px)`, top: `calc(env(safe-area-inset-top, 0px) + ${hx(6)}px)`, display: fishing ? 'none' : 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: hx(8) }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: hx(8) }}>
-          <div style={{ ...pillBox, display: 'flex', alignItems: 'center', gap: hx(8), width: hx(215), height: hx(64), boxSizing: 'border-box', padding: `${hx(5)}px ${hx(10)}px ${hx(5)}px ${hx(7)}px`, borderRadius: hx(32) }}>
+          <div style={{ ...pillBox, display: 'flex', alignItems: 'center', gap: hx(8), width: hx(215), height: hx(72), boxSizing: 'border-box', padding: `${hx(8)}px ${hx(10)}px ${hx(8)}px ${hx(7)}px`, borderRadius: hx(36) }}>
             <div style={{ width: hx(44), height: hx(44), borderRadius: '50%', overflow: 'hidden', border: `${hx(2.5)}px solid ${CREAM_EDGE}`, boxSizing: 'border-box', background: '#35405c', flex: '0 0 auto' }}>
               {photo ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={photo} alt="" referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : null}
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: hx(14.5), fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.1 }}>{name || 'Tamu'}</div>
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <div style={{ fontSize: hx(14.5), fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.25, paddingTop: hx(1) }}>{name || 'Tamu'}</div>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: hx(3), marginTop: hx(2), padding: `0 ${hx(7)}px`, borderRadius: 99, background: '#e6f6df', border: `${hx(1.5)}px solid #5fbf6a`, fontSize: hx(11.5), fontWeight: 800, color: '#1f7a35', lineHeight: 1.35, whiteSpace: 'nowrap', maxWidth: '100%' }}><BoatIcon size={hx(12)} />{titleFor(lv.level)}</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: hx(5), marginTop: hx(2) }}>
                 <span style={{ fontSize: hx(11.5), fontWeight: 800, color: '#2b7fc2' }}>Lv{lv.level}</span>
@@ -787,14 +833,14 @@ export default function FishingGame(props: Props) {
         const soon = () => say('Fitur ini segera hadir');
         const go = (path: string) => () => { window.location.assign(path); };
         const items: { k: string; icon: string; label: string; act: () => void }[] = [
-          { k: 'rumahku', icon: '🏠', label: 'Rumahku', act: soon },
-          { k: 'misi', icon: '📜', label: 'Misi', act: go('/misi') },
-          { k: 'hadiah', icon: '🎁', label: 'Hadiah', act: () => say('Belum ada hadiah hari ini 🎁') },
-          { k: 'buku', icon: '📘', label: 'Buku', act: soon },
-          { k: 'peringkat', icon: '🏆', label: 'Peringkat', act: go('/ranking') },
-          { k: 'lemari', icon: '👕', label: 'Lemari', act: soon },
-          { k: 'skill', icon: '🌳', label: 'Skill', act: soon },
-          { k: 'surat', icon: '✉️', label: 'Surat', act: soon },
+          { k: 'rumahku', icon: 'rumahku', label: 'Rumahku', act: soon },
+          { k: 'misi', icon: 'misi', label: 'Misi', act: go('/misi') },
+          { k: 'hadiah', icon: 'hadiah', label: 'Hadiah', act: () => say('Belum ada hadiah hari ini 🎁') },
+          { k: 'buku', icon: 'buku', label: 'Buku', act: soon },
+          { k: 'peringkat', icon: 'peringkat', label: 'Peringkat', act: go('/ranking') },
+          { k: 'lemari', icon: 'lemari', label: 'Lemari', act: soon },
+          { k: 'skill', icon: 'skill', label: 'Skill', act: soon },
+          { k: 'surat', icon: 'surat', label: 'Surat', act: soon },
         ];
         return (
           <>
@@ -802,7 +848,7 @@ export default function FishingGame(props: Props) {
             <div style={{ position: 'absolute', zIndex: 26, right: `calc(env(safe-area-inset-right, 0px) + ${hx(68)}px)`, top: `calc(env(safe-area-inset-top, 0px) + ${hx(56)}px)`, width: `min(${hx(376)}px, calc(100% - ${hx(140)}px))`, boxSizing: 'border-box', padding: hx(8), display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: hx(6), background: CREAM_BG, border: `${hx(3)}px solid ${CREAM_EDGE}`, borderRadius: hx(20), boxShadow: `0 ${hx(4)}px 0 #d9c08a, 0 8px 22px rgba(0,0,0,0.35)` }}>
               {items.map((it) => (
                 <button key={it.k} onClick={() => { setMenu2(false); it.act(); }} style={{ height: hx(78), boxSizing: 'border-box', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', gap: hx(4), padding: `${hx(9)}px ${hx(2)}px 0`, borderRadius: hx(14), border: `${hx(2)}px solid ${CREAM_EDGE}`, background: '#fff8e8', boxShadow: '0 2px 0 #d9c08a', color: CREAM_INK, fontFamily: HUD, fontWeight: 800, fontSize: hx(14.5), lineHeight: 1.1, cursor: 'pointer' }}>
-                  <span style={{ fontSize: hx(28), lineHeight: 1 }}>{it.icon}</span>
+                  <span style={{ height: hx(34), display: 'flex', alignItems: 'center', justifyContent: 'center' }}><PixIcon k={it.icon} size={hx(34)} /></span>
                   <span>{it.label}</span>
                 </button>
               ))}
@@ -814,7 +860,7 @@ export default function FishingGame(props: Props) {
       {/* chat */}
       {!fishing && (() => {
         const last = chat[chat.length - 1];
-        const box: CSSProperties = { position: 'absolute', left: `calc(env(safe-area-inset-left, 0px) + ${hx(6)}px)`, top: `calc(env(safe-area-inset-top, 0px) + ${hx(126)}px)`, maxWidth: hx(277), boxSizing: 'border-box', background: 'transparent', padding: 0, fontSize: hx(13), fontWeight: 700, textShadow: '0 1px 2px rgba(0,0,0,0.7)' };
+        const box: CSSProperties = { position: 'absolute', left: `calc(env(safe-area-inset-left, 0px) + ${hx(6)}px)`, top: `calc(env(safe-area-inset-top, 0px) + ${hx(134)}px)`, maxWidth: hx(277), boxSizing: 'border-box', background: 'transparent', padding: 0, fontSize: hx(13), fontWeight: 700, textShadow: '0 1px 2px rgba(0,0,0,0.7)' };
         const line = (m: { who: string; msg: string }, i: number) => (
           <div key={i} style={{ display: 'block', width: 'fit-content', maxWidth: '100%', boxSizing: 'border-box', background: 'rgba(24,30,22,0.46)', borderRadius: hx(13), padding: `${hx(3)}px ${hx(10)}px`, marginBottom: hx(3), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#fff' }}><span style={{ color: '#ffe9a8' }}>{m.who}</span> : {m.msg}</div>
         );
