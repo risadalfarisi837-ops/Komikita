@@ -682,7 +682,7 @@ function line(ctx: CanvasRenderingContext2D, x0: number, y0: number, x1: number,
 }
 
 // ---------- skin joran (tampil di tangan karakter) ----------
-export interface RodSkin { shaft: string; shaftD: string; grip: string; tip: string; ring: string; glow?: string; spark?: string }
+export interface RodSkin { shaft: string; shaftD: string; grip: string; tip: string; ring: string; glow?: string; spark?: string; accent?: string }
 export const ROD_SKINS: Record<string, RodSkin> = {
   default: { shaft: '#8a5a2b', shaftD: '#5e3a18', grip: '#3d2610', tip: '#e8d9b0', ring: '#b88a4a' },
   fiber: { shaft: '#3fb7a6', shaftD: '#26857a', grip: '#1f4a45', tip: '#d8fff6', ring: '#8ff0df' },
