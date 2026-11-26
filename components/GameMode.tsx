@@ -15,6 +15,16 @@ const getOrient = () => (typeof screen !== 'undefined' ? (screen.orientation as 
 // penanda urutan supaya "keluar" yang telat tidak membatalkan "masuk" berikutnya
 let seq = 0;
 
+// true saat pemain sudah menekan "Ya, keluar": jangan buka layar penuh lagi di sentuhan itu
+let leaving = false;
+export function markLeavingGame() { leaving = true; }
+export function cancelLeavingGame() { leaving = false; }
+
+// Tombol back HP di layar penuh: pertama-tama browser hanya MENUTUP layar penuh (back tidak sampai ke halaman).
+// Supaya tidak perlu tekan dua kali, keluar dari layar penuh dianggap sama dengan menekan back:
+// game mendengarkan event ini dan langsung menampilkan "Yakin keluar?".
+export const GAME_BACK_EVENT = 'game-back-request';
+
 async function lockLandscape(): Promise<boolean> {
   const o = getOrient();
   if (!o?.lock) return false;
@@ -23,6 +33,7 @@ async function lockLandscape(): Promise<boolean> {
 
 async function enterGameMode(): Promise<boolean> {
   seq++;
+  leaving = false;
   return lockLandscape();
 }
 
@@ -51,6 +62,7 @@ export default function GameMode() {
     let armed = false;
     const onTap = () => {
       armed = false;
+      if (leaving) return;
       if (!document.fullscreenElement) enterFullscreenLandscape();
     };
     const arm = () => {
@@ -58,12 +70,25 @@ export default function GameMode() {
       armed = true;
       window.addEventListener('pointerup', onTap, { once: true, capture: true });
     };
-    const onFs = () => { if (!document.fullscreenElement) arm(); };
+    let wasFs = !!document.fullscreenElement;
+    let visChangedAt = 0;
+    const onVis = () => { visChangedAt = Date.now(); };
+    const onFs = () => {
+      const isFs = !!document.fullscreenElement;
+      if (!isFs) arm();
+      // keluar layar penuh karena tombol back (bukan karena pindah aplikasi) → minta konfirmasi keluar
+      if (wasFs && !isFs && !leaving && document.visibilityState === 'visible' && Date.now() - visChangedAt > 1500) {
+        window.dispatchEvent(new Event(GAME_BACK_EVENT));
+      }
+      wasFs = isFs;
+    };
     arm();
     document.addEventListener('fullscreenchange', onFs);
+    document.addEventListener('visibilitychange', onVis);
     return () => {
       window.removeEventListener('pointerup', onTap, true);
       document.removeEventListener('fullscreenchange', onFs);
+      document.removeEventListener('visibilitychange', onVis);
       leaveGameMode();
     };
   }, []);

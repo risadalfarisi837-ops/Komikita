@@ -15,6 +15,7 @@ import DevTools, { DevFab, EMPTY_STATS } from './DevTools';
 import ShopScreen, { RodArt } from './Shop';
 import type { ShopTab } from './Shop';
 import type { DevStats, SellMode } from './DevTools';
+import { GAME_BACK_EVENT, cancelLeavingGame, markLeavingGame } from '@/components/GameMode';
 
 interface Props {
   name: string;
@@ -280,7 +281,15 @@ export default function FishingGame(props: Props) {
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
   }, []);
+  // tombol back saat layar penuh: GameMode mengirim event ini (back pertama hanya menutup layar penuh)
+  useEffect(() => {
+    const onBack = () => { setMenuOpen(false); setConfirmExit(true); };
+    window.addEventListener(GAME_BACK_EVENT, onBack);
+    return () => window.removeEventListener(GAME_BACK_EVENT, onBack);
+  }, []);
+  const cancelExit = () => { cancelLeavingGame(); setConfirmExit(false); };
   const doExit = () => {
+    markLeavingGame();
     exitOkRef.current = true;
     setConfirmExit(false);
     try { history.go(-2); } catch { /* abaikan */ }
@@ -1017,13 +1026,13 @@ export default function FishingGame(props: Props) {
 
       {/* menu pengaturan */}
       {confirmExit && (
-        <div style={{ ...ov, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={() => setConfirmExit(false)}>
+        <div style={{ ...ov, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={cancelExit}>
           <div style={{ width: px(300), maxWidth: '90%', background: '#141a28', borderRadius: px(20), padding: px(18), textAlign: 'center', color: '#fff', boxShadow: '0 12px 40px rgba(0,0,0,0.5)' }} onClick={(e) => e.stopPropagation()}>
             <div style={{ fontFamily: HUD, fontWeight: 800, fontSize: px(24) }}>Yakin keluar?</div>
             <div style={{ marginTop: px(6), fontSize: px(14), fontWeight: 600, color: 'rgba(255,255,255,0.65)' }}>Kamu akan meninggalkan pulau mancing.</div>
             <div style={{ display: 'flex', gap: px(10), marginTop: px(16) }}>
-              <button onClick={() => setConfirmExit(false)} style={{ flex: 1, borderRadius: px(12), border: 0, background: 'rgba(255,255,255,0.12)', color: '#fff', fontFamily: HUD, fontWeight: 700, fontSize: px(16), padding: `${px(11)}px 0`, cursor: 'pointer' }}>Tetap main</button>
-              <button onClick={doExit} style={{ flex: 1, borderRadius: px(12), border: 0, background: '#e11d48', color: '#fff', fontFamily: HUD, fontWeight: 700, fontSize: px(16), padding: `${px(11)}px 0`, cursor: 'pointer' }}>Ya, keluar</button>
+              <button onClick={cancelExit} style={{ flex: 1, borderRadius: px(12), border: 0, background: 'rgba(255,255,255,0.12)', color: '#fff', fontFamily: HUD, fontWeight: 700, fontSize: px(16), padding: `${px(11)}px 0`, cursor: 'pointer' }}>Tetap main</button>
+              <button onPointerDown={markLeavingGame} onClick={doExit} style={{ flex: 1, borderRadius: px(12), border: 0, background: '#e11d48', color: '#fff', fontFamily: HUD, fontWeight: 700, fontSize: px(16), padding: `${px(11)}px 0`, cursor: 'pointer' }}>Ya, keluar</button>
             </div>
           </div>
         </div>
