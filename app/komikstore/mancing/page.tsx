@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getFirebase } from '@/lib/firebase-client';
 import FishingGame from '@/components/fishing/FishingGame';
+import FishingLobby from '@/components/fishing/FishingLobby';
 import { GameLoading } from '@/components/GameMode';
 import {
   DEFAULT_ROD, GACHA_DUPLICATE_REFUND, GACHA_PRICE, ROD_MAX_LV, RODS_BY_ID, SPECIES_BY_ID, clampRodLv, fishPrice, rodAt, rodUpgradeCost, rollGacha, nextPity, sanitizeBag, sanitizeRodLv, sanitizeRods,
@@ -13,6 +14,7 @@ import type { BagItem, Rod } from '@/lib/fishing';
 export default function MancingPage() {
   const router = useRouter();
   const [ready, setReady] = useState(false);
+  const [room, setRoom] = useState<string | null>(null); // null = masih di lobi
   const [name, setName] = useState('');
   const [photo, setPhoto] = useState('');
   const [crystal, setCrystal] = useState(0);
@@ -219,6 +221,7 @@ export default function MancingPage() {
   }, []);
 
   if (!ready) return <GameLoading text="Memuat pulau..." />;
+  if (room === null) return <FishingLobby name={name} onPlay={setRoom} />;
 
   return (
     <>
@@ -226,7 +229,7 @@ export default function MancingPage() {
         name={name} photo={photo} crystal={crystal} xp={xp} bag={bag}
         rods={rods} equippedRod={equippedRod} rodLv={rodLv} onUpgradeRod={onUpgradeRod} dev={isDev}
         onCatch={onCatch} onSell={onSell} onBuyRod={onBuyRod} onEquipRod={onEquipRod} onGacha={onGacha}
-        pity={pity} starterClaimed={starter} onClaimStarter={onClaimStarter}
+        room={room} pity={pity} starterClaimed={starter} onClaimStarter={onClaimStarter}
         onExit={() => router.push('/komikstore')}
       />
       {err && <div className="fixed left-1/2 top-24 z-[80] -translate-x-1/2 rounded-full bg-rose-600 px-4 py-2 text-sm font-bold text-white">{err}</div>}

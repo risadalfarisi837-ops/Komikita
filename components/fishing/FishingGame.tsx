@@ -13,6 +13,7 @@ import { SPECIES as KSPECIES, sizeRatio as kSizeRatio } from '@/lib/fishing';
 import type { BagItem, Rarity, Rod, SizeTier } from '@/lib/fishing';
 import DevTools, { DevFab, EMPTY_STATS } from './DevTools';
 import { startFishingNet } from '@/lib/fishingNet';
+import { MAIN_ROOM, islandName } from '@/lib/fishingIslands';
 import { getFirebase } from '@/lib/firebase-client';
 import ShopScreen from './Shop';
 import PixelRod from './RodArt';
@@ -41,6 +42,7 @@ interface Props {
   starterClaimed?: boolean;
   onClaimStarter?: () => Promise<boolean>;
   onExit: () => void;
+  room?: string; // kode pulau dari lobi (kosong = pulau utama)
   dev?: boolean; // role Developer: buka Dev Tools (auto fishing dll)
 }
 
@@ -576,7 +578,7 @@ export default function FishingGame(props: Props) {
         if (net) { net.stop(); net = null; netRef.current = null; }
         if (!u || dead) { setOnline(1); return; }
         net = startFishingNet({
-          db, uid: u.uid,
+          db, uid: u.uid, room: propsRef.current.room,
           getSelf: () => ({ name: propsRef.current.name || u.displayName || 'Tamu', level: levelFromXp(propsRef.current.xp).level, rodId: propsRef.current.equippedRod }),
           getPose: () => (engineRef.current ? engineRef.current.netPose() : null),
           onPlayers: (l) => { engineRef.current?.setRemotes(l); setOnline(l.length + 1); },
@@ -900,7 +902,7 @@ export default function FishingGame(props: Props) {
             <div style={{ ...pillBox, display: 'flex', alignItems: 'center', gap: hx(9), boxSizing: 'border-box', minWidth: hx(168), padding: `${hx(6)}px ${hx(14)}px ${hx(6)}px ${hx(8)}px`, borderRadius: hx(18) }}>
               <IslandIcon size={hx(28)} />
               <div>
-                <div style={{ fontSize: hx(14.5), fontWeight: 800, lineHeight: 1.15, whiteSpace: 'nowrap' }}>Pulau Tengah Laut</div>
+                <div style={{ fontSize: hx(14.5), fontWeight: 800, lineHeight: 1.15, whiteSpace: 'nowrap' }}>{islandName(props.room || MAIN_ROOM)}</div>
                 <div style={{ fontSize: hx(12.5), fontWeight: 600, color: '#9a7a4e', marginTop: hx(1), whiteSpace: 'nowrap' }}>{dateStr} · <b style={{ color: CREAM_INK }}>{timeStr}</b> {tz}</div>
               </div>
             </div>

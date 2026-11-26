@@ -2,7 +2,7 @@
 // Data diambil dari path yang sama dengan lib/fishingNet.ts: fishingRoom/<room>/players/<uid>
 // (pemain dianggap online kalau `t`-nya masih segar, aturan yang sama dengan fishingNet).
 
-export const ISLAND_CAP = 8;
+export const ISLAND_CAP = 20;
 export const MAIN_ROOM = 'utama';
 
 export type IslandTheme = 'pulau' | 'iblis' | 'society';
@@ -28,8 +28,19 @@ export function newIslandCode(): string {
   return s;
 }
 
-function islandName(room: string): string {
-  return room === MAIN_ROOM ? 'Pulau Tengah Laut' : 'Pulau ' + room.toUpperCase();
+// Tema pulau ditentukan dari kode (konsisten untuk semua pemain): kebanyakan Pulau biasa.
+export function themeOf(room: string): IslandTheme {
+  if (room === MAIN_ROOM) return 'pulau';
+  let h = 0;
+  for (let i = 0; i < room.length; i++) h = (h * 31 + room.charCodeAt(i)) >>> 0;
+  const m = h % 6;
+  return m === 0 ? 'iblis' : m === 1 ? 'society' : 'pulau';
+}
+
+export function islandName(room: string): string {
+  if (room === MAIN_ROOM) return 'Pulau Tengah Laut';
+  const t = themeOf(room);
+  return (t === 'iblis' ? 'Iblis ' : t === 'society' ? 'Society ' : 'Pulau ') + room.toUpperCase();
 }
 
 // Urutkan: belum penuh dulu, lalu paling ramai, lalu pulau utama.
@@ -68,7 +79,7 @@ function toIslands(root: any, offset: number): IslandInfo[] {
     }
     if (count === 0 && room !== MAIN_ROOM) continue; // pulau kosong tidak ditampilkan
     seen.add(room);
-    out.push({ room, name: islandName(room), count, theme: 'pulau' });
+    out.push({ room, name: islandName(room), count, theme: themeOf(room) });
   }
   if (!seen.has(MAIN_ROOM)) out.push({ room: MAIN_ROOM, name: islandName(MAIN_ROOM), count: 0, theme: 'pulau' });
   return out;
