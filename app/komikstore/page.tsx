@@ -15,7 +15,7 @@ const SQ = Math.SQRT1_2; // diagonal → sisi persegi yang diputar 45°
 const STARS = (() => {
   let s = 20260;
   const r = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
-  return Array.from({ length: 46 }, () => ({ x: r() * 100, y: r() * 100, k: r() < 0.45 ? 'plus' : r() < 0.7 ? 'ring' : 'dot', z: 2 + r() * 4, d: r() * 4, c: ['#5aa9e6', '#e0b84c', '#8fb7d9', '#6c7a99'][Math.floor(r() * 4)] }));
+  return Array.from({ length: 64 }, () => { const k = r() < 0.2 ? 'plus' : r() < 0.22 ? 'ring' : 'dot'; return ({ x: r() * 100, y: r() * 100, k, z: k === 'plus' ? 2.5 + r() * 2.5 : k === 'ring' ? 1.6 + r() * 1.2 : 0.8 + r() * 1.4, d: r() * 4, c: ['#5aa9e6', '#e0b84c', '#8fb7d9', '#6c7a99'][Math.floor(r() * 4)] }); });
 })();
 
 // ---------- ilustrasi beranimasi ----------
@@ -85,7 +85,7 @@ type D = {
   cx: number; cy: number; d: number; // pusat & diagonal (satuan u)
   from: string; to: string; edge: string; ghost?: string;
   title: string; sub?: string; art?: ReactNode; artSize?: number; artDy?: number;
-  dark?: boolean; tsize?: number; onClick?: () => void; float?: number; badge?: ReactNode;
+  dark?: boolean; tsize?: number; onClick?: () => void; float?: number; badge?: ReactNode; gx?: number; gy?: number;
 };
 function Diamond(p: D) {
   const L = p.d * SQ;
@@ -94,7 +94,7 @@ function Diamond(p: D) {
   const ink = p.dark ? '#3a2400' : '#fff';
   return (
     <div style={posStyle}>
-      {p.ghost && <div style={sq({ background: p.ghost, opacity: 0.55, transform: `translate(-50%,-50%) translate(${U(p.d * 0.1)},${U(-p.d * 0.1)}) rotate(45deg) scale(0.92)` })} />}
+      {p.ghost && <div style={sq({ background: p.ghost, opacity: 0.55, transform: `translate(-50%,-50%) translate(${U(p.d * (p.gx ?? 0.1))},${U(p.d * (p.gy ?? -0.1))}) rotate(45deg) scale(0.92)` })} />}
       <button
         type="button" aria-label={p.title} onClick={p.onClick} className="k-tile"
         style={sq({ pointerEvents: 'auto', cursor: 'pointer', padding: 0, border: `${U(0.55)} solid ${p.edge}`, background: `linear-gradient(135deg,${p.from},${p.to})`, boxShadow: `0 ${U(1)} ${U(3)} rgba(0,0,0,0.45), inset 0 0 ${U(5)} rgba(255,255,255,0.12)`, overflow: 'hidden' })}
@@ -185,7 +185,7 @@ export default function KomikStorePage() {
   const soon = (t: string) => () => alert(t + ' segera hadir.');
 
   return (
-    <div className="min-h-screen text-white max-w-md mx-auto pb-10 -mb-28 overflow-x-hidden relative" style={{ '--u': 'min(1vw, 4.48px)', background: 'radial-gradient(ellipse at top, #0e1424 0%, #07090f 55%, #04060b 100%)' } as CSSProperties}>
+    <div className="fixed inset-0 overflow-y-auto overflow-x-hidden text-white max-w-md mx-auto" style={{ '--u': 'min(1vw, 4.48px)', background: 'linear-gradient(180deg, #0a0c11 0%, #05070b 60%, #030508 100%)' } as CSSProperties}>
       <style>{CSS}</style>
 
       {/* bintang latar */}
@@ -199,7 +199,7 @@ export default function KomikStorePage() {
       </div>
 
       {/* header */}
-      <div className="relative flex items-center" style={{ gap: U(5), padding: `${U(8)} ${U(4)} 0` }}>
+      <div className="relative flex items-center" style={{ gap: U(5), padding: `${U(3.5)} ${U(4)} 0` }}>
         <button onClick={() => router.back()} aria-label="Kembali" className="flex items-center justify-center rounded-2xl border border-white/20 bg-white/5 active:scale-95 transition-transform" style={{ width: U(12.5), height: U(12.5) }}>
           <ArrowLeft style={{ width: U(6), height: U(6) }} />
         </button>
@@ -208,35 +208,29 @@ export default function KomikStorePage() {
         </h1>
       </div>
 
-      {/* peta ubin */}
-      <div className="relative" style={{ height: U(200), marginTop: U(2) }}>
-        {/* profil */}
-        <Diamond cx={26} cy={26} d={38} from="#14171d" to="#101318" edge="#2c313b" title={name || 'Tamu'} tsize={5.4} float={0} onClick={() => router.push('/profile')}
+      {/* peta ubin (posisi & ukuran mengikuti desain Wibu Play) */}
+      <div className="relative" style={{ height: U(192) }}>
+        <Diamond cx={25.5} cy={26.1} d={37.5} from="#14171d" to="#101318" edge="#2c313b" title={(name || 'Tamu').split(' ')[0]} tsize={5.4} float={0} onClick={() => router.push('/profile')}
           art={photo ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={photo} alt="" referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.15)' }} />
           ) : <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Sparkles style={{ width: '50%', height: '50%', opacity: 0.6 }} /></div>}
-          artSize={11.5} artDy={-1.5} />
+          artSize={11.6} artDy={-2.5} />
 
-        {/* misi */}
-        <Diamond cx={15.5} cy={64.5} d={27} from="#0b8f7e" to="#087a6d" edge="#33d1b9" title="Misi" tsize={5.4} float={2} onClick={go('/misi')}
-          art={<Target style={{ width: '100%', height: '100%' }} strokeWidth={2.4} />} artSize={7.5} artDy={-1} />
+        <Diamond cx={15.6} cy={64.3} d={26} from="#0b8f7e" to="#087a6d" edge="#33d1b9" title="Misi" tsize={5.4} float={2} onClick={go('/misi')}
+          art={<Target style={{ width: '100%', height: '100%' }} strokeWidth={2.4} />} artSize={7.5} artDy={-1.5} />
 
-        {/* gacha wallpaper (besar, biru) */}
-        <Diamond cx={72} cy={68.5} d={59} from="#3aa3ee" to="#2a58a8" edge="#8ad4ff" ghost="#0d4a78" title="Gacha" sub="Wallpaper, Latar, Border & Efek" float={1} onClick={go('/komikstore/gacha-wallpaper')}
-          art={<GachaArt />} artSize={19} artDy={-5} tsize={7} />
+        <Diamond cx={72.2} cy={68.9} d={62.4} from="#3aa3ee" to="#2a58a8" edge="#8ad4ff" ghost="#0d4a78" gx={-0.09} gy={-0.06} title="Gacha" sub="Wallpaper, Latar, Border & Efek" float={1} onClick={go('/komikstore/gacha-wallpaper')}
+          art={<GachaArt />} artSize={21} artDy={-6} tsize={6.6} />
 
-        {/* pet (kuning) */}
-        <Diamond cx={27} cy={119} d={56} from="#ffd21f" to="#ffae3a" edge="#ffd400" ghost="#8a6a12" dark title="Pet" sub="Pelihara Pet dan Hasilkan Koin" float={3} onClick={go('/komikstore/pet')}
-          art={<PetArt />} artSize={21} artDy={-3} tsize={8} />
+        <Diamond cx={27.8} cy={119.1} d={61.5} from="#ffd21f" to="#ffae3a" edge="#ffd400" ghost="#8a6a12" gx={0.1} gy={0.12} dark title="Pet" sub="Pelihara Pet dan Hasilkan Koin" float={3} onClick={go('/komikstore/pet')}
+          art={<PetArt />} artSize={21} artDy={-4} tsize={7.4} />
 
-        {/* mancing (hijau) */}
-        <Diamond cx={73} cy={124} d={46} from="#13b88a" to="#0a5a62" edge="#5ff0c4" ghost="#0b4b4a" title="Mancing" sub="Mancing ikan, dan Hangout bareng teman" float={4} onClick={go('/komikstore/mancing')}
-          art={<FishArt />} artSize={19} artDy={-3} tsize={7} />
+        <Diamond cx={69.9} cy={123.1} d={53.7} from="#13b88a" to="#0a5a62" edge="#5ff0c4" ghost="#0b4b4a" gx={-0.1} gy={-0.1} title="Mancing" sub="Mancing ikan, dan Hangout bareng teman" float={4} onClick={go('/komikstore/mancing')}
+          art={<FishArt />} artSize={19} artDy={-4} tsize={6.6} />
 
-        {/* saldo */}
-        <Diamond cx={79} cy={172} d={30} from="#14171d" to="#101318" edge="#2c313b" title={koin === null ? '–' : koin.toLocaleString('id-ID')} sub="Crystal" tsize={5.2} float={5}
-          art={<GemIcon />} artSize={8} artDy={-1} />
+        <Diamond cx={78.6} cy={170.4} d={29.8} from="#14171d" to="#101318" edge="#2c313b" title={koin === null ? '–' : koin.toLocaleString('id-ID')} sub="Crystal" tsize={4.2} float={5}
+          art={<GemIcon />} artSize={8} artDy={-1.5} />
       </div>
     </div>
   );
