@@ -194,7 +194,7 @@ const HINT: Record<Phase, string> = {
   result: '',
 };
 
-const rarityBorder = (r: keyof typeof RARITY, _xl: boolean) => (r === 'common' ? 'rgba(190,196,212,0.65)' : RARITY[r].color);
+const rarityBorder = (r: keyof typeof RARITY, _xl: boolean) => (r === 'common' ? '#b3bcc2' : RARITY[r].color);
 
 // ---------- kartu pamer (gambar untuk dibagikan) ----------
 async function makeShareCard(item: BagItem, player: string, level: number): Promise<Blob | null> {
@@ -709,17 +709,16 @@ export default function FishingGame(props: Props) {
 
   const circleBtn: CSSProperties = { width: hx(40), height: hx(40), borderRadius: '50%', background: PANEL, border: `${hx(2)}px solid ${GOLD}88`, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 };
   const pillBox: CSSProperties = { background: CREAM_BG, borderRadius: hx(18), border: `${hx(2)}px solid ${CREAM_EDGE}`, boxShadow: `0 ${hx(3)}px 0 #d9c08a`, color: CREAM_INK, fontFamily: HUD };
-  const slot = (selected: boolean, color: string): CSSProperties => {
-    const tint = !selected && color.startsWith('#') && color.length === 7 ? color + '30' : 'transparent';
-    return {
-      position: 'relative', width: hx(42), height: hx(44), borderRadius: hx(9), boxSizing: 'border-box',
-      background: selected ? 'linear-gradient(180deg,#2b3b5e,#121626)' : `linear-gradient(${tint},${tint}), linear-gradient(180deg,rgba(62,68,88,0.88),rgba(20,22,34,0.94))`,
-      border: `${hx(1.6)}px solid ${selected ? '#4a9bff' : color}`, boxShadow: '0 2px 0 rgba(0,0,0,0.35)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto', cursor: 'pointer', padding: 0,
-    };
-  };
+  // slot hotbar: kotak membulat biru-abu gelap, bingkai tebal (putih = terpilih, warna = kelangkaan)
+  const slot = (selected: boolean, color: string): CSSProperties => ({
+    position: 'relative', width: hx(56), height: hx(56), borderRadius: hx(15), boxSizing: 'border-box',
+    background: 'linear-gradient(180deg,rgba(66,100,110,0.94),rgba(40,66,76,0.96))',
+    border: `${hx(3.2)}px solid ${selected ? '#eef2f4' : color}`,
+    boxShadow: selected ? `0 0 0 ${hx(2)}px rgba(104,124,132,0.95), 0 ${hx(3)}px 0 rgba(0,0,0,0.3)` : `0 ${hx(3)}px 0 rgba(0,0,0,0.3)`,
+    display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto', cursor: 'pointer', padding: 0,
+  });
   const xlTag = (): CSSProperties => ({ position: 'absolute', top: hx(-5), right: hx(-4), background: '#f08a24', color: '#fff', fontSize: hx(8.5), fontWeight: 700, borderRadius: hx(4), padding: `0 ${hx(3.5)}px`, zIndex: 1, border: `${hx(1)}px solid rgba(255,255,255,0.55)` });
-  const wLabel = (): CSSProperties => ({ position: 'absolute', bottom: hx(1), left: 0, right: 0, textAlign: 'center', fontFamily: '"Pixelify Sans", ui-monospace, monospace', fontSize: hx(9.5), fontWeight: 700, color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.45)' });
+  const wLabel = (): CSSProperties => ({ position: 'absolute', bottom: hx(2), left: 0, right: 0, textAlign: 'center', fontFamily: '"Pixelify Sans", ui-monospace, monospace', fontSize: hx(12), fontWeight: 700, lineHeight: 1, color: '#fff', textShadow: '-1px 0 #1d2d33, 1px 0 #1d2d33, 0 -1px #1d2d33, 0 1px #1d2d33, 0 2px 0 #1d2d33' });
   const wl = (w: number) => formatWeight(w).replace(' ', '');
   const ringBtn = (ring: string): CSSProperties => ({
     width: hx(33), height: hx(33), borderRadius: '50%', boxSizing: 'border-box', background: CREAM_BG, border: `${hx(2)}px solid ${CREAM_EDGE}`,
@@ -735,9 +734,9 @@ export default function FishingGame(props: Props) {
     boxShadow: `0 ${hx(3)}px 0 ${accent}`, marginBottom: hx(3),
   });
   const chipSt = (white: boolean, hi = false): CSSProperties => ({
-    display: 'inline-flex', alignItems: 'center', gap: hx(4), height: hx(20), boxSizing: 'border-box', padding: `0 ${hx(9)}px`, borderRadius: 99,
+    display: 'inline-flex', alignItems: 'center', gap: hx(4), height: hx(26), boxSizing: 'border-box', padding: `0 ${hx(11)}px`, borderRadius: 99,
     background: white ? '#fff8e8' : 'rgba(22,20,20,0.94)', color: white ? '#1d3a24' : hi ? '#7dffa5' : '#fff', border: `${hx(1.5)}px solid ${white ? '#f1e2bd' : '#2c2828'}`,
-    fontSize: hx(13.5), fontWeight: 700, boxShadow: `0 ${hx(1.5)}px 0 rgba(0,0,0,0.35)`, whiteSpace: 'nowrap',
+    fontSize: hx(15), fontWeight: 800, boxShadow: `0 ${hx(2)}px 0 rgba(0,0,0,0.3)`, whiteSpace: 'nowrap',
   });
   const ov: CSSProperties = { position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 30 };
 
@@ -903,41 +902,41 @@ export default function FishingGame(props: Props) {
       {/* buff + hotbar ransel */}
       {!fishing && (() => {
         const chips = [
-          { k: 'pow', icon: <CloverIcon size={hx(12)} color="#1f7a35" />, t: String(rod.power), white: true, hi: false },
-          { k: 'luck', icon: <CloverIcon size={hx(13)} />, t: '+' + luckPct + '%', white: false, hi: status.inShoal },
-          { k: 'money', icon: <CoinIcon size={hx(13)} />, t: '+' + Math.round(rod.money * 100) + '%', white: false, hi: false },
-          { k: 'xp', icon: <XpIcon size={hx(12)} />, t: '+' + Math.round(rod.xp * 100) + '%', white: false, hi: false },
+          { k: 'pow', icon: <CloverIcon size={hx(15)} color="#1f7a35" />, t: String(rod.power), white: true, hi: false, tint: '', edge: '' },
+          { k: 'luck', icon: <CloverIcon size={hx(13)} />, t: '+' + luckPct + '%', white: false, hi: status.inShoal, tint: '#2f7d46', edge: '#58b676' },
+          { k: 'money', icon: <CoinIcon size={hx(13)} />, t: '+' + Math.round(rod.money * 100) + '%', white: false, hi: false, tint: '#9a6a12', edge: '#d3a23a' },
+          { k: 'xp', icon: <XpIcon size={hx(12)} />, t: '+' + Math.round(rod.xp * 100) + '%', white: false, hi: false, tint: '#2a5fae', edge: '#6a98e6' },
         ];
         return (
           <div style={{ position: 'absolute', left: '50%', bottom: `calc(env(safe-area-inset-bottom, 0px) + ${hx(12)}px)`, transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: hx(5) }}>
             <div style={{ display: 'flex', gap: hx(5), alignItems: 'center' }}>
               {chips.slice(0, buffOpen ? chips.length : 1).map((c) => (
-                <span key={c.k} style={chipSt(c.white, c.hi)}>{c.icon}{c.t}</span>
+                <span key={c.k} style={{ ...chipSt(c.white, c.hi), ...(c.tint ? { background: c.tint, border: `${hx(2)}px solid ${c.edge}`, color: '#fff' } : {}) }}>{c.icon}{c.t}</span>
               ))}
               <button onClick={() => setBuffOpen((o) => !o)} aria-label="Buff" style={{ width: hx(22), height: hx(22), borderRadius: '50%', background: '#1f6fe0', border: `${hx(2)}px solid #6aa8ff`, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}><Svg d={buffOpen ? 'M14 6l-6 6 6 6' : 'M10 6l6 6-6 6'} size={hx(12)} w={3.6} /></button>
             </div>
-            <div style={{ display: 'flex', gap: hx(3), alignItems: 'flex-end' }}>
-              <button style={slot(true, '#4a9bff')} onClick={() => setRodOpen(true)} aria-label="Joran"><PixelRod id={rod.id} size={hx(36)} /></button>
+            <div style={{ display: 'flex', gap: hx(7), alignItems: 'flex-end' }}>
+              <button style={slot(true, '#4a9bff')} onClick={() => setRodOpen(true)} aria-label="Joran"><PixelRod id={rod.id} size={hx(46)} /></button>
               {recent.map((b) => {
                 const sp = SPECIES_BY_ID[b.s];
                 const xl = isXL(sp, b.w);
                 return (
                   <button key={b.id} style={slot(false, rarityBorder(sp.rarity, xl))} onClick={() => { setSel(b.id); setBagOpen(true); }} aria-label={sp.name}>
                     {xl && <span style={xlTag()}>XL</span>}
-                    <FishIcon id={sp.id} scale={0.62 * u * HUD_SCALE} />
+                    <FishIcon id={sp.id} scale={0.86 * u * HUD_SCALE} />
                     <span style={wLabel()}>{wl(b.w)}</span>
                   </button>
                 );
               })}
               {held && (
-                <button style={{ ...slot(false, '#34d27a'), width: hx(40) }} onClick={() => setHeld(null)} aria-label="Lepas ikan">
-                  <span style={{ fontSize: hx(18) }}>🙌</span>
+                <button style={slot(false, '#34d27a')} onClick={() => setHeld(null)} aria-label="Lepas ikan">
+                  <span style={{ fontSize: hx(24) }}>🙌</span>
                   <span style={wLabel()}>Lepas</span>
                 </button>
               )}
-              <button style={slot(false, '#4a9bff')} onClick={() => { setSel(''); setBagOpen(true); }} aria-label="Ransel">
-                <BagIcon size={hx(26)} />
-                <span style={{ ...wLabel(), color: bag.length >= BAG_MAX ? '#ff8a8a' : '#fff' }}>{bag.length}/{BAG_MAX}</span>
+              <button onClick={() => { setSel(''); setBagOpen(true); }} aria-label="Ransel" style={{ ...slot(false, CREAM_EDGE), background: CREAM_BG, borderColor: CREAM_EDGE, boxShadow: `0 ${hx(3)}px 0 #d9c08a`, marginLeft: hx(4) }}>
+                <BagIcon size={hx(30)} />
+                <span style={{ ...wLabel(), textShadow: 'none', color: bag.length >= BAG_MAX ? '#d6312f' : CREAM_INK, fontSize: hx(11.5) }}>{bag.length}/{BAG_MAX}</span>
               </button>
             </div>
           </div>
