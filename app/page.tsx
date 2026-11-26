@@ -352,22 +352,20 @@ const LatestList = memo(function LatestList({ items }: { items: any[] }) {
   );
 });
 
-// ─── Kartu Premium ───────────────────────────────────────────────────────────
+// ─── Kartu Premium (strip biru: pill Premium + harga + panah) ────────────────
 function PremiumCard() {
   return (
-    <div style={{ margin: '30px 14px 0', padding: '18px 18px', borderRadius: 22, border: '1.5px solid #5E4E1C', background: '#272212', display: 'flex', alignItems: 'center', gap: 12 }}>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: GOLD, fontSize: 13, fontWeight: 800 }}>
-          <svg width={16} height={16} viewBox="0 0 24 24" fill={GOLD}><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5L3 8z" /></svg>
-          KOMIKITA PREMIUM
-        </div>
-        <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: -1, marginTop: 6, color: '#FBF3DC' }}>Baca tanpa iklan</div>
-        <div style={{ fontSize: 13, fontWeight: 700, color: '#B7AD8C', marginTop: 2, lineHeight: 1.3 }}>Plus unduh massal untuk baca offline</div>
-      </div>
-      <Link href="/profile" style={{ background: GOLD, color: '#2A2208', fontWeight: 800, fontSize: 14, padding: '12px 18px', borderRadius: 99, whiteSpace: 'nowrap' }}>
-        Coba sekarang
-      </Link>
-    </div>
+    <Link href="/premium" style={{ position: 'relative', overflow: 'hidden', margin: '14px 20px 0', padding: '14px 16px', borderRadius: 22, border: '1.5px solid #2B5A9E', background: 'linear-gradient(90deg, #0F2547 0%, #14325E 55%, #0F2547 100%)', display: 'flex', alignItems: 'center', gap: 12 }}>
+      <span aria-hidden style={{ position: 'absolute', right: -18, top: -30, width: 130, height: 130, background: 'rgba(59,155,255,.14)', transform: 'rotate(35deg)' }} />
+      <span style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 6, background: 'linear-gradient(180deg, #3FA2FF, #1E7BEA)', color: '#fff', fontWeight: 800, fontSize: 17, padding: '10px 16px', borderRadius: 14, whiteSpace: 'nowrap' }}>
+        <svg width={22} height={22} viewBox="0 0 24 24" fill="#FFC53D"><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5L3 8z" /></svg>
+        Premium
+      </span>
+      <span style={{ position: 'relative', flex: 1, minWidth: 0, fontSize: 15, fontWeight: 600, color: '#B9C7DD', lineHeight: 1.25 }}>
+        Mulai <b style={{ color: '#fff', fontWeight: 800 }}>Rp5.000</b>, tanpa iklan
+      </span>
+      <svg style={{ position: 'relative', flex: '0 0 auto' }} width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="#3B9BFF" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round"><path d="M9 5l7 7-7 7" /></svg>
+    </Link>
   );
 }
 
@@ -560,12 +558,11 @@ export default function Home() {
         ) : (
           <>
             <Hero />
+            <PremiumCard />
             <ContinueReading />
 
             <SectionTitle title="Pembaruan terbaru" action="Lihat semua" onAction={() => seeAll('Update')} />
             <LatestList items={latest} />
-
-            <PremiumCard />
 
             <SectionTitle title="Terpopuler sepanjang masa" sub="Paling banyak dibaca di Komikita" action="Lihat semua" onAction={() => seeAll('Popular')} />
             <Ranked items={popular} />
