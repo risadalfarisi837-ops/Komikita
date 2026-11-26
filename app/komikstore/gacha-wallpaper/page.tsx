@@ -48,6 +48,36 @@ function Gem({ size = 24, dim = false }: { size?: number; dim?: boolean }) {
   );
 }
 
+const BTN = {
+  blue: {
+    border: '#34a2f5',
+    face: 'linear-gradient(180deg,#6eaeed 0%,#75bdef 8%,#8fcdfd 36%,#96d3ff 50%,#8cc6eb 55%,#6e9dbc 66%,#547388 80%,#323e4d 93%,#2f3a48 100%)',
+    text: '#12305a',
+    pill: 'rgba(38,52,72,.82)',
+  },
+  gold: {
+    border: '#d99a2b',
+    face: 'linear-gradient(180deg,#d9a24a 0%,#e3b25c 8%,#eec064 36%,#f7d97f 50%,#e3ca7a 55%,#bea366 66%,#8c7d53 80%,#5c523a 93%,#554c36 100%)',
+    text: '#4a2f0a',
+    pill: 'rgba(52,44,34,.82)',
+  },
+};
+
+// Tombol Summon: tinggi 65px, muka gradien terang -> gelap, garis dalam, pill harga di bawah (diukur dari tampilan acuan)
+function SummonBtn({ kind, label, cost, onClick, disabled, dim, locked }: { kind: 'blue' | 'gold'; label: string; cost: number; onClick: () => void; disabled: boolean; dim: boolean; locked: boolean }) {
+  const c = BTN[kind];
+  return (
+    <button onClick={onClick} disabled={disabled}
+      className="relative h-[65px] w-full overflow-hidden rounded-[13px] active:scale-95 transition-transform"
+      style={{ border: '2px solid ' + c.border, background: c.face, filter: locked ? 'saturate(.5) brightness(.78)' : dim ? 'brightness(.6) saturate(.9)' : 'none' }}>
+      <span className="pointer-events-none absolute inset-[3px] rounded-[9px]" style={{ border: '1.5px solid rgba(255,255,255,.5)' }} />
+      <span className="absolute inset-x-0 top-[6px] block whitespace-nowrap text-center text-[20px] font-extrabold leading-6" style={{ color: c.text }}>{label}</span>
+      <span className="absolute left-[14px] right-[14px] top-[36px] flex h-[19px] items-center justify-center gap-1 rounded-full text-[13px] font-extrabold leading-none text-white"
+        style={{ background: c.pill, border: '1.5px solid rgba(255,255,255,.35)' }}><Gem size={12} />{cost}</span>
+    </button>
+  );
+}
+
 type Hit = { key: string; isNew: boolean; dup?: number };
 
 // bintang 4 sudut (cekung) untuk banner & percikan
@@ -59,31 +89,34 @@ const BURST: [number, number, number, number][] = [
   [455, 410, 30, 0.45], [668, 245, 34, 0.15], [338, 235, 28, 0.25], [530, 430, 24, 0.4], [480, 118, 26, 0.05],
 ];
 
+// bintang 4 sudut gemuk (sama bentuknya dengan bintang biru di ilustrasi banner)
+const starFat = (cx: number, cy: number, r: number) =>
+  `M${cx} ${cy - r}C${cx + 0.117 * r} ${cy - 0.317 * r} ${cx + 0.317 * r} ${cy - 0.117 * r} ${cx + r} ${cy}` +
+  `C${cx + 0.317 * r} ${cy + 0.117 * r} ${cx + 0.117 * r} ${cy + 0.317 * r} ${cx} ${cy + r}` +
+  `C${cx - 0.117 * r} ${cy + 0.317 * r} ${cx - 0.317 * r} ${cy + 0.117 * r} ${cx - r} ${cy}` +
+  `C${cx - 0.317 * r} ${cy - 0.117 * r} ${cx - 0.117 * r} ${cy - 0.317 * r} ${cx} ${cy - r}Z`;
+
+// Banner = ilustrasi diam (public/banner/gacha-wibuku.jpg). Efek bintang membesar + percikan hanya muncul saat opening.
 function Banner({ opening }: { opening: boolean }) {
-  const stars = [[60,70],[150,200],[260,90],[330,300],[120,420],[700,80],[820,190],[900,330],[760,450],[640,520],[210,520],[930,60],[40,300],[560,40]];
   return (
-    <svg viewBox="0 0 996 560" preserveAspectRatio="xMidYMid slice" className="block h-full w-full">
-      <defs>
-        <linearGradient id="gbBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#0a1236" /><stop offset="0.6" stopColor="#1b2d6b" /><stop offset="1" stopColor="#0a1030" /></linearGradient>
-        <radialGradient id="gbOrb" cx="50%" cy="50%" r="50%"><stop offset="0" stopColor="#ffffff" /><stop offset="0.55" stopColor="#dbe8ff" /><stop offset="1" stopColor="#6e8fe0" stopOpacity="0.55" /></radialGradient>
-        <radialGradient id="gbGlow" cx="50%" cy="50%" r="50%"><stop offset="0" stopColor="#9ec2ff" stopOpacity="0.7" /><stop offset="1" stopColor="#9ec2ff" stopOpacity="0" /></radialGradient>
-      </defs>
-      <rect width="996" height="560" fill="url(#gbBg)" />
-      {stars.map(([x, y], i) => (
-        <circle key={i} cx={x} cy={y} r={i % 3 === 0 ? 3 : 2} fill="#cfe0ff" className="kgs" style={{ animation: 'kgTw ' + (2.4 + (i % 4) * 0.6) + 's ease-in-out ' + (i % 5) * 0.4 + 's infinite' }} />
-      ))}
-      <circle cx="498" cy="270" r="330" fill="url(#gbGlow)" style={{ animation: (opening ? 'kgOrb .6s' : 'kgOrb 3.4s') + ' ease-in-out infinite' }} />
-      <circle cx="498" cy="270" r="195" fill="url(#gbOrb)" />
-      <g className="kgs" style={{ animation: (opening ? 'kgBreathe .45s' : 'kgBreathe 3.4s') + ' ease-in-out infinite' }}>
-        <path d="M498 150 C512 232 536 256 618 270 C536 284 512 308 498 390 C484 308 460 284 378 270 C460 256 484 232 498 150Z" fill="#2f8bff" stroke="#e8f2ff" strokeWidth="6" />
-      </g>
-      <path d="M390 120 C396 150 406 160 436 166 C406 172 396 182 390 212 C384 182 374 172 344 166 C374 160 384 150 390 120Z" fill="#fff" opacity="0.95" />
-      <path d="M640 380 C645 402 652 409 674 414 C652 419 645 426 640 448 C635 426 628 419 606 414 C628 409 635 402 640 380Z" fill="#fff" opacity="0.9" />
-      {opening && BURST.map(([x, y, r, d], i) => (
-        <path key={i} d={star4(x, y, r)} fill="#fff" className="kgs" style={{ opacity: 0, animation: 'kgBurst 1.1s ease-out ' + d + 's infinite' }} />
-      ))}
-      <path d="M0 560 L0 470 Q250 430 498 450 Q750 430 996 470 L996 560Z" fill="#070b22" opacity="0.7" />
-    </svg>
+    <div className="relative h-full w-full">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/banner/gacha-wibuku.jpg" alt="" draggable={false} className="block h-full w-full select-none object-cover" />
+      {opening && (
+        <svg viewBox="0 0 996 560" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 h-full w-full" aria-hidden="true">
+          <defs>
+            <radialGradient id="gbGlow" cx="50%" cy="50%" r="50%"><stop offset="0" stopColor="#ffffff" stopOpacity="0.95" /><stop offset="1" stopColor="#bcd6ff" stopOpacity="0" /></radialGradient>
+          </defs>
+          <circle cx="497" cy="267" r="210" fill="url(#gbGlow)" className="kgs" style={{ animation: 'kgOrb .6s ease-in-out infinite' }} />
+          <g className="kgs" style={{ animation: 'kgBig .9s ease-in-out infinite' }}>
+            <path d={starFat(497, 267, 40)} fill="#2f8bff" stroke="#e8f2ff" strokeWidth="4" strokeLinejoin="round" />
+          </g>
+          {BURST.map(([x, y, r, d], i) => (
+            <path key={i} d={star4(x, y, r)} fill="#fff" className="kgs" style={{ opacity: 0, animation: 'kgBurst 1.1s ease-out ' + d + 's infinite' }} />
+          ))}
+        </svg>
+      )}
+    </div>
   );
 }
 
@@ -148,6 +181,7 @@ const KFX = `
 @keyframes kgPop{0%{opacity:0;transform:translate3d(0,14px,0) scale(.92)}100%{opacity:1;transform:none}}
 @keyframes kgTw{0%,100%{opacity:.25}50%{opacity:1}}
 @keyframes kgBreathe{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+@keyframes kgBig{0%,100%{transform:scale(1.25)}50%{transform:scale(1.9)}}
 @keyframes kgOrb{0%,100%{opacity:.7}50%{opacity:1}}
 @keyframes kgBurst{0%{transform:scale(0) rotate(0);opacity:0}35%{opacity:1}100%{transform:scale(1.2) rotate(70deg);opacity:0}}
 .kgs{transform-box:fill-box;transform-origin:center}
@@ -335,12 +369,12 @@ export default function GachaWallpaperPage() {
   const card = 'rounded-2xl border border-white/10 bg-[#171c2b]';
 
   return (
-    <div ref={scroller} onScroll={(e) => setShowTop(e.currentTarget.scrollTop > 400)} className="fixed inset-0 overflow-y-auto text-white" style={{ background: '#131418' }}>
+    <div ref={scroller} onScroll={(e) => setShowTop(e.currentTarget.scrollTop > 400)} className="fixed inset-0 overflow-y-auto text-white" style={{ background: '#151619' }}>
       <style>{KFX}</style>
       <div className="max-w-md mx-auto pb-28">
-        <div className="flex items-center gap-4 px-4 pt-6 pb-4">
-          <button onClick={() => router.back()} className="active:scale-90 transition-transform"><ArrowLeft className="w-6 h-6" /></button>
-          <h1 className="text-[22px] font-extrabold">Wibuku Gacha</h1>
+        <div className="flex items-center gap-[18px] px-7 pt-6 pb-[15px]">
+          <button onClick={() => router.back()} className="active:scale-90 transition-transform"><ArrowLeft className="h-8 w-8" /></button>
+          <h1 className="text-[26.5px] font-extrabold leading-tight">Wibuku Gacha</h1>
         </div>
 
         {ready && !uid && <p className="px-5 pt-6 text-white/60">Login dulu buat summon wallpaper.</p>}
@@ -352,41 +386,29 @@ export default function GachaWallpaperPage() {
               {shown && <RevealCard key={shown.key} it={shown} />}
             </div>
 
-            <div className="mx-4 mt-5 grid grid-cols-2 gap-3">
-              <button onClick={() => summon(1)} disabled={lockedNow}
-                className="rounded-2xl p-[2px] active:scale-95 transition-transform"
-                style={{ background: 'linear-gradient(180deg,#4ea9ff,#2f86e8)', filter: lockedNow ? 'saturate(.5) brightness(.78)' : koin < COST_1 ? 'brightness(.55)' : 'none' }}>
-                <div className="rounded-[14px] px-2.5 py-2.5 text-center" style={{ background: 'linear-gradient(180deg,#8fd0ff,#5fb3fb 55%,#4a9fee)', boxShadow: 'inset 0 0 0 1.5px rgba(255,255,255,.35)' }}>
-                  <div className="whitespace-nowrap text-[18px] font-extrabold leading-tight" style={{ color: '#12305a' }}>{busy || opening ? 'Opening...' : cool > 0 ? 'Cooldown ' + cool + 's' : 'Summon 1x'}</div>
-                  <div className="mt-1 flex items-center justify-center gap-1.5 rounded-full py-1 text-[14px] font-extrabold text-white" style={{ background: 'rgba(38,52,72,.85)', border: '1.5px solid rgba(255,255,255,.35)' }}><Gem size={15} />{COST_1}</div>
-                </div>
-              </button>
-              <button onClick={() => summon(10)} disabled={lockedNow}
-                className="rounded-2xl p-[2px] active:scale-95 transition-transform"
-                style={{ background: 'linear-gradient(180deg,#f2b94d,#c98a1f)', filter: lockedNow ? 'saturate(.5) brightness(.78)' : koin < COST_10 ? 'brightness(.5) saturate(.85)' : 'none' }}>
-                <div className="rounded-[14px] px-2.5 py-2.5 text-center" style={{ background: 'linear-gradient(180deg,#ffd886,#f0b448 55%,#dd9a2c)', boxShadow: 'inset 0 0 0 1.5px rgba(255,255,255,.35)' }}>
-                  <div className="whitespace-nowrap text-[18px] font-extrabold leading-tight" style={{ color: '#4a2f0a' }}>{busy || opening ? 'Opening...' : cool > 0 ? 'Cooldown ' + cool + 's' : 'Summon 10x'}</div>
-                  <div className="mt-1 flex items-center justify-center gap-1.5 rounded-full py-1 text-[14px] font-extrabold text-white" style={{ background: 'rgba(52,44,34,.85)', border: '1.5px solid rgba(255,255,255,.35)' }}><Gem size={15} />{COST_10}</div>
-                </div>
-              </button>
+            <div className="mx-4 mt-[15px] grid grid-cols-2 gap-2">
+              <SummonBtn kind="blue" label={busy || opening ? 'Opening...' : cool > 0 ? 'Cooldown ' + cool + 's' : 'Summon 1x'} cost={COST_1}
+                onClick={() => summon(1)} disabled={lockedNow} dim={koin < COST_1} locked={lockedNow} />
+              <SummonBtn kind="gold" label={busy || opening ? 'Opening...' : cool > 0 ? 'Cooldown ' + cool + 's' : 'Summon 10x'} cost={COST_10}
+                onClick={() => summon(10)} disabled={lockedNow} dim={koin < COST_10} locked={lockedNow} />
             </div>
 
-            <button onClick={() => setGem(true)} className={card + ' mx-4 mt-4 flex w-[calc(100%-2rem)] items-center gap-3 px-4 py-3 text-left active:scale-[.98] transition-transform'}>
+            <button onClick={() => setGem(true)} className={card + ' mx-4 mt-5 flex w-[calc(100%-2rem)] items-center gap-3 px-4 py-3 text-left active:scale-[.98] transition-transform'}>
               <Gem size={26} />
               <span className="text-[13px] font-extrabold">Cara mendapatkan WibuGem</span>
               <span className="ml-auto flex shrink-0 items-center gap-1 whitespace-nowrap text-[12px] font-medium text-[#3b9cff]">Lihat info <ArrowRight className="w-4 h-4" /></span>
             </button>
 
-            <div className="mx-4 mt-4 rounded-2xl border bg-[#171c2b] p-4" style={{ borderColor: '#3a3a42' }}>
+            <div className="mx-4 mt-5 rounded-2xl border bg-[#171c2b] p-4" style={{ borderColor: '#46474c' }}>
               <h2 className="text-[15px] font-extrabold">Bonus EXP Wallpaper</h2>
               <p className="mt-0.5 text-[12px] text-white/65">Hanya wallpaper yang sedang dipakai yang memberi bonus.</p>
               <div className="mt-3 space-y-2">
-                <div className="flex items-center justify-between rounded-xl border border-white/20 bg-[#0b0d17] px-3 py-2">
+                <div className="flex items-center justify-between rounded-xl border border-white/20 bg-[#0b0c13] px-3 py-2">
                   {bonusPill(EXP_BONUS[0])}<span className="text-[14px] font-extrabold">+{EXP_BONUS[0].pct}%</span>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   {EXP_BONUS.slice(1).map((b) => (
-                    <div key={b.name} className="flex items-center justify-between rounded-xl border border-white/20 bg-[#0b0d17] px-3 py-2">
+                    <div key={b.name} className="flex items-center justify-between rounded-xl border border-white/20 bg-[#0b0c13] px-3 py-2">
                       {bonusPill(b)}<span className="text-[14px] font-extrabold">+{b.pct}%</span>
                     </div>
                   ))}
@@ -530,7 +552,7 @@ export default function GachaWallpaperPage() {
 
       {gem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-6" onClick={() => setGem(false)} style={{ animation: 'kgFade .2s ease-out' }}>
-          <div className="relative flex max-h-[64vh] w-full max-w-[380px] flex-col overflow-hidden rounded-[28px] bg-[#eaf2fb]" onClick={(e) => e.stopPropagation()} style={{ animation: 'kgPop .28s ease-out both' }}>
+          <div className="relative flex max-h-[64vh] w-full max-w-[334px] flex-col overflow-hidden rounded-[28px] bg-[#eaf2fb]" onClick={(e) => e.stopPropagation()} style={{ animation: 'kgPop .28s ease-out both' }}>
             <div className="shrink-0 px-5 pb-5 pt-5 text-center" style={{ background: 'linear-gradient(180deg,#2079b8,#14568f)' }}>
               <div className="mx-auto flex h-[68px] w-[68px] items-center justify-center rounded-2xl border border-white/25 bg-white/15"><Gem size={40} /></div>
               <div className="mx-auto mt-3 inline-flex items-center gap-2 rounded-full bg-white px-4 py-1.5 text-[14px] font-extrabold text-[#17508a]" style={{ boxShadow: '0 0 0 5px rgba(255,255,255,.18)' }}>
@@ -541,20 +563,20 @@ export default function GachaWallpaperPage() {
               <p className="mt-2 text-[13px] font-medium text-white/85">Kumpulkan wibugem untuk gacha di Wibuku.</p>
               <button onClick={() => setGem(false)} aria-label="Tutup" className="absolute right-0 top-0 flex h-12 w-12 items-center justify-center rounded-bl-[22px] bg-[#0b0d14] text-[20px] font-black text-[#ffd21f] active:scale-90 transition-transform">X</button>
             </div>
-            <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto p-3">
+            <div className="min-h-0 flex-1 space-y-[11px] overflow-y-auto p-2.5">
               {[
                 { Ic: CalendarCheck, bg: 'linear-gradient(180deg,#2fc58a,#1b9a6a)', t: 'Absen Harian', sub: 'Hadiah naik tiap hari berturut-turut.', val: '5–30', lab: 'PER HARI', go: '' },
                 { Ic: Target, bg: 'linear-gradient(180deg,#3d94f0,#2368c8)', t: 'Selesaikan Misi', sub: 'Crystal dari misi yang selesai.', val: 'Variasi', lab: 'PER MISI', go: '/misi' },
                 { Ic: Fish, bg: 'linear-gradient(180deg,#ffb04a,#f2832a)', t: 'Mancing', sub: 'Hasil tangkapan jadi Crystal.', val: 'Variasi', lab: 'PER TANGKAP', go: '/komikstore/mancing' },
               ].map((r) => (
-                <div key={r.t} onClick={() => r.go && router.push(r.go)} className="flex items-center gap-3 rounded-2xl border border-[#d6e3f1] bg-white p-2.5" style={{ cursor: r.go ? 'pointer' : 'default' }}>
-                  <div className="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-xl text-white" style={{ background: r.bg }}><r.Ic className="h-6 w-6" strokeWidth={2.6} /></div>
+                <div key={r.t} onClick={() => r.go && router.push(r.go)} className="flex h-16 items-center gap-[9px] rounded-2xl border border-[#d6e3f1] bg-[#fbfdff] px-[11px]" style={{ cursor: r.go ? 'pointer' : 'default' }}>
+                  <div className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-xl text-white" style={{ background: r.bg }}><r.Ic className="h-5 w-5" strokeWidth={2.6} /></div>
                   <div className="min-w-0 flex-1 leading-tight">
-                    <p className="text-[16px] font-extrabold text-[#1a2433]">{r.t}</p>
+                    <p className="text-[17px] font-extrabold text-[#1a2433]">{r.t}</p>
                     <p className="mt-0.5 text-[12px] font-medium text-[#6b7a90]">{r.sub}</p>
                   </div>
                   <div className="flex shrink-0 flex-col items-center rounded-xl border border-[#cfe3f5] bg-[#e8f3fd] px-3 py-1.5">
-                    <span className="flex items-center gap-1 text-[17px] font-extrabold text-[#1d6fa8]"><Gem size={16} />{r.val}</span>
+                    <span className="flex items-center gap-1 text-[19px] font-extrabold text-[#1d6fa8]"><Gem size={16} />{r.val}</span>
                     <span className="text-[9px] font-black tracking-wide text-[#3a6c94]">{r.lab}</span>
                   </div>
                 </div>
