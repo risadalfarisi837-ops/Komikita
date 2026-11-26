@@ -216,14 +216,14 @@ const SP: Record<string, [string, string]> = {
   '🐱': [cat2(), 'grass'],
 };
 
-export default function PetArt({ e, ground = true }: { e: string; ground?: boolean }) {
+export default function PetArt({ e, ground = true, still = false }: { e: string; ground?: boolean; still?: boolean }) {
   const k = Array.from(e || '')[0] || '';
   const hit = SP[k];
   const art = hit ? hit[0] : blob(k);
   const g = hit ? hit[1] : 'grass';
   const html =
     (ground ? GROUND[g] : '') +
-    `<g><animateTransform attributeName="transform" type="translate" values="0 0;0 -1.6;0 0" dur="2.6s" repeatCount="indefinite"/>${art}</g>`;
+    (still ? `<g>${art}</g>` : `<g><animateTransform attributeName="transform" type="translate" values="0 0;0 -1.6;0 0" dur="2.6s" repeatCount="indefinite"/>${art}</g>`);
   return (
     <svg viewBox="0 0 100 100" width="1.4em" height="1.4em" aria-hidden="true"
       style={{ display: 'inline-block', overflow: 'visible', verticalAlign: 'middle' }}
