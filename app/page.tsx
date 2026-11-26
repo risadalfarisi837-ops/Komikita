@@ -185,18 +185,9 @@ function Hero({ items }: { items: any[] }) {
     <>
     <div ref={ref} onScroll={(e) => { const el = e.currentTarget; const n = Math.round(el.scrollLeft / (el.scrollWidth / slides.length)); if (n !== active) setActive(n); }} className="no-scrollbar" style={{ display: 'flex', gap: 10, overflowX: 'auto', scrollSnapType: 'x mandatory', padding: '4px 14px' }}>
       {slides.map((m, i) => {
-        const rating = m.score && m.score !== 'N/A' ? m.score : getRating(m.desc);
         return (
           <Link key={i} href={`/manga?url=${encodeURIComponent(m.link)}`} style={{ position: 'relative', display: 'block', flex: '0 0 94%', height: 215, borderRadius: 28, overflow: 'hidden', scrollSnapAlign: 'center', background: '#16151A' }}>
             <img src={m.thumb} alt={m.title} referrerPolicy="no-referrer" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 25%' }} />
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(0deg, rgba(20,19,24,.88) 0%, rgba(20,19,24,0) 55%)' }} />
-            <div style={{ position: 'absolute', left: 18, right: 18, bottom: 16 }}>
-              <div style={{ fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ letterSpacing: 0.3 }}>{typeLabel(m).toUpperCase()}</span>
-                {rating && <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><span style={{ color: '#FBBF24' }}>★</span>{rating}</span>}
-              </div>
-              <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.2, letterSpacing: -1, marginTop: 4, ...clamp(1) }}>{m.title}</div>
-            </div>
           </Link>
         );
       })}
