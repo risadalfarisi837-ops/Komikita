@@ -1344,7 +1344,7 @@ export function drawRodPreview(ctx: CanvasRenderingContext2D, rodId: string) {
 }
 
 export interface Pal { skin: string; skinD: string; hair: string; shirt: string; shirtD: string; pants: string; boot: string; hat: string; hatD: string; band: string; cap?: boolean; nohat?: boolean; top?: string }
-export const PAL_PLAYER: Pal = { skin: '#f6d4b8', skinD: '#dcae8c', hair: '#3a2a3e', shirt: '#2f4b7e', shirtD: '#1f3459', pants: '#2b2b3d', boot: '#6b4a2a', hat: '#2b4375', hatD: '#1b2c52', band: '#f0c75a', nohat: true, top: '#f3e8d0' };
+export const PAL_PLAYER: Pal = { skin: '#fbd5bb', skinD: '#e6a98c', hair: '#5a3a28', shirt: '#3fa24a', shirtD: '#2a7a34', pants: '#3fa24a', boot: '#6a4426', hat: '#2b4375', hatD: '#1b2c52', band: '#f0c75a', nohat: true, top: '#f6eee0' };
 export const PAL_BAYU: Pal = { skin: '#e2b48a', skinD: '#c4936a', hair: '#d9d6cf', shirt: '#6b9a4e', shirtD: '#527a3a', pants: '#c8a96a', boot: '#6b4a2a', hat: '#ead69a', hatD: '#c9b06a', band: '#8a5a2b' };
 
 export function drawPlayerRaw(ctx: CanvasRenderingContext2D, x: number, y: number, dir: Dir, moving: boolean, step: number, rod: boolean, rodShake = 0, pal: Pal = PAL_PLAYER, rodId = 'default', hold = false, armsUp = false) {
@@ -1374,15 +1374,14 @@ export function drawPlayerRaw(ctx: CanvasRenderingContext2D, x: number, y: numbe
     // badan: kemeja krem + rompi berwarna di kedua sisi
     R(ctx, ox + 4, oy + 10, 8, 7, top);
     R(ctx, ox + 4, oy + 15, 8, 2, topD);
+    // overall hijau: dada + tali bahu
+    R(ctx, ox + 4, oy + 12, 8, 5, pal.shirt);
+    R(ctx, ox + 4, oy + 16, 8, 1, pal.shirtD);
+    R(ctx, ox + 5, oy + 10, 2, 3, pal.shirt);
+    R(ctx, ox + 9, oy + 10, 2, 3, pal.shirt);
     if (dir === 'down') {
-      R(ctx, ox + 4, oy + 10, 2, 6, pal.shirt);
-      R(ctx, ox + 10, oy + 10, 2, 6, pal.shirt);
-      R(ctx, ox + 4, oy + 15, 8, 1, pal.shirtD);
-      R(ctx, ox + 7, oy + 10, 2, 2, pal.skinD);
-    } else {
-      R(ctx, ox + 4, oy + 10, 8, 6, pal.shirt);
-      R(ctx, ox + 4, oy + 15, 8, 1, pal.shirtD);
-      R(ctx, ox + 5, oy + 11, 6, 4, '#8a5a2b');
+      R(ctx, ox + 7, oy + 10, 2, 1, pal.skinD);
+      R(ctx, ox + 6, oy + 13, 4, 2, pal.shirtD);
     }
     if (armsUp) {
       R(ctx, ox + 2, oy - 6, 2, 17, top);
@@ -1405,10 +1404,10 @@ export function drawPlayerRaw(ctx: CanvasRenderingContext2D, x: number, y: numbe
       R(ctx, ox + 3, oy + 5, 2, 5, pal.hair);
       R(ctx, ox + 11, oy + 5, 2, 5, pal.hair);
       R(ctx, ox + 5, oy + 2, 3, 1, hairL);
-      R(ctx, ox + 5, oy + 7, 2, 2, '#1d1d2b');
-      R(ctx, ox + 9, oy + 7, 2, 2, '#1d1d2b');
-      R(ctx, ox + 5, oy + 7, 1, 1, '#ffffff');
-      R(ctx, ox + 9, oy + 7, 1, 1, '#ffffff');
+      R(ctx, ox + 5, oy + 6, 2, 3, '#1d1d2b');
+      R(ctx, ox + 9, oy + 6, 2, 3, '#1d1d2b');
+      R(ctx, ox + 5, oy + 6, 1, 1, '#ffffff');
+      R(ctx, ox + 9, oy + 6, 1, 1, '#ffffff');
       R(ctx, ox + 5, oy + 10, 1, 1, 'rgba(240,110,120,0.55)');
       R(ctx, ox + 10, oy + 10, 1, 1, 'rgba(240,110,120,0.55)');
       R(ctx, ox + 7, oy + 10, 2, 1, '#b5543f');
@@ -1418,6 +1417,11 @@ export function drawPlayerRaw(ctx: CanvasRenderingContext2D, x: number, y: numbe
       R(ctx, ox + 5, oy + 2, 4, 1, hairL);
       R(ctx, ox + 4, oy + 9, 8, 2, hairD);
     }
+    // dua gelungan rambut di atas kepala
+    R(ctx, ox + 2, oy - 1, 3, 3, pal.hair);
+    R(ctx, ox + 11, oy - 1, 3, 3, pal.hair);
+    R(ctx, ox + 3, oy - 1, 1, 1, hairL);
+    R(ctx, ox + 12, oy - 1, 1, 1, hairL);
   } else {
     // samping (menghadap kiri; kanan = cermin)
     R(ctx, ox + 6 + (legA < 0 ? -1 : 0), oy + 16, 2, 3, pal.pants);
@@ -1426,12 +1430,15 @@ export function drawPlayerRaw(ctx: CanvasRenderingContext2D, x: number, y: numbe
     R(ctx, ox + 8 + (legA > 0 ? 1 : 0), oy + 19, 4, 2, darken(pal.boot, 0.15));
     R(ctx, ox + 5, oy + 10, 6, 7, top);
     R(ctx, ox + 5, oy + 15, 6, 2, topD);
-    R(ctx, ox + 5, oy + 10, 3, 6, pal.shirt);
-    R(ctx, ox + 9, oy + 11, 3, 5, '#8a5a2b');
+    R(ctx, ox + 5, oy + 12, 6, 5, pal.shirt);
+    R(ctx, ox + 5, oy + 16, 6, 1, pal.shirtD);
+    R(ctx, ox + 6, oy + 10, 2, 3, pal.shirt);
     R(ctx, ox + 4, oy + 4, 8, 7, pal.skin);
     R(ctx, ox + 8, oy + 1, 5, 10, pal.hair);
     R(ctx, ox + 3, oy + 2, 9, 3, pal.hair);
     R(ctx, ox + 4, oy + 1, 7, 1, pal.hair);
+    R(ctx, ox + 8, oy - 1, 4, 3, pal.hair);
+    R(ctx, ox + 9, oy - 1, 1, 1, hairL);
     R(ctx, ox + 5, oy + 2, 3, 1, hairL);
     R(ctx, ox + 4, oy + 5, 2, 1, pal.hair);
     R(ctx, ox + 5, oy + 7, 2, 2, '#1d1d2b');
@@ -1508,15 +1515,33 @@ export function drawLine(ctx: CanvasRenderingContext2D, x0: number, y0: number, 
 
 export function drawBubbleAlert(ctx: CanvasRenderingContext2D, x: number, y: number, t: number) {
   const b = Math.abs(Math.sin(t * 9)) * 2;
-  const X = Math.round(x) - 6;
-  const Y = Math.round(y - b) - 12;
-  R(ctx, X, Y, 12, 12, '#ffffff');
-  R(ctx, X + 1, Y - 1, 10, 1, '#ffffff');
-  R(ctx, X + 1, Y + 12, 10, 1, '#ffffff');
-  R(ctx, X + 4, Y + 13, 4, 2, '#ffffff');
-  R(ctx, X + 5, Y + 15, 2, 1, '#ffffff');
-  R(ctx, X + 5, Y + 2, 2, 6, '#e8412f');
-  R(ctx, X + 5, Y + 9, 2, 2, '#e8412f');
+  const X = Math.round(x) - 7;
+  const Y = Math.round(y - b) - 14;
+  R(ctx, X, Y, 14, 14, '#ffffff');
+  R(ctx, X + 1, Y - 1, 12, 1, '#ffffff');
+  R(ctx, X + 1, Y + 14, 12, 1, '#ffffff');
+  R(ctx, X + 5, Y + 15, 4, 2, '#ffffff');
+  R(ctx, X + 1, Y + 1, 12, 12, '#15131a');
+  R(ctx, X + 6, Y + 3, 2, 5, '#ffffff');
+  R(ctx, X + 6, Y + 9, 2, 2, '#e8412f');
+}
+
+// bintang emas muncul di umpan saat ikan menggigit
+export function drawStarPop(ctx: CanvasRenderingContext2D, x: number, y: number, t: number) {
+  const s = 1 + Math.sin(t * 10) * 0.12;
+  const X = Math.round(x), Y = Math.round(y - Math.abs(Math.sin(t * 7)) * 2);
+  ctx.save();
+  ctx.translate(X, Y);
+  ctx.scale(s, s);
+  ctx.fillStyle = '#7a4a05';
+  ctx.beginPath();
+  for (let k = 0; k < 10; k++) { const r = k % 2 ? 2.2 : 5.4; const an = -Math.PI / 2 + (k * Math.PI) / 5; ctx.lineTo(Math.cos(an) * (r + 0.9), Math.sin(an) * (r + 0.9)); }
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#ffd23f';
+  ctx.beginPath();
+  for (let k = 0; k < 10; k++) { const r = k % 2 ? 2.2 : 5.4; const an = -Math.PI / 2 + (k * Math.PI) / 5; ctx.lineTo(Math.cos(an) * r, Math.sin(an) * r); }
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
 }
 
 // ---------- ikan ----------
@@ -2354,7 +2379,7 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number, 
   oc.clearRect(0, 0, PS_W, PS_H);
   oc.drawImage(pScratch, -1, 0); oc.drawImage(pScratch, 1, 0); oc.drawImage(pScratch, 0, -1); oc.drawImage(pScratch, 0, 1);
   oc.globalCompositeOperation = 'source-in';
-  oc.fillStyle = '#1b1530';
+  oc.fillStyle = '#14110f';
   oc.fillRect(0, 0, PS_W, PS_H);
   oc.globalCompositeOperation = 'source-over';
   const dx = rx - PS_AX, dy = ry - PS_AY;

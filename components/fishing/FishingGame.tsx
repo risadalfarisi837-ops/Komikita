@@ -753,8 +753,9 @@ export default function FishingGame(props: Props) {
   const luckPct = Math.round((rod.luck + (status.inShoal ? 2 : 0)) * 100);
   const mmss = (s: number) => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
 
-  const btnLabel = phase === 'idle' ? 'Lempar' : phase === 'bite' ? 'Tarik!' : phase === 'reel' ? 'Tahan' : phase === 'result' || phase === 'catching' ? '...' : 'Tunggu...';
-  const btnBg = phase === 'bite' ? 'radial-gradient(circle at 35% 30%,#ff8a9a,#e11d48)' : phase === 'reel' ? 'radial-gradient(circle at 35% 30%,#7df0a4,#16a34a)' : 'radial-gradient(circle at 38% 28%,#5db4ff,#1f66d6)';
+  const btnLabel = phase === 'idle' ? 'Mancing' : phase === 'cast' || phase === 'wait' ? 'Angkat' : phase === 'bite' ? 'Strike!' : phase === 'reel' ? 'Tarik' : '...';
+  const btnBg = phase === 'bite' ? 'radial-gradient(circle at 40% 30%,#ff9d8a,#ee6b57)' : phase === 'reel' ? 'radial-gradient(circle at 40% 28%,#33a850,#1b7a36)' : phase === 'cast' || phase === 'wait' ? 'radial-gradient(circle at 40% 28%,#a7b1c0,#707c8f)' : 'radial-gradient(circle at 40% 28%,#3f73ba,#274f8d)';
+  const btnSz = phase === 'reel' ? 108 : 92;
 
   const circleBtn: CSSProperties = { width: hx(40), height: hx(40), borderRadius: '50%', background: PANEL, border: `${hx(2)}px solid ${GOLD}88`, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 };
   const pillBox: CSSProperties = { background: CREAM_BG, borderRadius: hx(18), border: `${hx(2)}px solid ${CREAM_EDGE}`, boxShadow: `0 ${hx(3)}px 0 #d9c08a`, color: CREAM_INK, fontFamily: HUD };
@@ -1001,18 +1002,16 @@ export default function FishingGame(props: Props) {
 
       {/* tombol aksi */}
       <div style={{ position: 'absolute', right: `calc(env(safe-area-inset-right, 0px) + ${hx(14)}px)`, bottom: `calc(env(safe-area-inset-bottom, 0px) + ${hx(32)}px)`, display: 'flex', alignItems: 'flex-end', gap: hx(10) }}>
-        {(phase === 'cast' || phase === 'wait') && (
-          <button onClick={() => engineRef.current?.cancel()} aria-label="Batal" style={{ ...pillBox, width: hx(46), height: hx(46), borderRadius: '50%', marginBottom: hx(8), display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0, color: '#fff', background: '#e5484d', border: `${hx(3)}px solid #fff` }}><Svg d="M6 6l12 12M18 6L6 18" size={hx(22)} /></button>
-        )}
         <button
           onPointerDown={(e) => { e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId); engineRef.current?.action(true); }}
           onPointerUp={() => engineRef.current?.action(false)}
           onPointerCancel={() => engineRef.current?.action(false)}
           className={phase === 'bite' ? 'komikita-pulse' : undefined}
-          style={{ width: hx(92), height: hx(92), borderRadius: '50%', border: `${hx(4.5)}px solid #fff`, boxSizing: 'border-box', background: btnBg, color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: hx(1), boxShadow: '0 4px 0 rgba(20,60,140,0.6), 0 6px 16px rgba(0,0,0,0.35)', touchAction: 'none', cursor: 'pointer', padding: 0, fontFamily: HUD }}
+          style={{ width: hx(btnSz), height: hx(btnSz), borderRadius: '50%', border: `${hx(4.5)}px solid #fff`, boxSizing: 'border-box', background: btnBg, color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: hx(1), boxShadow: '0 4px 0 rgba(20,60,140,0.6), 0 6px 16px rgba(0,0,0,0.35)', touchAction: 'none', cursor: 'pointer', padding: 0, fontFamily: HUD }}
         >
-          {phase === 'idle' ? <FishRodIcon size={hx(32)} /> : <RodIcon size={hx(30)} color="#fff" />}
-          <span style={{ fontSize: hx(17), fontWeight: 700, textShadow: '0 2px 3px rgba(20,40,100,0.6)' }}>{btnLabel}</span>
+          {phase === 'idle' ? <FishRodIcon size={hx(32)} /> : phase === 'reel' ? null : <RodIcon size={hx(28)} color="#fff" />}
+          <span style={{ fontSize: phase === 'reel' ? hx(22) : hx(17), fontWeight: 800, textShadow: '0 2px 3px rgba(20,40,100,0.6)' }}>{btnLabel}</span>
+          {phase === 'reel' && <span style={{ fontSize: hx(10), fontWeight: 600, opacity: 0.92, marginTop: hx(-2) }}>tahan biar naik</span>}
         </button>
         {/* joran terpasang: ketuk untuk ganti */}
         <button onClick={() => setRodOpen(true)} aria-label="Joran" style={{ position: 'absolute', right: hx(74), top: hx(-34), width: hx(56), height: hx(56), borderRadius: '50%', padding: 0, cursor: 'pointer', background: CREAM_BG, border: `${hx(3)}px solid ${CREAM_EDGE}`, boxShadow: '0 3px 0 #d9c08a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1040,87 +1039,65 @@ export default function FishingGame(props: Props) {
         </>
       )}
 
-      {/* hasil tangkapan: kartu lengkap (ketuk di mana saja untuk menutup) */}
+      {/* hasil tangkapan: kartu gaya referensi (ketuk di mana saja untuk menutup) */}
       {popup && (() => {
         const sp = SPECIES_BY_ID[popup.item.s];
         const rar = RARITY[sp.rarity];
-        const xl = isXL(sp, popup.item.w);
-        const big = isShowoff(sp, popup.item.w);
         const price = fishPrice(sp, popup.item.w, rod.money);
-        const ratio = kSizeRatio(sp, popup.item.w);
-        const q = qualityOf(ratio);
-        const stars = 1 + Math.min(6, Math.floor(ratio * 6.999));
         const len = formatLength(fishLengthCm(sp.shape, popup.item.w));
         const odds = oddsOf(sp.id);
-        const mult = 1 + Math.max(0, rod.xp);
         const pct = Math.min(100, Math.round((lv.into / Math.max(1, lv.need)) * 100));
-        const special = popup.up ? `LEVEL NAIK! · LEVEL ${popup.up}` : popup.record ? 'REKOR BARU!' : big ? 'TANGKAPAN BESAR!' : '';
-        const INK = '#4a2c17';
+        const rarName = sp.rarity.charAt(0).toUpperCase() + sp.rarity.slice(1);
+        const INK = '#2f241a';
         const k = (n: number) => Math.round(n * u * 0.68);
-        const box = (hi: boolean): CSSProperties => ({ flex: 1, borderRadius: k(12), padding: `${k(5)}px ${k(2)}px ${k(4)}px`, background: hi ? '#ffe3cc' : '#fff', border: `${k(2)}px solid ${hi ? '#f7c9a3' : '#f1e6d2'}`, boxShadow: `0 ${k(3)}px 0 ${hi ? '#efb487' : '#e3d6bd'}`, textAlign: 'center' });
+        const chip = (bg: string, fg: string): CSSProperties => ({ display: 'inline-flex', alignItems: 'center', gap: k(4), background: bg, color: fg, fontWeight: 700, fontSize: k(13), borderRadius: 99, padding: `${k(3)}px ${k(11)}px`, border: `${k(1.5)}px solid rgba(0,0,0,0.06)` });
+        const special = popup.up ? `Level naik! Lv ${popup.up}` : '';
+        const cream = '#fdf5e4';
+        const edge = `${k(4)}px solid #f4efe3`;
         return (
-          <div style={{ ...ov, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: k(8), background: 'rgba(8,14,28,0.72)', backdropFilter: 'blur(3px)' }} onClick={closePopup}>
-            <style>{`@keyframes kcardin{0%{transform:translateY(${k(16)}px) scale(.88);opacity:0}100%{transform:none;opacity:1}}@keyframes kspin{to{transform:rotate(360deg)}}@keyframes ktw{0%,100%{opacity:.15;transform:scale(.6)}50%{opacity:1;transform:scale(1.15)}}`}</style>
-            <div style={{ position: 'relative', width: k(300), maxHeight: '92%', animation: 'kcardin .28s ease-out' }}>
-              {/* pita rarity */}
-              <div style={{ position: 'absolute', top: k(-6), left: '50%', transform: 'translateX(-50%)', zIndex: 3, minWidth: k(150), textAlign: 'center', background: 'linear-gradient(180deg,#eef1f7,#c9d0de)', border: `${k(2)}px solid #aab3c6`, borderRadius: k(10), padding: `${k(2)}px ${k(18)}px`, boxShadow: `0 ${k(3)}px 0 #8d97ad`, fontWeight: 700, fontSize: k(17), letterSpacing: k(2), color: '#1d2230' }}>
-                {RARITY_EN[sp.rarity]}
-                <span style={{ position: 'absolute', left: 0, right: 0, bottom: k(-4), height: k(3), borderRadius: 99, background: rar.color }} />
-              </div>
-              <div style={{ borderRadius: k(24), border: `${k(4)}px solid #c4cbd8`, background: '#fff7e6', boxShadow: `0 ${k(6)}px 0 #9aa3b6, 0 0 ${k(40)}px ${rar.color}88`, padding: `${k(24)}px ${k(12)}px ${k(10)}px`, textAlign: 'center', color: INK, overflow: 'hidden', position: 'relative' }}>
-                {special && <div style={{ fontSize: k(12), fontWeight: 700, letterSpacing: k(1.5), color: '#c0561b', marginBottom: k(2) }}>{special}</div>}
-                {/* ikan + sinar + kilau */}
-                <div style={{ position: 'relative', height: k(84), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <div style={{ position: 'absolute', width: k(190), height: k(190), left: '50%', top: '50%', marginLeft: k(-95), marginTop: k(-95), borderRadius: '50%', background: `repeating-conic-gradient(${rar.color}55 0deg 9deg, transparent 9deg 24deg)`, WebkitMaskImage: 'radial-gradient(circle, #000 18%, transparent 68%)', maskImage: 'radial-gradient(circle, #000 18%, transparent 68%)', animation: 'kspin 24s linear infinite' }} />
-                  {SPARKS.map((s2, i) => (
-                    <svg key={i} viewBox="0 0 20 20" width={k(s2.s)} height={k(s2.s)} style={{ position: 'absolute', left: `${s2.x}%`, top: `${s2.y}%`, animation: `ktw 1.8s ease-in-out ${s2.d}s infinite` }}><path d="M10 0l2.2 7.8L20 10l-7.8 2.2L10 20l-2.2-7.8L0 10l7.8-2.2z" fill="#fff" /></svg>
-                  ))}
-                  <div style={{ position: 'relative' }}>
-                    <FishIcon id={sp.id} scale={2.6 * u * 0.68} />
-                    {xl && <span style={{ position: 'absolute', top: k(-4), right: k(-14), background: '#f59e3d', color: '#fff', fontWeight: 700, fontSize: k(12), borderRadius: k(7), padding: `${k(1)}px ${k(6)}px`, border: `${k(1.5)}px solid #fff` }}>XL</span>}
+          <div style={{ ...ov, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(24,34,24,0.38)', backdropFilter: 'blur(2px)', overflow: 'hidden' }} onClick={closePopup}>
+            <style>{`@keyframes kcardin{0%{transform:translateY(${k(16)}px) scale(.9);opacity:0}100%{transform:none;opacity:1}}@keyframes kfall{0%{transform:translateY(-12vh) rotate(0);opacity:1}100%{transform:translateY(112vh) rotate(540deg);opacity:.9}}@keyframes kray{to{transform:rotate(360deg)}}`}</style>
+            <div style={{ position: 'absolute', width: '170vmax', height: '170vmax', left: '50%', top: '50%', marginLeft: '-85vmax', marginTop: '-85vmax', background: 'repeating-conic-gradient(rgba(255,255,255,0.16) 0deg 10deg, transparent 10deg 24deg)', animation: 'kray 40s linear infinite', pointerEvents: 'none' }} />
+            {Array.from({ length: 26 }, (_, i) => (
+              <span key={i} style={{ position: 'absolute', top: 0, left: `${(i * 37) % 100}%`, width: k(5), height: k(9), background: ['#ff6b9a', '#ffd23f', '#4ecdc4', '#7aa7ff', '#b28dff'][i % 5], animation: `kfall ${3.2 + (i % 5) * 0.7}s linear ${(i % 7) * 0.35}s infinite`, pointerEvents: 'none' }} />
+            ))}
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'flex-start', gap: k(10), animation: 'kcardin .28s ease-out' }}>
+              <div style={{ position: 'relative', width: k(300) }}>
+                <div style={{ position: 'absolute', top: k(-13), left: '50%', transform: 'translateX(-50%)', zIndex: 2, background: 'linear-gradient(180deg,#e9edf3,#c6cedb)', border: `${k(2)}px solid #f7f9fc`, borderRadius: 99, padding: `${k(2)}px ${k(18)}px`, fontWeight: 700, fontSize: k(14), color: '#3a4558', whiteSpace: 'nowrap', boxShadow: `0 ${k(2)}px 0 #9aa5b8` }}>{rarName}{odds ? ` · 1 in ${formatNum(odds)}` : ''}</div>
+                <div style={{ borderRadius: k(22), border: edge, background: cream, boxShadow: `0 ${k(5)}px ${k(18)}px rgba(0,0,0,0.35), 0 0 ${k(30)}px ${rar.color}66`, padding: `${k(22)}px ${k(14)}px ${k(10)}px`, textAlign: 'center', color: INK }}>
+                  {special && <div style={{ fontSize: k(12), fontWeight: 800, letterSpacing: k(1), color: '#c0561b', marginBottom: k(2) }}>{special}</div>}
+                  <div style={{ position: 'relative', width: k(104), height: k(72), margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'radial-gradient(circle,#e4dfd3 0%,#efe9db 68%,transparent 70%)' }} />
+                    <div style={{ position: 'relative' }}><FishIcon id={sp.id} scale={2.2 * u * 0.68} /></div>
                   </div>
-                </div>
-                {/* bintang */}
-                <div style={{ display: 'flex', justifyContent: 'center', gap: k(3), margin: `${k(2)}px 0 ${k(1)}px` }}>
-                  {Array.from({ length: 7 }, (_, i) => (
-                    <svg key={i} viewBox="0 0 24 24" width={k(16)} height={k(16)}><path d="M12 2l3 6.6 7.2.8-5.4 4.9 1.5 7.1L12 17.7 5.7 21.4l1.5-7.1L1.8 9.4 9 8.6z" fill={i < stars ? '#f5b82e' : '#e8dcc4'} stroke={i < stars ? '#d98e0f' : 'none'} strokeWidth="1" /></svg>
-                  ))}
-                </div>
-                <div style={{ fontSize: k(27), fontWeight: 700, lineHeight: 1.1, color: INK }}>{sp.name}</div>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: k(4), marginTop: k(4), background: q.bg, color: q.fg, fontWeight: 700, fontSize: k(15), borderRadius: 99, padding: `${k(2)}px ${k(14)}px`, boxShadow: '0 2px 0 rgba(0,0,0,0.18)' }}>{q.star && '⭐'}{q.label}</span>
-                {/* statistik */}
-                <div style={{ display: 'flex', gap: k(7), marginTop: k(9) }}>
-                  <div style={box(true)}>
-                    <div style={{ fontSize: k(23), fontWeight: 700, color: '#b5441f', lineHeight: 1.05 }}>{formatWeight(popup.item.w)}</div>
-                    <div style={{ fontSize: k(12), fontWeight: 700, letterSpacing: k(1), color: '#a07a62' }}>BERAT</div>
+                  <div style={{ fontSize: k(24), fontWeight: 800, lineHeight: 1.15, marginTop: k(6) }}>{sp.name}</div>
+                  <div style={{ marginTop: k(2) }}>
+                    <span style={{ fontSize: k(26), fontWeight: 800, color: '#c8322a' }}>{formatWeight(popup.item.w)}</span>{' '}
+                    <span style={{ fontSize: k(13), fontWeight: 600, color: '#8b8374' }}>({len})</span>
                   </div>
-                  <div style={box(false)}>
-                    <div style={{ fontSize: k(23), fontWeight: 700, lineHeight: 1.05 }}>{len}</div>
-                    <div style={{ fontSize: k(12), fontWeight: 700, letterSpacing: k(1), color: '#a49a88' }}>PANJANG</div>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: k(6), marginTop: k(7), flexWrap: 'wrap' }}>
+                    <span style={chip('#e3efdb', '#3f6b34')}>● Pulau</span>
+                    {popup.record && <span style={chip('#d9f2d6', '#2f7a35')}>Rekor baru</span>}
+                    <span style={chip('#dcebfb', '#2a64b0')}>
+                      <svg viewBox="0 0 20 20" width={k(13)} height={k(13)}><path d="M10 1l2.4 6.6L19 10l-6.6 2.4L10 19l-2.4-6.6L1 10l6.6-2.4z" fill="#4aa8ff" stroke="#2a78d0" strokeWidth="1.2" strokeLinejoin="round" /></svg>
+                      Nilai {formatNum(price)}
+                    </span>
                   </div>
-                  <div style={box(false)}>
-                    <div style={{ fontSize: k(23), fontWeight: 700, lineHeight: 1.05, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: k(3) }}>
-                      <svg viewBox="0 0 20 20" width={k(16)} height={k(16)}><path d="M10 1l2.4 6.6L19 10l-6.6 2.4L10 19l-2.4-6.6L1 10l6.6-2.4z" fill="none" stroke="#4aa8ff" strokeWidth="1.8" strokeLinejoin="round" /></svg>
-                      {formatNum(price)}
-                    </div>
-                    <div style={{ fontSize: k(12), fontWeight: 700, letterSpacing: k(1), color: '#a49a88' }}>NILAI</div>
+                  <div style={{ marginTop: k(7), fontSize: k(11), color: '#a39b8b' }}>Ketuk untuk menutup</div>
+                </div>
+                <div style={{ margin: `${k(10)}px auto 0`, width: '92%', borderRadius: k(14), border: `${k(3)}px solid #f4efe3`, background: cream, padding: `${k(6)}px ${k(10)}px ${k(8)}px`, boxShadow: `0 ${k(3)}px ${k(10)}px rgba(0,0,0,0.3)` }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: k(6) }}>
+                    <span style={{ background: 'linear-gradient(180deg,#3b8cff,#1f64d6)', color: '#fff', fontWeight: 800, fontSize: k(12), borderRadius: 99, padding: `${k(1)}px ${k(9)}px`, whiteSpace: 'nowrap' }}>Lv {lv.level}</span>
+                    <span style={{ background: '#dcebfb', color: '#2a64b0', fontWeight: 800, fontSize: k(12), borderRadius: 99, padding: `${k(1)}px ${k(8)}px`, whiteSpace: 'nowrap' }}>XP +{popup.gain}</span>
+                    <span style={{ marginLeft: 'auto', fontSize: k(12), fontWeight: 700, color: '#6b6354', whiteSpace: 'nowrap' }}>{formatNum(lv.into)}/{formatNum(lv.need)}</span>
                   </div>
-                </div>
-                <div style={{ marginTop: k(7), fontSize: k(14), fontWeight: 700, color: '#9d9484' }}>{odds ? `Peluang 1 dari ${formatNum(odds)}` : 'Ikan event spesial'}</div>
-                <div style={{ borderTop: `${k(2)}px dashed #ecdcb8`, margin: `${k(7)}px 0` }} />
-                {/* level & XP */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: k(7) }}>
-                  <span style={{ background: 'linear-gradient(180deg,#3b8cff,#1f64d6)', color: '#fff', fontWeight: 700, fontSize: k(15), borderRadius: 99, padding: `${k(2)}px ${k(12)}px`, boxShadow: '0 2px 0 #123f8f', whiteSpace: 'nowrap' }}>Lv {lv.level}</span>
-                  <span style={{ fontSize: k(16), fontWeight: 700, color: '#2d7be0', whiteSpace: 'nowrap' }}>+{popup.gain} XP</span>
-                  {mult > 1 && <span style={{ fontSize: k(13), fontWeight: 700, color: '#8a6a1f', background: '#fff0c4', borderRadius: 99, padding: `${k(1)}px ${k(8)}px`, whiteSpace: 'nowrap' }}>⭐ ×{mult.toFixed(1).replace('.', ',')}</span>}
-                  <span style={{ marginLeft: 'auto', fontSize: k(13), fontWeight: 700, color: '#8f8676', whiteSpace: 'nowrap' }}>{formatNum(lv.into)}/{formatNum(lv.need)} XP</span>
-                </div>
-                <div style={{ marginTop: k(5), height: k(10), borderRadius: 99, background: '#e9dfca', overflow: 'hidden' }}>
-                  <div style={{ width: `${pct}%`, height: '100%', borderRadius: 99, background: 'linear-gradient(180deg,#8be08f,#43b94f)', transition: 'width .6s ease-out' }} />
+                  <div style={{ marginTop: k(5), height: k(9), borderRadius: 99, background: '#e7dcc4', overflow: 'hidden' }}>
+                    <div style={{ width: `${pct}%`, height: '100%', borderRadius: 99, background: 'linear-gradient(180deg,#8be08f,#43b94f)', transition: 'width .6s ease-out' }} />
+                  </div>
                 </div>
               </div>
+              <button onClick={(e) => { e.stopPropagation(); share(popup.item); }} style={{ marginTop: k(40), background: cream, color: INK, border: `${k(3)}px solid #f4efe3`, borderRadius: k(14), padding: `${k(6)}px ${k(12)}px`, fontWeight: 800, fontSize: k(14), boxShadow: `0 ${k(3)}px 0 #d9c08a`, cursor: 'pointer', fontFamily: 'inherit' }}>Share</button>
             </div>
-            <div style={{ marginTop: k(12), fontSize: k(15), fontWeight: 600, color: 'rgba(255,255,255,0.75)', pointerEvents: 'none' }}>Ketuk di mana saja untuk menutup</div>
           </div>
         );
       })()}

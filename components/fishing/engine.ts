@@ -4,7 +4,7 @@ import type { NetPose, RemotePlayer } from '@/lib/fishingNet';
 import type { Rarity, SizeTier, Species } from '@/lib/fishing';
 import {
   TILE, generateWorld, drawPlayer, drawPalm, drawRock, drawLamp, drawBobber, drawRipple, drawLine,
-  drawBubbleAlert, drawFish, drawShowFish, rodGeometry, PAL_PLAYER, drawFountain, drawBench, drawTable, drawStool, drawSign, drawBush, drawNpc,
+  drawBubbleAlert, drawStarPop, drawFish, drawShowFish, rodGeometry, PAL_PLAYER, drawFountain, drawBench, drawTable, drawStool, drawSign, drawBush, drawNpc,
   drawStall, drawFlowers, drawPine, drawLighthouse, drawBigTree, drawBarrel, drawCrate, drawNet, drawUmbrella, drawBoat, drawGiantFish, drawShop, palForId, mulberry32,
 } from './art';
 import type { Dir, Pal, World } from './art';
@@ -157,6 +157,7 @@ export class FishingEngine {
       return;
     }
     if (!down) return;
+    if (this.phase === 'cast' || this.phase === 'wait') { this.cancel(); return; } // tombol "Angkat"
     if (this.phase === 'bite') this.hook();
   }
 
@@ -863,7 +864,10 @@ export class FishingEngine {
       const sag = ph === 'reel' ? 2 : ph === 'cast' ? 4 : 7 + Math.sin(t * 2) * 1.2;
       drawLine(ctx, geo.tx, geo.ty, bx, by - (showBobber ? 3 : 0), sag);
     }
-    if (ph === 'bite') drawBubbleAlert(ctx, this.px, this.py - 24, t);
+    if (ph === 'bite') {
+      drawBubbleAlert(ctx, this.px, this.py - 24, t);
+      if (tg) { drawRipple(ctx, tg.wx, tg.wy, (t * 1.6) % 1); drawStarPop(ctx, tg.wx, tg.wy - 11, t); }
+    }
 
     // ikan melompat ke tangan
     if (ph === 'catching' && tg && this.fish) {
@@ -955,18 +959,18 @@ export class FishingEngine {
       if (bx + bw + 8 * u > this.canvas.width - 96 * u) bx = sxp - off - bw; // dekat tombol aksi -> pindah ke kiri karakter
       const by = syFeet - bh + 3 * u;
       const pad = Math.max(2.4 * u, 0.9 * S);
-      ctx.fillStyle = 'rgba(18,16,14,0.88)';
+      ctx.fillStyle = '#ffffff';
       this.rrect(bx - pad, by - pad, bw + pad * 2, bh + pad * 2, 5 * u);
       ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,0.22)';
-      ctx.lineWidth = Math.max(1, u * 0.8);
-      ctx.stroke();
-      const sh = (bh - gap * (N - 1)) / N;
-      for (let i = 0; i < N; i++) {
-        const y = by + bh - (i + 1) * sh - i * gap;
-        const lit = this.charge * N > i + 0.12;
-        ctx.fillStyle = lit ? cols[i] : cols[i] + '30';
-        this.rrect(bx, y, bw, sh, Math.min(3 * u, sh / 2.4));
+      ctx.fillStyle = '#3a3330';
+      this.rrect(bx, by, bw, bh, 3.5 * u);
+      ctx.fill();
+      const fh = Math.max(0, this.charge * bh);
+      if (fh > 0) {
+        const gr = ctx.createLinearGradient(0, by + bh, 0, by);
+        gr.addColorStop(0, '#ffd23f'); gr.addColorStop(0.55, '#ff9f1c'); gr.addColorStop(1, '#ef4a2f');
+        ctx.fillStyle = gr;
+        this.rrect(bx, by + bh - fh, bw, fh, Math.min(3.5 * u, fh / 2));
         ctx.fill();
       }
       const tr = this.charge < 0.34 ? 0 : this.charge < 0.67 ? 1 : 2;
@@ -1096,94 +1100,96 @@ export class FishingEngine {
     const r = this.reel;
     const d = this.dpr;
     ctx.setTransform(d, 0, 0, d, 0, 0);
-    const topOff = this.cssH < 500 ? 78 : 118;
-    const avail = this.cssH - topOff - 150;
-    const mh = clamp(avail, 100, 190);
-    const top = topOff + Math.max(0, (avail - mh) / 2);
-    const PW = 92;
-    const panelX = this.cssW - 14 - PW;
-    const panelY = top - 40;
-    const pad = 4;
+    const topOff = this.cssH < 500 ? 62 : 96;
+    const avail = this.cssH - topOff - 110;
+    const mh = clamp(avail, 110, 220);
+    const top = topOff + Math.max(0, (avail - mh) / 2) + 14;
+    const pad = 3;
     const inner = mh - pad * 2;
     const ypx = (pos: number) => top + mh - pad - (pos / 100) * inner;
-    const bw = 10;
-    const bx = panelX + 8;
-    const mw = 54;
-    const mx = bx + bw + 6;
+    const mw = clamp(this.cssH * 0.1, 30, 46);
+    const mx = Math.max(130, Math.min(this.cssW * 0.64, this.cssW - 190 - mw));
+    const pbx = mx + mw + 10;
+    const pbw = 9;
 
-    // panel krem
-    ctx.fillStyle = '#fbf1dc';
-    this.rrect(panelX, panelY, PW, mh + 40 + 10, 12);
+    // bar air (biru kehijauan) berbingkai putih
+    ctx.fillStyle = '#ffffff';
+    this.rrect(mx - 3, top - 3, mw + 6, mh + 6, 9);
     ctx.fill();
-    ctx.strokeStyle = '#d9c196';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    // judul + label rarity (nama disembunyikan sampai ketangkap)
-    const sp = this.fish ? this.fish.species : null;
-    const rar = sp ? RARITY[sp.rarity] : null;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.font = '700 13px "Pixelify Sans", ui-monospace, monospace';
-    ctx.fillStyle = '#3b2f1a';
-    ctx.fillText('???', panelX + PW / 2, panelY + 13);
-    if (rar && sp) {
-      const label = rar.label;
-      ctx.font = '700 10px "Pixelify Sans", ui-monospace, monospace';
-      const tw = ctx.measureText(label).width + 16;
-      const hot = sp.rarity !== 'common' && sp.rarity !== 'uncommon';
-      ctx.fillStyle = sp.rarity === 'common' ? '#2a2a2a' : rar.color;
-      this.rrect(panelX + PW / 2 - tw / 2, panelY + 23, tw, 15, 5);
-      ctx.fill();
-      ctx.fillStyle = sp.rarity === 'common' ? '#f3f3f3' : '#1a1206';
-      ctx.fillText(label, panelX + PW / 2, panelY + 30.5);
-      if (hot) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.2; this.rrect(panelX + PW / 2 - tw / 2, panelY + 23, tw, 15, 5); ctx.stroke(); }
-    }
-    ctx.textAlign = 'start';
-    ctx.textBaseline = 'alphabetic';
-
-    // bar kemajuan (kiri)
-    ctx.fillStyle = '#2a2a2e';
-    this.rrect(bx - 1, top, bw + 2, mh, 4);
-    ctx.fill();
-    const pc = r.prog > 66 ? '#facc15' : r.prog > 33 ? '#f5b82e' : '#f08a24';
-    ctx.fillStyle = pc;
-    const ph = (r.prog / 100) * inner;
-    ctx.fillRect(bx + 2, top + mh - pad - ph, bw - 4, Math.max(0, ph));
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
-    for (let y = top + 4; y < top + mh - 2; y += 7) ctx.fillRect(bx + 2, y, bw - 4, 1);
-
-    // meter utama
     const g = ctx.createLinearGradient(0, top, 0, top + mh);
-    g.addColorStop(0, '#173a5c');
-    g.addColorStop(1, '#0d2540');
+    g.addColorStop(0, '#2b9aa8'); g.addColorStop(1, '#17657e');
     ctx.fillStyle = g;
-    this.rrect(mx, top, mw, mh, 5);
+    this.rrect(mx, top, mw, mh, 7);
     ctx.fill();
-    ctx.strokeStyle = '#0a1a2c';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.fillStyle = 'rgba(255,255,255,0.06)';
-    for (let y = top + 12; y < top + mh - 6; y += 22) ctx.fillRect(mx + 6, y, mw - 12, 1);
 
+    // zona hijau muda
     const inZone = r.fishPos >= r.zone && r.fishPos <= r.zone + r.zoneH;
     const zt = ypx(r.zone + r.zoneH);
     const zh = (r.zoneH / 100) * inner;
-    ctx.fillStyle = inZone ? '#3f8f52' : '#2f6b40';
-    this.rrect(mx + 4, zt, mw - 8, zh, 3);
+    ctx.fillStyle = inZone ? '#9be8ae' : '#7fd195';
+    this.rrect(mx + 3, zt, mw - 6, zh, 6);
     ctx.fill();
-    ctx.strokeStyle = inZone ? '#9cf0a8' : '#5fd076';
+    ctx.strokeStyle = '#f2fff4';
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    // siluet ikan
+    // siluet ikan hitam
+    const fy = ypx(r.fishPos);
     if (this.fish) {
       const anyCtx = ctx as CanvasRenderingContext2D & { filter?: string };
       const hasF = 'filter' in anyCtx;
-      if (hasF) anyCtx.filter = 'brightness(0.12)';
-      drawFish(ctx, this.fish.species, mx + mw / 2, ypx(r.fishPos), 0.48, 0, false);
+      if (hasF) anyCtx.filter = 'brightness(0)';
+      drawFish(ctx, this.fish.species, mx + mw / 2, fy, 0.5, 0, false);
       if (hasF) anyCtx.filter = 'none';
     }
+
+    // bar kemajuan (kuning -> hijau)
+    ctx.fillStyle = '#ffffff';
+    this.rrect(pbx - 3, top - 3, pbw + 6, mh + 6, 8);
+    ctx.fill();
+    ctx.fillStyle = '#2c2a28';
+    this.rrect(pbx, top, pbw, mh, 5);
+    ctx.fill();
+    const ph = (r.prog / 100) * inner;
+    if (ph > 0) {
+      ctx.fillStyle = r.prog < 45 ? '#f2c230' : '#4cc35a';
+      this.rrect(pbx + 1.5, top + mh - pad - ph, pbw - 3, ph, 3);
+      ctx.fill();
+    }
+
+    // label rarity di atas bar
+    const sp = this.fish ? this.fish.species : null;
+    if (sp) {
+      const nm = sp.rarity.charAt(0).toUpperCase() + sp.rarity.slice(1);
+      ctx.font = '700 12px "Pixelify Sans", ui-monospace, monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(20,20,24,0.85)';
+      ctx.strokeText(nm, mx + (mw + pbw + 10) / 2, top - 14);
+      ctx.fillStyle = sp.rarity === 'common' ? '#ffffff' : RARITY[sp.rarity].color;
+      ctx.fillText(nm, mx + (mw + pbw + 10) / 2, top - 14);
+
+      // ucapan ikan di kiri bar
+      const lines: Record<string, string> = {
+        common: 'Baru belajar, jangan buru-buru malu.',
+        uncommon: 'Lumayan, tapi belum cukup.',
+        rare: 'Yakin sanggup menarikku?',
+        epic: 'Jorannmu bisa patah!',
+        legendary: 'Aku bukan ikan biasa!',
+        mythic: 'Semua yang mencoba pulang kosong.',
+      };
+      const text = lines[sp.rarity] || lines.common;
+      const fs = 11;
+      ctx.font = '700 ' + fs + 'px "Pixelify Sans", ui-monospace, monospace';
+      const tw = ctx.measureText(text).width + 22;
+      const cx2 = mx - 14 - tw / 2;
+      this.pillText(text, cx2, fy, fs, '#fffdf7', '#2b2b2b', 11, 'rgba(60,60,60,0.35)');
+      ctx.fillStyle = '#fffdf7';
+      ctx.beginPath(); ctx.moveTo(mx - 15, fy - 4); ctx.lineTo(mx - 15, fy + 4); ctx.lineTo(mx - 7, fy); ctx.closePath(); ctx.fill();
+    }
+    ctx.textAlign = 'start';
+    ctx.textBaseline = 'alphabetic';
     ctx.setTransform(1, 0, 0, 1, 0, 0);
   }
 
