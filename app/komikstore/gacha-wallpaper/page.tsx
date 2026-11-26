@@ -1,485 +1,595 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+
+import { useEffect, useState, memo, useCallback, useRef } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowRight, ArrowUp, Check, Coins, ShoppingBag } from 'lucide-react';
-import { getFirebase } from '@/lib/firebase-client';
-import { WALLPAPER_CATALOG, RARITY_STYLE, RARITY_INFO, RARITIES, RATES, COST_1, COST_10, TOKEN_DUP, TOKEN_PRICE, rollMany, type Rarity } from '@/lib/wallpapers';
+import { useHistory } from '@/lib/store';
+import { primeGameFullscreen } from '@/components/GameMode';
 
-// Background gambar diam saja (webp -> gradien). SVG lama sengaja tidak dipakai karena animasinya ikut jalan.
-const wpBg = (key: string) => {
-  const w = WALLPAPER_CATALOG[key];
-  if (!w) return '';
-  return w.url ? 'url(' + w.url + ') center/cover, ' + w.grad : w.grad;
+// ─── Firebase ────────────────────────────────────────────────────────────────
+declare global { interface Window { firebase: any; _fbReady: boolean; } }
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDOVdnkjnjTfNMMIBT68WPOMGPH6MGbakI",
+  authDomain: "komikita-11c46.firebaseapp.com",
+  databaseURL: "https://komikita-11c46-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "komikita-11c46",
+  storageBucket: "komikita-11c46.firebasestorage.app",
+  messagingSenderId: "1001217731870",
+  appId: "1:1001217731870:web:2343f4c4aa06496cfcad0f",
+  measurementId: "G-LE9NQH23YR"
 };
+function loadFirebaseCDN(): Promise<void> {
+  if (typeof window === 'undefined') return Promise.resolve();
+  if (window._fbReady) return Promise.resolve();
+  return new Promise((resolve) => {
+    const urls = [
+      'https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js',
+      'https://www.gstatic.com/firebasejs/10.14.0/firebase-auth-compat.js',
+      'https://www.gstatic.com/firebasejs/10.14.0/firebase-database-compat.js',
+    ];
+    let done = 0;
+    urls.forEach(src => {
+      const s = document.createElement('script');
+      s.src = src;
+      s.onload = () => { done++; if (done === urls.length) { window._fbReady = true; resolve(); } };
+      document.head.appendChild(s);
+    });
+  });
+}
+let _fbInit2 = false;
+async function getFirebase() {
+  await loadFirebaseCDN();
+  if (!_fbInit2) {
+    if (!window.firebase.apps.length) window.firebase.initializeApp(FIREBASE_CONFIG);
+    _fbInit2 = true;
+  }
+  return { auth: window.firebase.auth(), db: window.firebase.database() };
+}
 
-const rank = (k: string) => RARITIES.indexOf(WALLPAPER_CATALOG[k].rarity);
-// Urut dari rarity terbaik, untuk panel info
-const INFO_ORDER = [...RARITIES].reverse().map((r) => ({ r, keys: Object.keys(WALLPAPER_CATALOG).filter((k) => WALLPAPER_CATALOG[k].rarity === r) }));
+interface TopUser {
+  uid: string; displayName: string; photoURL: string;
+  level: number; koin: number; role: string;
+}
 
-// Bonus EXP & warna header per rarity untuk daftar koleksi
-const SEC: Record<Rarity, { bonus: number; border: string; bg: string }> = {
-  Legendary: { bonus: 20, border: '#fbbf24', bg: '#2a2312' },
-  Epic:      { bonus: 15, border: '#a855f7', bg: '#211a37' },
-  Rare:      { bonus: 10, border: '#2f9bff', bg: '#172033' },
-  Normal:    { bonus: 5,  border: '#ffffff', bg: '#161b28' },
-};
-const SEC_ORDER = [...RARITIES].reverse();
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function getFlag(title: string, type?: string, flagField?: string): string {
+  if (flagField) return flagField; // dari scraper langsung
+  if (type) {
+    const t = type.toLowerCase();
+    if (t.includes('manhua')) return '🇨🇳';
+    if (t.includes('manhwa') || t.includes('webtoon')) return '🇰🇷';
+    if (t.includes('manga')) return '🇯🇵';
+    if (t.includes('comic')) return '🇺🇸';
+  }
+  // fallback tebak dari judul
+  const tl = title.toLowerCase();
+  if (tl.includes('manhua') || tl.includes('chinese')) return '🇨🇳';
+  if (tl.includes('manga') || tl.includes('japanese')) return '🇯🇵';
+  return '🇰🇷';
+}
+function getRating(desc: string): string | null {
+  if (!desc) return null;
+  const m = desc.match(/Score:\s*([\d.]+)/i);
+  if (!m) return null;
+  const n = parseFloat(m[1]);
+  return (isNaN(n) || n <= 0) ? null : n.toFixed(1);
+}
 
-function SecHead({ title, pill, border, bg, pillBg }: { title: string; pill: string; border: string; bg: string; pillBg?: string }) {
+// ─── Warna & util ────────────────────────────────────────────────────────────
+const ACCENT = '#FF6B6B';
+const CARD = '#2A2931';
+const MUTED = '#8F8D9B';
+
+function typeLabel(item: any): string {
+  const f = getFlag(item.title, item.type, item.flag);
+  if (f === '🇰🇷') return 'Manhwa';
+  if (f === '🇨🇳') return 'Manhua';
+  if (f === '🇯🇵') return 'Manga';
+  return 'Komik';
+}
+const clamp = (n: number): React.CSSProperties => ({ display: '-webkit-box', WebkitLineClamp: n, WebkitBoxOrient: 'vertical', overflow: 'hidden' });
+const ell: React.CSSProperties = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
+
+// ─── Header: kartu profil (level + EXP) + search + Minigame ─────────────────
+function Header({ onSearch }: { onSearch: () => void }) {
+  const router = useRouter();
+  const [hasGift, setHasGift] = useState(false);
+  const [me, setMe] = useState<{ name: string; photo: string; level: number; exp: number } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    const t = setTimeout(async () => {
+      try {
+        const { auth, db } = await getFirebase();
+        const u: any = auth.currentUser || await new Promise((res) => { const un = auth.onAuthStateChanged((x: any) => { un(); res(x); }); });
+        if (!u || !alive) return;
+        const d = (await db.ref(`users/${u.uid}`).get()).val() || {};
+        if (!alive) return;
+        const exp = Math.max(0, Math.floor(Number(d.exp) || 0));
+        setMe({ name: d.displayName || u.displayName || 'User', photo: d.photoURL || u.photoURL || '', level: Number(d.level) || Math.floor(exp / 200) + 1, exp });
+        const v = d.gifts || {};
+        setHasGift(Object.values(v).some((g: any) => g && !g.claimed));
+      } catch {}
+    }, 1500);
+    return () => { alive = false; clearTimeout(t); };
+  }, []);
+
+  const EXP_PER_LEVEL = 200;
+  const cur = me ? me.exp % EXP_PER_LEVEL : 0;
+  const pct = Math.min(100, (cur / EXP_PER_LEVEL) * 100);
+  const BOX: React.CSSProperties = { background: '#26252C', border: '1px solid #3A3942', borderRadius: 20 };
+
   return (
-    <div className="flex items-center gap-3 rounded-2xl px-4 py-2.5" style={{ border: '1.5px solid ' + border, background: bg }}>
-      <span className="h-8 w-1.5 shrink-0 rounded-full" style={{ background: border }} />
-      <h2 className="text-[17px] font-extrabold">{title}</h2>
-      <span className="ml-auto whitespace-nowrap rounded-xl px-3 py-1 text-[12.5px] font-extrabold" style={{ border: '1.5px solid ' + (pillBg ? 'rgba(255,255,255,.55)' : border), background: pillBg || 'transparent' }}>{pill}</span>
+    <div style={{ padding: '14px 14px 8px' }}>
+      <div style={{ ...BOX, padding: '14px 16px', borderRadius: 24 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <Link href="/profile" style={{ flex: '0 0 auto' }}>
+          {me?.photo ? (
+            <img src={me.photo} alt="" referrerPolicy="no-referrer" style={{ width: 62, height: 62, borderRadius: '50%', objectFit: 'cover', border: '2px solid #3A3942', display: 'block' }} />
+          ) : (
+            <div style={{ width: 62, height: 62, borderRadius: '50%', background: '#3A3942', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, fontWeight: 800 }}>{(me?.name || 'K').slice(0, 1).toUpperCase()}</div>
+          )}
+        </Link>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ ...ell, fontSize: 19, fontWeight: 800, letterSpacing: -0.5 }}>{me?.name || 'Komikita'}</div>
+          <span style={{ display: 'inline-block', marginTop: 6, fontSize: 13, fontWeight: 800, color: '#F5C451', background: 'rgba(245,196,81,.16)', border: '1px solid rgba(245,196,81,.3)', padding: '3px 10px', borderRadius: 99 }}>
+            Lvl. {me?.level ?? 1}
+          </span>
+        </div>
+        <button onClick={() => { window.location.assign('/notifikasi'); }} aria-label="Notifikasi" style={{ position: 'relative', flex: '0 0 auto', width: 52, height: 52, borderRadius: '50%', background: '#3A3942', border: 0, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 01-3.4 0" /></svg>
+          {hasGift && <span style={{ position: 'absolute', top: 12, right: 13, width: 9, height: 9, borderRadius: '50%', background: ACCENT }} />}
+        </button>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14 }}>
+        <span style={{ fontSize: 13, fontWeight: 800, color: MUTED }}>EXP</span>
+        <div style={{ flex: 1, height: 7, borderRadius: 99, background: '#3A3942', overflow: 'hidden' }}>
+          <div style={{ width: `${pct}%`, height: '100%', borderRadius: 99, background: 'linear-gradient(90deg,#C99A2E,#F5C451)', transition: 'width .6s' }} />
+        </div>
+        <span style={{ fontSize: 13, fontWeight: 800, color: '#D6D4DE' }}>{cur.toLocaleString('id-ID')} / {EXP_PER_LEVEL.toLocaleString('id-ID')}</span>
+      </div>
+      </div>
+      <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
+        <button onClick={onSearch} style={{ ...BOX, flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 12, padding: '0 16px', height: 54, color: MUTED, fontSize: 16, textAlign: 'left' }}>
+          <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth={2} strokeLinecap="round"><circle cx={11} cy={11} r={7.5} /><line x1={21} y1={21} x2={16.5} y2={16.5} /></svg>
+          <span style={ell}>Cari komik di sini</span>
+        </button>
+        <button onClick={() => { primeGameFullscreen(); router.push('/komikstore/mancing'); }} style={{ ...BOX, flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 10, padding: '0 18px', height: 54, color: '#fff', fontSize: 16, fontWeight: 800 }}>
+          <svg width={26} height={26} viewBox="0 0 24 24" fill="#4ADE80"><path d="M7 7h10a5 5 0 014.9 6l-.9 4.3a2.6 2.6 0 01-4.4 1.3L15 17H9l-1.6 1.6A2.6 2.6 0 013 17.3L2.1 13A5 5 0 017 7zm1 3v1.5H6.5V13H8v1.5h1.5V13H11v-1.5H9.5V10H8zm7.5.5a1 1 0 100 2 1 1 0 000-2zm2 2a1 1 0 100 2 1 1 0 000-2z" /></svg>
+          Minigame
+        </button>
+      </div>
     </div>
   );
 }
 
-function Gem({ size = 24, dim = false }: { size?: number; dim?: boolean }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" style={{ opacity: dim ? 0.8 : 1, flexShrink: 0 }}>
-      <polygon points="6,2 18,2 22,9 12,22 2,9" fill="#3b9cff" />
-      <polygon points="6,2 12,9 2,9" fill="#8fd0ff" />
-      <polygon points="18,2 22,9 12,9" fill="#5db4ff" />
-      <polygon points="2,9 12,9 12,22" fill="#2f7fe0" />
-      <polygon points="22,9 12,9 12,22" fill="#1f63c4" />
-      <polygon points="6,2 18,2 12,9" fill="#b9e3ff" />
-    </svg>
-  );
-}
-
-function Banner() {
-  const stars = [[60,70],[150,200],[260,90],[330,300],[120,420],[700,80],[820,190],[900,330],[760,450],[640,520],[210,520],[930,60],[40,300],[560,40]];
-  return (
-    <svg viewBox="0 0 996 560" preserveAspectRatio="xMidYMid slice" className="mx-4 block w-[calc(100%-2rem)] rounded-3xl" style={{ aspectRatio: '996 / 560' }}>
-      <defs>
-        <linearGradient id="gbBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#0a1236" /><stop offset="0.6" stopColor="#1b2d6b" /><stop offset="1" stopColor="#0a1030" /></linearGradient>
-        <radialGradient id="gbOrb" cx="50%" cy="50%" r="50%"><stop offset="0" stopColor="#ffffff" /><stop offset="0.55" stopColor="#dbe8ff" /><stop offset="1" stopColor="#6e8fe0" stopOpacity="0.55" /></radialGradient>
-        <radialGradient id="gbGlow" cx="50%" cy="50%" r="50%"><stop offset="0" stopColor="#9ec2ff" stopOpacity="0.7" /><stop offset="1" stopColor="#9ec2ff" stopOpacity="0" /></radialGradient>
-      </defs>
-      <rect width="996" height="560" fill="url(#gbBg)" />
-      {stars.map(([x, y], i) => <circle key={i} cx={x} cy={y} r={i % 3 === 0 ? 3 : 2} fill="#cfe0ff" opacity={0.75} />)}
-      <circle cx="498" cy="270" r="330" fill="url(#gbGlow)" />
-      <circle cx="498" cy="270" r="195" fill="url(#gbOrb)" />
-      <path d="M498 150 C512 232 536 256 618 270 C536 284 512 308 498 390 C484 308 460 284 378 270 C460 256 484 232 498 150Z" fill="#2f8bff" stroke="#e8f2ff" strokeWidth="6" />
-      <path d="M390 120 C396 150 406 160 436 166 C406 172 396 182 390 212 C384 182 374 172 344 166 C374 160 384 150 390 120Z" fill="#fff" opacity="0.95" />
-      <path d="M640 380 C645 402 652 409 674 414 C652 419 645 426 640 448 C635 426 628 419 606 414 C628 409 635 402 640 380Z" fill="#fff" opacity="0.9" />
-      <path d="M0 560 L0 470 Q250 430 498 450 Q750 430 996 470 L996 560Z" fill="#070b22" opacity="0.7" />
-    </svg>
-  );
-}
-
-// Bonus EXP sesuai tampilan (hanya wallpaper yang sedang dipakai yang memberi bonus)
-const EXP_BONUS: { name: string; pct: number; color: string; bg: string; border: string }[] = [
-  { name: 'Mythic', pct: 25, color: '#f5d0fe', bg: '#3b0f3a', border: '#ec4899' },
-  { name: 'Legendary', pct: 20, color: '#fde68a', bg: '#3d3208', border: '#f5b301' },
-  { name: 'Epic', pct: 15, color: '#e9d5ff', bg: '#2a1a5e', border: '#7c3aed' },
-  { name: 'Rare', pct: 10, color: '#cfe6ff', bg: '#0f2a52', border: '#2f81f7' },
-  { name: 'Normal', pct: 5, color: '#ffffff', bg: '#0b0d14', border: '#ffffff' },
-];
-const bonusPill = (b: (typeof EXP_BONUS)[number]) => (
-  <span className="rounded-lg border-[1.5px] px-2.5 py-0.5 text-[13px] font-extrabold" style={{ color: b.color, background: b.bg, borderColor: b.border }}>{b.name}</span>
-);
-
-const KFX = `
-@keyframes kgFade{from{opacity:0}to{opacity:1}}
-@keyframes kgBlink{0%,100%{opacity:.35}50%{opacity:1}}
-@keyframes kgFlash{from{opacity:0}to{opacity:1}}
-`;
-
-const FX_MS: Record<Rarity, number> = { Normal: 1600, Rare: 1600, Epic: 2000, Legendary: 2400 };
-
-export default function GachaWallpaperPage() {
-  const router = useRouter();
-  const [fb, setFb] = useState<any>(null);
-  const [uid, setUid] = useState('');
-  const [ready, setReady] = useState(false);
-  const [d, setD] = useState<any>({});
-  const [busy, setBusy] = useState(false);
-  const [toast, setToast] = useState('');
-  const [result, setResult] = useState<{ key: string; isNew: boolean; dup?: number }[] | null>(null);
-  const [fx, setFx] = useState<Rarity | null>(null);
-  const [info, setInfo] = useState(false);
-  const [shop, setShop] = useState(false);
-  const [gain, setGain] = useState(0);
-  const [showTop, setShowTop] = useState(false);
-  const scroller = useRef<HTMLDivElement>(null);
-
-  const load = async (f: any, id: string, photo = '') => {
-    try {
-      const v = (await f.db.ref('users/' + id).get()).val() || {};
-      setD({ ...v, photoURL: v.photoURL || photo });
-    } catch {}
-  };
+// ─── Banner geser: teks kiri, cover kanan, tombol "Baca sekarang" ────────────
+function Hero({ items }: { items: any[] }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const slides = items.slice(0, 5);
+  const [active, setActive] = useState(0);
 
   useEffect(() => {
-    let stop = false;
-    let off: (() => void) | undefined;
-    getFirebase().then((f: any) => {
-      if (stop) return;
-      setFb(f);
-      off = f.auth.onAuthStateChanged(async (u: any) => {
-        if (stop) return;
-        if (!u) { setUid(''); setReady(true); return; }
-        setUid(u.uid);
-        await load(f, u.uid, u.photoURL || '');
-        if (!stop) setReady(true);
-      });
-    }).catch(() => setReady(true));
-    return () => { stop = true; if (off) off(); };
-  }, []);
-
-  const say = (m: string) => { setToast(m); setTimeout(() => setToast(''), 2200); };
-  const ref = () => fb.db.ref('users/' + uid);
-  const koin: number = d.koin || 0;
-  const token: number = d.token || 0;
-  const owned: Record<string, number> = d.ownedWallpapers || {};
-  const active: string = d.activeWallpaper || '';
-
-  const summon = async (n: 1 | 10) => {
-    if (!fb || !uid || busy || fx) return;
-    const cost = n === 1 ? COST_1 : COST_10;
-    if (koin < cost) { say('WibuGem kurang'); return; }
-    setBusy(true);
-    try {
-      // potong saldo pakai transaction supaya nggak bisa dobel dari 2 tab
-      const res = await ref().child('koin').transaction((cur: any) => (typeof cur !== 'number' ? cur : cur >= cost ? cur - cost : undefined));
-      if (!res.committed) { say('WibuGem kurang'); setBusy(false); return; }
-      const picks = rollMany(n);
-      const counts: Record<string, number> = {};
-      picks.forEach((k) => { counts[k] = (counts[k] || 0) + 1; });
-      // satu wallpaper cuma boleh dimiliki sekali; kelebihannya jadi token
-      const wasOwned: Record<string, boolean> = {};
-      await Promise.all(Object.keys(counts).map((k) =>
-        ref().child('ownedWallpapers/' + k).transaction((cur: any) => {
-          if (typeof cur === 'number' && cur > 0) { wasOwned[k] = true; return cur; }
-          wasOwned[k] = false; return 1;
-        })
-      ));
-      const left: Record<string, number> = {};
-      Object.keys(counts).forEach((k) => { left[k] = counts[k]; });
-      let tokens = 0;
-      const items: { key: string; isNew: boolean; dup?: number }[] = picks.map((k) => {
-        const give = TOKEN_DUP[WALLPAPER_CATALOG[k].rarity];
-        const first = left[k] === counts[k];
-        left[k]--;
-        if (first && !wasOwned[k]) return { key: k, isNew: true };
-        tokens += give;
-        return { key: k, isNew: false, dup: give };
-      });
-      let newToken = token;
-      if (tokens > 0) {
-        const tr = await ref().child('token').transaction((cur: any) => (typeof cur === 'number' ? cur : 0) + tokens);
-        newToken = tr.snapshot.val();
-      }
-      setGain(tokens);
-      setD((p: any) => {
-        const nextOwned = { ...(p.ownedWallpapers || {}) };
-        Object.keys(counts).forEach((k) => { nextOwned[k] = nextOwned[k] > 0 ? nextOwned[k] : 1; });
-        return { ...p, koin: res.snapshot.val(), ...(tokens > 0 ? { token: newToken } : {}), ownedWallpapers: nextOwned };
-      });
-      const sorted = items.sort((a, b) => rank(b.key) - rank(a.key));
-      const best = WALLPAPER_CATALOG[sorted[0].key].rarity;
-      setFx(best);
-      setTimeout(() => { setFx(null); setResult(sorted); }, FX_MS[best]);
-    } catch { say('Gagal, coba lagi'); }
-    setBusy(false);
-  };
-
-  const equip = async (key: string) => {
-    if (!fb || !uid || busy) return;
-    setBusy(true);
-    try {
-      await ref().update({ activeWallpaper: key });
-      setD((p: any) => ({ ...p, activeWallpaper: key }));
-    } catch { say('Gagal, coba lagi'); }
-    setBusy(false);
-  };
-
-  const buy = async (key: string) => {
-    if (!fb || !uid || busy) return;
-    const w = WALLPAPER_CATALOG[key];
-    const price = TOKEN_PRICE[w.rarity];
-    if (owned[key]) { say('Sudah kamu miliki'); return; }
-    if (token < price) { say('Token kurang'); return; }
-    setBusy(true);
-    try {
-      const res = await ref().child('token').transaction((cur: any) => (typeof cur !== 'number' ? cur : cur >= price ? cur - price : undefined));
-      if (!res.committed) { say('Token kurang'); setBusy(false); return; }
-      await ref().child('ownedWallpapers/' + key).transaction((cur: any) => (typeof cur === 'number' && cur > 0 ? cur : 1));
-      setD((p: any) => ({ ...p, token: res.snapshot.val(), ownedWallpapers: { ...(p.ownedWallpapers || {}), [key]: 1 } }));
-      say(w.nama + ' didapat!');
-    } catch { say('Gagal, coba lagi'); }
-    setBusy(false);
-  };
-
-  // duplikat lama (dari sebelum aturan baru) ditukar jadi token
-  const oldDup = Object.keys(owned)
-    .filter((k) => WALLPAPER_CATALOG[k] && owned[k] > 1)
-    .reduce((a, k) => a + (owned[k] - 1) * TOKEN_DUP[WALLPAPER_CATALOG[k].rarity], 0);
-  const convertOld = async () => {
-    if (!fb || !uid || busy || !oldDup) return;
-    setBusy(true);
-    try {
-      let add = 0;
-      for (const k of Object.keys(owned)) {
-        if (!WALLPAPER_CATALOG[k]) continue;
-        let extra = 0;
-        await ref().child('ownedWallpapers/' + k).transaction((cur: any) => {
-          if (typeof cur === 'number' && cur > 1) { extra = cur - 1; return 1; }
-          extra = 0; return cur;
-        });
-        add += extra * TOKEN_DUP[WALLPAPER_CATALOG[k].rarity];
-      }
-      if (add > 0) await ref().child('token').transaction((cur: any) => (typeof cur === 'number' ? cur : 0) + add);
-      await load(fb, uid, d.photoURL);
-      say('+' + add + ' Token');
-    } catch { say('Gagal, coba lagi'); }
-    setBusy(false);
-  };
-
-  const sections = SEC_ORDER.map((r) => {
-    const all = Object.keys(WALLPAPER_CATALOG).filter((k) => WALLPAPER_CATALOG[k].rarity === r);
-    const mine = all.filter((k) => owned[k] && k !== active);
-    return { r, total: all.length, mine };
-  }).filter((s) => s.mine.length > 0);
-  const card = 'rounded-2xl border border-white/10 bg-[#171c2b]';
-  const last = result && result[0];
-  const fxc = fx ? RARITY_STYLE[fx].color : '#ffffff';
-  const fxDur = fx ? FX_MS[fx] / 1000 : 1.6;
+    if (slides.length < 2) return;
+    let i = 0;
+    const t = setInterval(() => {
+      const el = ref.current;
+      if (!el) return;
+      i = (i + 1) % slides.length;
+      setActive(i);
+      el.scrollTo({ left: i * (el.scrollWidth / slides.length), behavior: 'smooth' });
+    }, 5000);
+    return () => clearInterval(t);
+  }, [slides.length]);
 
   return (
-    <div ref={scroller} onScroll={(e) => setShowTop(e.currentTarget.scrollTop > 400)} className="fixed inset-0 overflow-y-auto text-white" style={{ background: '#131418' }}>
-      <style>{KFX}</style>
-      <div className="max-w-md mx-auto pb-28">
-        <div className="flex items-center gap-4 px-4 pt-6 pb-4">
-          <button onClick={() => router.back()} className="active:scale-90 transition-transform"><ArrowLeft className="w-6 h-6" /></button>
-          <h1 className="text-[22px] font-extrabold">Wibuku Gacha</h1>
-        </div>
-
-        {ready && !uid && <p className="px-5 pt-6 text-white/60">Login dulu buat summon wallpaper.</p>}
-
-        {uid && (
-          <>
-            <Banner />
-
-            <div className="mx-4 mt-5 grid grid-cols-2 gap-3">
-              <button onClick={() => summon(1)} disabled={busy}
-                className="rounded-2xl p-[2px] active:scale-95 transition-transform disabled:opacity-60"
-                style={{ background: 'linear-gradient(180deg,#4ea9ff,#2f86e8)', filter: koin < COST_1 ? 'brightness(.55)' : 'none' }}>
-                <div className="rounded-[14px] px-2.5 py-2.5 text-center" style={{ background: 'linear-gradient(180deg,#8fd0ff,#5fb3fb 55%,#4a9fee)', boxShadow: 'inset 0 0 0 1.5px rgba(255,255,255,.35)' }}>
-                  <div className="whitespace-nowrap text-[18px] font-extrabold leading-tight" style={{ color: '#12305a' }}>Summon 1x</div>
-                  <div className="mt-1 flex items-center justify-center gap-1.5 rounded-full py-1 text-[14px] font-extrabold text-white" style={{ background: 'rgba(38,52,72,.85)', border: '1.5px solid rgba(255,255,255,.35)' }}><Gem size={15} />{COST_1}</div>
-                </div>
-              </button>
-              <button onClick={() => summon(10)} disabled={busy}
-                className="rounded-2xl p-[2px] active:scale-95 transition-transform disabled:opacity-60"
-                style={{ background: 'linear-gradient(180deg,#f2b94d,#c98a1f)', filter: koin < COST_10 ? 'brightness(.5) saturate(.85)' : 'none' }}>
-                <div className="rounded-[14px] px-2.5 py-2.5 text-center" style={{ background: 'linear-gradient(180deg,#ffd886,#f0b448 55%,#dd9a2c)', boxShadow: 'inset 0 0 0 1.5px rgba(255,255,255,.35)' }}>
-                  <div className="whitespace-nowrap text-[18px] font-extrabold leading-tight" style={{ color: '#4a2f0a' }}>Summon 10x</div>
-                  <div className="mt-1 flex items-center justify-center gap-1.5 rounded-full py-1 text-[14px] font-extrabold text-white" style={{ background: 'rgba(52,44,34,.85)', border: '1.5px solid rgba(255,255,255,.35)' }}><Gem size={15} />{COST_10}</div>
-                </div>
-              </button>
+    <>
+    <div ref={ref} onScroll={(e) => { const el = e.currentTarget; const n = Math.round(el.scrollLeft / (el.scrollWidth / slides.length)); if (n !== active) setActive(n); }} className="no-scrollbar" style={{ display: 'flex', gap: 10, overflowX: 'auto', scrollSnapType: 'x mandatory', padding: '4px 14px' }}>
+      {slides.map((m, i) => {
+        const rating = m.score && m.score !== 'N/A' ? m.score : getRating(m.desc);
+        const desc = (m.desc || '').replace(/^Score:\s*[\d.]+\s*/i, '');
+        return (
+          <div key={i} style={{ position: 'relative', flex: '0 0 94%', height: 215, borderRadius: 28, overflow: 'hidden', scrollSnapAlign: 'center', background: '#16151A' }}>
+            <img src={m.thumb} alt="" referrerPolicy="no-referrer" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(18px) brightness(.35)', transform: 'scale(1.3)' }} />
+            <img src={m.thumb} alt={m.title} referrerPolicy="no-referrer" style={{ position: 'absolute', right: 14, top: 14, bottom: -20, width: '36%', objectFit: 'cover', borderRadius: 18, transform: 'rotate(6deg)', boxShadow: '0 6px 24px rgba(0,0,0,.6)' }} />
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(20,19,24,.92) 45%, transparent 75%)' }} />
+            <div style={{ position: 'absolute', left: 18, top: 16, bottom: 16, width: '60%', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ letterSpacing: 0.3 }}>{typeLabel(m).toUpperCase()}</span>
+                {rating && <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><span style={{ color: '#FBBF24' }}>★</span>{rating}</span>}
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.2, letterSpacing: -1, marginTop: 4, ...clamp(2) }}>{m.title}</div>
+              <div style={{ fontSize: 12.5, fontWeight: 700, lineHeight: 1.35, marginTop: 6, color: '#E8E6EF', ...clamp(2) }}>{desc}</div>
+              <Link href={`/manga?url=${encodeURIComponent(m.link)}`} style={{ marginTop: 'auto', alignSelf: 'flex-start', background: ACCENT, color: '#fff', fontWeight: 800, fontSize: 14, padding: '10px 22px', borderRadius: 99 }}>
+                Baca sekarang
+              </Link>
             </div>
+          </div>
+        );
+      })}
+    </div>
+    <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 12 }}>
+      {slides.map((_, i) => <span key={i} style={{ width: 9, height: 9, borderRadius: '50%', background: i === active ? '#3B9BFF' : '#4A4953' }} />)}
+    </div>
+    </>
+  );
+}
 
-            <button onClick={() => setInfo(true)} className={card + ' mx-4 mt-4 flex w-[calc(100%-2rem)] items-center gap-3 px-4 py-3 text-left active:scale-[.98] transition-transform'}>
-              <Gem size={26} />
-              <span className="text-[13px] font-extrabold">Cara mendapatkan WibuGem</span>
-              <span className="ml-auto flex shrink-0 items-center gap-1 whitespace-nowrap text-[12px] font-medium text-[#3b9cff]">Lihat info <ArrowRight className="w-4 h-4" /></span>
-            </button>
+// ─── Judul section: judul besar + link koral ─────────────────────────────────
+function SectionTitle({ title, sub, action, onAction, href }: { title: string; sub?: string; action: string; onAction?: () => void; href?: string }) {
+  const inner = (
+    <span style={{ color: ACCENT, fontWeight: 800, fontSize: 14, display: 'flex', alignItems: 'center', gap: 2 }}>
+      {action}
+      <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={ACCENT} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="9 6 15 12 9 18" /></svg>
+    </span>
+  );
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '30px 14px 14px' }}>
+      <div style={{ minWidth: 0, flex: 1, paddingRight: 12 }}>
+        <div style={{ ...ell, fontSize: 22, fontWeight: 800, letterSpacing: -1 }}>{title}</div>
+        {sub && <div style={{ ...ell, fontSize: 14, fontWeight: 800, color: MUTED, letterSpacing: -0.5, marginTop: 2 }}>{sub}</div>}
+      </div>
+      {href ? <Link href={href}>{inner}</Link> : <button onClick={onAction} style={{ background: 'none', border: 0 }}>{inner}</button>}
+    </div>
+  );
+}
 
-            <div className="mx-4 mt-4 rounded-2xl border bg-[#171c2b] p-4" style={{ borderColor: '#3a3a42' }}>
-              <h2 className="text-[15px] font-extrabold">Bonus EXP Wallpaper</h2>
-              <p className="mt-0.5 text-[12px] text-white/65">Hanya wallpaper yang sedang dipakai yang memberi bonus.</p>
-              <div className="mt-3 space-y-2">
-                <div className="flex items-center justify-between rounded-xl border border-white/20 bg-[#0b0d17] px-3 py-2">
-                  {bonusPill(EXP_BONUS[0])}<span className="text-[14px] font-extrabold">+{EXP_BONUS[0].pct}%</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {EXP_BONUS.slice(1).map((b) => (
-                    <div key={b.name} className="flex items-center justify-between rounded-xl border border-white/20 bg-[#0b0d17] px-3 py-2">
-                      {bonusPill(b)}<span className="text-[14px] font-extrabold">+{b.pct}%</span>
-                    </div>
-                  ))}
+// ─── Lanjut baca (dari riwayat) ──────────────────────────────────────────────
+function ContinueReading() {
+  const { history } = useHistory();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
+
+  const seen = new Set<string>();
+  const list = history.filter(h => (seen.has(h.mangaLink) ? false : (seen.add(h.mangaLink), true))).slice(0, 8);
+  if (!list.length) return null;
+
+  return (
+    <>
+      <SectionTitle title="Lanjut baca" action="Riwayat" href="/history" />
+      <div className="no-scrollbar" style={{ display: 'flex', gap: 12, overflowX: 'auto', padding: '0 14px' }}>
+        {list.map((h, i) => {
+          const pct = h.totalPages > 0 ? Math.min(100, Math.round((h.pageRead / h.totalPages) * 100)) : 0;
+          const ch = (h.chapterNumber || h.chapterTitle || '').toString().replace(/^ch(apter)?\.?\s*/i, '');
+          return (
+            <Link key={i} href={`/chapter?url=${encodeURIComponent(h.chapterLink)}&thumb=${encodeURIComponent(h.mangaThumb||'')}&mangaTitle=${encodeURIComponent(h.mangaTitle||'')}`} style={{ flex: '0 0 82%', maxWidth: 330, display: 'flex', gap: 14, background: CARD, borderRadius: 22, padding: 12 }}>
+              <img src={h.mangaThumb} alt="" referrerPolicy="no-referrer" style={{ width: 62, height: 84, borderRadius: 10, objectFit: 'cover', background: '#222' }} />
+              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <div style={{ fontSize: 15, fontWeight: 800, lineHeight: 1.2, letterSpacing: -0.7, ...clamp(2) }}>{h.mangaTitle}</div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 6 }}>Ch. {ch} <span style={{ color: MUTED }}>· {pct}%</span></div>
+                  <div style={{ height: 5, borderRadius: 3, background: 'rgba(255,255,255,.08)' }}>
+                    <div style={{ width: `${pct}%`, height: '100%', borderRadius: 3, background: ACCENT }} />
+                  </div>
                 </div>
               </div>
+            </Link>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
+// ─── Kartu besar (Rekomendasi) ───────────────────────────────────────────────
+const BigCard = memo(function BigCard({ item }: { item: any }) {
+  const rating = item.score && item.score !== 'N/A' ? item.score : getRating(item.desc);
+  return (
+    <Link href={`/manga?url=${encodeURIComponent(item.link)}`} style={{ flex: '0 0 86%', maxWidth: 360, scrollSnapAlign: 'start' }}>
+      <div style={{ position: 'relative', height: 215, borderRadius: 28, overflow: 'hidden', background: CARD }}>
+        <img src={item.thumb} alt={item.title} loading="lazy" referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} />
+        <span style={{ position: 'absolute', top: 12, left: 12, background: 'rgba(20,19,24,.8)', fontSize: 13, fontWeight: 800, padding: '4px 10px', borderRadius: 8 }}>{typeLabel(item)}</span>
+      </div>
+      <div style={{ fontSize: 14, fontWeight: 800, letterSpacing: -0.6, margin: '10px 4px 0', ...clamp(1) }}>{item.title}</div>
+    </Link>
+  );
+});
+
+// ─── Util tampilan ───────────────────────────────────────────────────────────
+const GOLD = '#F5C451';
+const BADGE_BG = 'rgba(20,19,24,.82)';
+const ratingOf = (m: any) => (m.score && m.score !== 'N/A' ? m.score : getRating(m.desc));
+const ratingId = (m: any, zero = false) => { const r = ratingOf(m); return r ? String(r).replace('.', ',') : zero ? '0,0' : null; };
+function chNum(ch?: string) { const n = String(ch || '').match(/(\d+(?:[.,]\d+)?)/); return n ? `Ch. ${n[1]}` : ''; }
+function fmtViews(v: any): string | null {
+  if (v == null || v === '') return null;
+  const s = String(v).trim();
+  if (/[a-z]/i.test(s)) return s;
+  const n = parseInt(s.replace(/\D/g, ''), 10);
+  if (!n) return null;
+  if (n >= 1e6) return (n / 1e6).toFixed(1).replace('.', ',') + ' jt';
+  if (n >= 1e3) return Math.round(n / 1e3) + ' rb';
+  return String(n);
+}
+function vnum(m: any): number {
+  const s = String(m.views || '').toLowerCase().replace(/\./g, '').replace(',', '.');
+  const n = parseFloat(s) || 0;
+  return /jt|m/.test(s) ? n * 1e6 : /rb|k/.test(s) ? n * 1e3 : n;
+}
+const isFresh = (t?: string) => /detik|menit|jam|baru/i.test(t || '');
+const uniq = (arr: any[]) => arr.filter((v, i, a) => a.findIndex(t => t.link === v.link) === i);
+const mangaHref = (m: any) => `/manga?url=${encodeURIComponent(m.link)}`;
+
+const Eye = () => (
+  <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" /><circle cx={12} cy={12} r={3} /></svg>
+);
+const TypeBadge = ({ item, size = 11 }: { item: any; size?: number }) => (
+  <span style={{ background: BADGE_BG, fontSize: size, fontWeight: 800, padding: '3px 8px', borderRadius: 7 }}>{typeLabel(item)}</span>
+);
+const NewBadge = ({ size = 11 }: { size?: number }) => (
+  <span style={{ background: ACCENT, color: '#fff', fontSize: size, fontWeight: 800, padding: '3px 8px', borderRadius: 7 }}>BARU</span>
+);
+const Cover = ({ src, alt = '' }: { src: string; alt?: string }) => (
+  <img src={src} alt={alt} loading="lazy" referrerPolicy="no-referrer" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+);
+
+// ─── Pembaruan terbaru: daftar vertikal ──────────────────────────────────────
+const LatestList = memo(function LatestList({ items }: { items: any[] }) {
+  return (
+    <div style={{ padding: '0 14px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+      {items.map((m, i) => {
+        const views = fmtViews(m.views);
+        const ch = chNum(m.chapter);
+        return (
+          <Link key={i} href={mangaHref(m)} style={{ display: 'flex', gap: 14 }}>
+            <div style={{ position: 'relative', flex: '0 0 76px', height: 112, borderRadius: 14, overflow: 'hidden', background: CARD }}>
+              <Cover src={m.thumb} alt={m.title} />
+              <span style={{ position: 'absolute', top: 6, left: 6 }}><TypeBadge item={m} size={10} /></span>
+            </div>
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontSize: 17, fontWeight: 800, letterSpacing: -0.8, lineHeight: 1.15, ...clamp(2) }}>{m.title}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 5, fontSize: 13, fontWeight: 800 }}>
+                  <span><span style={{ color: '#FBBF24' }}>★</span> {ratingId(m, true)}</span>
+                  {views && <span style={{ color: MUTED, display: 'flex', alignItems: 'center', gap: 4 }}><Eye /> {views}</span>}
+                  {isFresh(m.time) && <NewBadge />}
+                </div>
+              </div>
+              {ch && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: CARD, borderRadius: 14, padding: '10px 14px', marginTop: 8 }}>
+                  <span style={{ fontSize: 14, fontWeight: 800 }}>{ch}</span>
+                  {m.time && <span style={{ fontSize: 11.5, fontWeight: 700, color: MUTED }}>{m.time}</span>}
+                </div>
+              )}
+            </div>
+          </Link>
+        );
+      })}
+    </div>
+  );
+});
+
+// ─── Kartu Premium ───────────────────────────────────────────────────────────
+function PremiumCard() {
+  return (
+    <div style={{ margin: '30px 14px 0', padding: '18px 18px', borderRadius: 22, border: '1.5px solid #5E4E1C', background: '#272212', display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: GOLD, fontSize: 13, fontWeight: 800 }}>
+          <svg width={16} height={16} viewBox="0 0 24 24" fill={GOLD}><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5L3 8z" /></svg>
+          KOMIKITA PREMIUM
+        </div>
+        <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: -1, marginTop: 6, color: '#FBF3DC' }}>Baca tanpa iklan</div>
+        <div style={{ fontSize: 13, fontWeight: 700, color: '#B7AD8C', marginTop: 2, lineHeight: 1.3 }}>Plus unduh massal untuk baca offline</div>
+      </div>
+      <Link href="/profile" style={{ background: GOLD, color: '#2A2208', fontWeight: 800, fontSize: 14, padding: '12px 18px', borderRadius: 99, whiteSpace: 'nowrap' }}>
+        Coba sekarang
+      </Link>
+    </div>
+  );
+}
+
+// ─── Terpopuler: kolom berisi 3 peringkat, geser ke samping ──────────────────
+const Ranked = memo(function Ranked({ items }: { items: any[] }) {
+  const cols: any[][] = [];
+  for (let i = 0; i < items.length; i += 3) cols.push(items.slice(i, i + 3));
+  return (
+    <div className="no-scrollbar" style={{ display: 'flex', gap: 8, overflowX: 'auto', scrollSnapType: 'x mandatory', padding: '0 14px' }}>
+      {cols.map((col, ci) => (
+        <div key={ci} style={{ flex: '0 0 88%', display: 'flex', flexDirection: 'column', gap: 14, scrollSnapAlign: 'start' }}>
+          {col.map((m, ri) => {
+            const n = ci * 3 + ri + 1;
+            const views = fmtViews(m.views);
+            return (
+              <Link key={ri} href={mangaHref(m)} style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <span style={{ width: 40, textAlign: 'center', fontSize: 41, fontWeight: 800, letterSpacing: -2, color: n <= 3 ? ACCENT : '#6B6976' }}>{n}</span>
+                <div style={{ position: 'relative', flex: '0 0 62px', height: 92, borderRadius: 10, overflow: 'hidden', background: CARD }}>
+                  <Cover src={m.thumb} alt={m.title} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 16, fontWeight: 800, letterSpacing: -0.7, lineHeight: 1.2, ...clamp(2) }}>{m.title}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4, fontSize: 13, fontWeight: 800 }}>
+                    <span><span style={{ color: '#FBBF24' }}>★</span> {ratingId(m, true)}</span>
+                    {views && <span style={{ color: MUTED, display: 'flex', alignItems: 'center', gap: 4 }}><Eye /> {views}</span>}
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
+});
+
+// ─── Poster (Jelajah per genre & Berdasarkan asal) ───────────────────────────
+const PosterCard = memo(function PosterCard({ m, w }: { m: any; w: string }) {
+  const ch = chNum(m.chapter);
+  return (
+    <Link href={mangaHref(m)} style={{ flex: `0 0 ${w}`, minWidth: 0 }}>
+      <div style={{ position: 'relative', paddingTop: '150%', borderRadius: 22, overflow: 'hidden', background: CARD }}>
+        <Cover src={m.thumb} alt={m.title} />
+        <div style={{ position: 'absolute', top: 8, left: 8, display: 'flex', gap: 4 }}>
+          <TypeBadge item={m} />
+          {isFresh(m.time) && <NewBadge />}
+        </div>
+      </div>
+      <div style={{ fontSize: 14, fontWeight: 800, lineHeight: 1.2, letterSpacing: -0.5, marginTop: 8, ...clamp(2) }}>{m.title}</div>
+      {ch && <div style={{ fontSize: 13, fontWeight: 800, color: MUTED, marginTop: 2 }}>{ch}</div>}
+    </Link>
+  );
+});
+
+function GenreSection({ categories }: { categories: { category: string; items: any[] }[] }) {
+  const [sel, setSel] = useState(0);
+  const cat = categories[sel] || categories[0];
+  if (!cat) return null;
+  return (
+    <>
+      <SectionTitle title="Jelajah per genre" action="Lihat semua" href="/search" />
+      <div className="no-scrollbar" style={{ display: 'flex', gap: 10, overflowX: 'auto', padding: '0 14px 16px' }}>
+        {categories.map((c, i) => {
+          const on = i === sel;
+          return (
+            <button key={c.category} onClick={() => setSel(i)} style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 8, padding: '9px 18px', borderRadius: 99, fontSize: 15, fontWeight: 800, letterSpacing: -0.4, background: on ? '#F3F2F7' : 'transparent', color: on ? '#1B1A20' : '#fff', border: on ? '1px solid #F3F2F7' : '1px solid rgba(255,255,255,.14)' }}>
+              {on && <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#1B1A20" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"><polyline points="4 12 10 18 20 6" /></svg>}
+              {c.category}
+            </button>
+          );
+        })}
+      </div>
+      <div className="no-scrollbar" style={{ display: 'flex', gap: 10, overflowX: 'auto', padding: '0 14px' }}>
+        {cat.items.slice(0, 9).map((m, i) => <PosterCard key={cat.category + i} m={m} w="calc((100% - 20px) / 3)" />)}
+      </div>
+    </>
+  );
+}
+
+function OriginSection({ all }: { all: any[] }) {
+  const tabs = ['Manhwa', 'Manhua', 'Manga'];
+  const [tab, setTab] = useState('Manga');
+  const list = all.filter(m => typeLabel(m) === tab).slice(0, 12);
+  return (
+    <>
+      <SectionTitle title="Berdasarkan asal" action="Lihat semua" href="/search" />
+      <div style={{ margin: '0 14px 16px', display: 'inline-flex', padding: 5, borderRadius: 99, background: '#25242B', border: '1px solid rgba(255,255,255,.06)' }}>
+        {tabs.map(t => (
+          <button key={t} onClick={() => setTab(t)} style={{ padding: '10px 26px', borderRadius: 99, fontSize: 16, fontWeight: 800, letterSpacing: -0.5, background: tab === t ? '#18171C' : 'transparent', color: tab === t ? '#fff' : MUTED, border: 0 }}>{t}</button>
+        ))}
+      </div>
+      {list.length ? (
+        <div className="no-scrollbar" style={{ display: 'flex', gap: 10, overflowX: 'auto', padding: '0 14px' }}>
+          {list.map((m, i) => <PosterCard key={tab + i} m={m} w="calc((100% - 30px) / 3.35)" />)}
+        </div>
+      ) : (
+        <div style={{ padding: '10px 14px', color: MUTED, fontWeight: 700 }}>Belum ada komik {tab}.</div>
+      )}
+    </>
+  );
+}
+
+// ─── Skeleton ────────────────────────────────────────────────────────────────
+function SkeletonHome() {
+  const sh: React.CSSProperties = { background: 'linear-gradient(90deg,#2A2931 25%,#33323B 50%,#2A2931 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite linear' };
+  return (
+    <div style={{ padding: '0 14px' }}>
+      <div style={{ ...sh, height: 215, borderRadius: 28 }} />
+      <div style={{ ...sh, width: 150, height: 26, borderRadius: 8, margin: '34px 0 14px' }} />
+      <div style={{ ...sh, height: 110, borderRadius: 22 }} />
+      <div style={{ ...sh, width: 190, height: 26, borderRadius: 8, margin: '34px 0 14px' }} />
+      <div style={{ ...sh, height: 215, borderRadius: 28 }} />
+    </div>
+  );
+}
+
+// ─── Halaman utama ───────────────────────────────────────────────────────────
+export default function Home() {
+  const router = useRouter();
+  const [categories, setCategories] = useState<{ category: string; items: any[] }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Firebase di-load setelah halaman siap (defer supaya tidak memblok render)
+  useEffect(() => {
+    const t = setTimeout(() => {
+      getFirebase().then(({ db }) => {
+        db.ref('users').get().then(() => {}).catch(() => {});
+      }).catch(() => {});
+    }, 3000);
+    return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    const CACHE_KEY = 'komiku_home_v3'; // v2: data sekarang punya chapter/waktu/views
+    const CACHE_TTL = 5 * 60 * 1000;
+    try {
+      const raw = localStorage.getItem(CACHE_KEY);
+      if (raw) {
+        const { data, ts } = JSON.parse(raw);
+        if (Array.isArray(data) && Date.now() - ts < CACHE_TTL) {
+          setCategories(data);
+          setLoading(false);
+          return;
+        } else if (Array.isArray(data)) {
+          setCategories(data);
+          setLoading(false);
+        }
+      }
+    } catch {}
+
+    fetch('/api/manga/home')
+      .then(r => r.json())
+      .then(json => {
+        if (json.success && Array.isArray(json.data)) {
+          setCategories(json.data);
+          try { localStorage.setItem(CACHE_KEY, JSON.stringify({ data: json.data, ts: Date.now() })); } catch {}
+        } else if (!categories.length) {
+          setError(json.message || 'Gagal memuat data');
+        }
+      })
+      .catch(e => { if (!categories.length) setError(e.message); })
+      .finally(() => setLoading(false));
+  }, []);
+
+  const goSearch = useCallback(() => router.push('/search'), [router]);
+  const seeAll = useCallback((c: string) => router.push(`/search?genre=${encodeURIComponent(c)}`), [router]);
+
+  const all = uniq(categories.flatMap(c => c.items));
+  const rate = (x: any) => parseFloat(ratingOf(x) ?? '0') || 0;
+  const hero = all.slice(0, 5);
+  const recommended = all.slice(5, 15);
+  const withCh = all.filter(m => m.chapter);
+  const latest = (withCh.length >= 4 ? withCh : all).slice(0, 4);
+  const popular = [...all].sort((a, b) => (vnum(b) - vnum(a)) || (rate(b) - rate(a))).slice(0, 12);
+
+  return (
+    <>
+      <style>{`
+        a { text-decoration: none; color: inherit; }
+        button { font-family: inherit; cursor: pointer; }
+        ::-webkit-scrollbar { display: none; }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+      `}</style>
+
+      <div style={{ background: '#1B1A20', color: '#fff', minHeight: '100vh', paddingBottom: 24 }}>
+        <Header onSearch={goSearch} />
+        {loading ? (
+          <SkeletonHome />
+        ) : error ? (
+          <div style={{ padding: 20, textAlign: 'center', color: MUTED }}>{error}</div>
+        ) : (
+          <>
+            <Hero items={hero} />
+            <ContinueReading />
+
+            <SectionTitle title="Rekomendasi" sub="Pilihan tim Komikita" action="Lihat semua" onAction={() => seeAll('Rekomendasi')} />
+            <div className="no-scrollbar" style={{ display: 'flex', gap: 12, overflowX: 'auto', scrollSnapType: 'x mandatory', scrollPaddingLeft: 14, padding: '0 14px' }}>
+              {recommended.map((m, i) => <BigCard key={i} item={m} />)}
             </div>
 
-            {active && WALLPAPER_CATALOG[active] && (
-              <section className="mt-6 px-4">
-                <SecHead title="Sedang Dipakai" pill={'+' + SEC[WALLPAPER_CATALOG[active].rarity].bonus + '% EXP aktif'} border="rgba(255,255,255,.85)" bg="#1c1824" pillBg="#6b6b73" />
-                <div className="relative mt-2 aspect-[996/526] overflow-hidden rounded-2xl" style={{ background: wpBg(active) }}>
-                  <p className="absolute left-3.5 top-3 text-[17px] font-extrabold">{WALLPAPER_CATALOG[active].nama}</p>
-                  <button onClick={() => equip('')} disabled={busy} className="absolute bottom-3.5 right-3.5 rounded-full bg-black/45 px-5 py-2.5 text-[16px] font-extrabold active:scale-95 transition-transform">Lepas</button>
-                </div>
-              </section>
-            )}
+            <SectionTitle title="Pembaruan terbaru" action="Lihat semua" onAction={() => seeAll('Update')} />
+            <LatestList items={latest} />
 
-            {sections.map(({ r, total, mine }) => (
-              <section key={r} className="mt-6 px-4">
-                <SecHead title={r} pill={'+' + SEC[r].bonus + '% EXP · ' + mine.length + '/' + total + ' items'} border={SEC[r].border} bg={SEC[r].bg} />
-                <div className="mt-2 grid grid-cols-2 gap-3">
-                  {mine.map((k) => (
-                    <div key={k} className="relative aspect-[482/273] overflow-hidden rounded-2xl" style={{ background: wpBg(k) }}>
-                      <p className="absolute left-3.5 top-3 text-[16px] font-extrabold">{WALLPAPER_CATALOG[k].nama}</p>
-                      <button onClick={() => equip(k)} disabled={busy} className="absolute bottom-3 right-3 rounded-full bg-black/45 px-4 py-2 text-[15px] font-extrabold text-[#2f9bff] active:scale-95 transition-transform">Pakai</button>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            ))}
+            <PremiumCard />
+
+            <SectionTitle title="Terpopuler sepanjang masa" sub="Paling banyak dibaca di Komikita" action="Lihat semua" onAction={() => seeAll('Popular')} />
+            <Ranked items={popular} />
+
+            <GenreSection categories={categories} />
+
+            <OriginSection all={all} />
           </>
         )}
       </div>
-
-      {uid && (
-        <div className="pointer-events-none fixed inset-x-0 bottom-5 z-40">
-          <div className="relative mx-auto flex max-w-md items-center justify-end px-4">
-            {showTop && (
-              <button onClick={() => scroller.current?.scrollTo({ top: 0, behavior: 'smooth' })}
-                className="pointer-events-auto absolute left-1/2 flex h-14 w-14 -translate-x-1/2 items-center justify-center rounded-full bg-[#1f95ff] shadow-lg shadow-black/40 active:scale-90 transition-transform">
-                <ArrowUp className="h-7 w-7" />
-              </button>
-            )}
-            <div className="pointer-events-auto flex items-center gap-2.5 rounded-xl bg-[#1c2233] px-4 py-2 shadow-lg shadow-black/40">
-              <Gem size={22} /><span className="text-[17px] font-extrabold">{koin.toLocaleString('id-ID')}</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {fx && (
-        <div className="fixed inset-0 z-[55] flex items-center justify-center overflow-hidden" style={{ background: 'radial-gradient(circle at 50% 45%,rgba(10,15,30,.75),#05070f 75%)', animation: 'kgFade .25s ease-out' }}>
-          <div className="w-36 h-36 rounded-full" style={{ background: 'radial-gradient(circle at 35% 30%,#fff,' + fxc + ' 45%,transparent 72%)', animation: 'kgBlink 1s ease-in-out infinite' }} />
-          <p className="absolute bottom-[22%] text-lg font-black tracking-widest text-white/80" style={{ animation: 'kgBlink 1s ease-in-out infinite' }}>SUMMONING...</p>
-          <div className="absolute inset-0 bg-white" style={{ opacity: 0, animation: 'kgFlash .35s ease-in ' + (fxDur - 0.35) + 's forwards' }} />
-        </div>
-      )}
-
-      {result && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70" onClick={() => setResult(null)}>
-          <div className="w-full max-w-md rounded-t-3xl bg-[#1a2238] p-5" onClick={(e) => e.stopPropagation()}>
-            <p className="text-center text-xl font-black">Hasil Summon</p>
-            <div className={'mt-4 grid gap-2 ' + (result.length > 1 ? 'grid-cols-5' : 'grid-cols-1 w-40 mx-auto')}>
-              {result.map((it, i) => {
-                const w = WALLPAPER_CATALOG[it.key];
-                const st = RARITY_STYLE[w.rarity];
-                return (
-                  <div key={i} className="relative rounded-xl overflow-hidden aspect-[3/4]"
-                    style={{ background: wpBg(it.key), border: '2px solid ' + st.border, animation: 'kgFade .3s ease-out both' }}>
-                    {it.isNew && <span className="absolute left-0 top-0 bg-rose-500 px-1.5 text-[9px] font-black">BARU</span>}
-                    {it.dup ? <span className="absolute left-0 top-0 bg-amber-400 px-1.5 text-[9px] font-black text-black">+{it.dup} Token</span> : null}
-                    <span className="absolute bottom-0 inset-x-0 bg-black/60 text-center text-[9px] font-black truncate px-0.5" style={{ color: st.color }}>{w.nama}</span>
-                  </div>
-                );
-              })}
-            </div>
-            {gain > 0 && <p className="mt-4 text-center text-sm font-black text-amber-300">Duplikat jadi +{gain} Token</p>}
-            <button onClick={() => setResult(null)} className="mt-5 w-full rounded-2xl bg-violet-500 py-3 font-black">Oke</button>
-          </div>
-        </div>
-      )}
-
-      {shop && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70" onClick={() => setShop(false)}>
-          <div className="w-full max-w-md max-h-[85vh] overflow-y-auto rounded-t-3xl bg-[#1a2238] p-5" onClick={(e) => e.stopPropagation()}>
-            <p className="text-center text-xl font-black">Toko Token</p>
-            <div className="mt-2 flex items-center justify-center gap-2">
-              <Coins className="w-5 h-5 text-amber-300" />
-              <span className="text-2xl font-black text-amber-300">{token.toLocaleString('id-ID')}</span>
-            </div>
-            <p className="mt-2 text-center text-xs font-bold text-white/50">
-              Dapat wallpaper yang sudah dimiliki? Otomatis jadi token: {RARITIES.map((r) => r + ' +' + TOKEN_DUP[r]).join(' · ')}.
-            </p>
-            {oldDup > 0 && (
-              <button onClick={convertOld} disabled={busy} className="mt-3 w-full rounded-2xl border border-amber-300/40 bg-[#2a2112] py-2.5 text-sm font-black text-amber-200 active:scale-95 disabled:opacity-60">
-                Tukar duplikat lama jadi +{oldDup} Token
-              </button>
-            )}
-            <div className="mt-4 space-y-4">
-              {INFO_ORDER.map(({ r, keys }) => (
-                <div key={r}>
-                  <div className="mb-2 flex items-center gap-2">
-                    <span className="font-black" style={{ color: RARITY_STYLE[r].color }}>{r}</span>
-                    <span className="ml-auto flex items-center gap-1 text-sm font-black text-amber-300"><Coins className="w-4 h-4" />{TOKEN_PRICE[r]}</span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    {keys.map((k) => {
-                      const have = !!owned[k];
-                      return (
-                        <button key={k} onClick={() => !have && buy(k)} disabled={busy || have} className="text-left active:scale-95 transition-transform">
-                          <div className="relative h-20 overflow-hidden rounded-xl" style={{ background: wpBg(k), border: '1.5px solid ' + RARITY_STYLE[r].border, opacity: have ? 0.45 : 1 }}>
-                            {have ? <span className="absolute bottom-1 right-1 rounded-full bg-emerald-600/90 p-0.5"><Check className="w-3 h-3" /></span> : null}
-                          </div>
-                          <p className="mt-1 truncate text-center text-[11px] font-black text-white/80">{WALLPAPER_CATALOG[k].nama}</p>
-                          <p className="text-center text-[11px] font-black" style={{ color: have ? '#34d399' : token >= TOKEN_PRICE[r] ? '#fcd34d' : 'rgba(255,255,255,.35)' }}>{have ? 'Dimiliki' : TOKEN_PRICE[r] + ' Token'}</p>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-            <button onClick={() => setShop(false)} className="mt-5 w-full rounded-2xl bg-violet-500 py-3 font-black">Tutup</button>
-          </div>
-        </div>
-      )}
-
-      {info && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70" onClick={() => setInfo(false)}>
-          <div className="w-full max-w-md max-h-[85vh] overflow-y-auto rounded-t-3xl bg-[#1a2238] p-5" onClick={(e) => e.stopPropagation()}>
-            <p className="text-center text-xl font-black">Info Rarity</p>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <button onClick={() => { setInfo(false); setShop(true); }} className="flex items-center justify-center gap-2 rounded-2xl border border-amber-300/30 bg-[#2a2112] py-2.5 text-sm font-black text-amber-200 active:scale-95"><ShoppingBag className="w-4 h-4" />Toko Token ({token.toLocaleString('id-ID')})</button>
-              <button onClick={() => router.push('/komikstore/avatar-border')} className="rounded-2xl border border-white/10 bg-[#111a2e] py-2.5 text-sm font-black active:scale-95">Gacha Border</button>
-            </div>
-            <p className="mt-1 text-center text-xs font-bold text-white/50">Makin tinggi rarity, makin langka dan makin bagus tampilannya.</p>
-            <div className="mt-4 space-y-3">
-              {INFO_ORDER.map(({ r, keys }) => {
-                const st = RARITY_STYLE[r];
-                const inf = RARITY_INFO[r];
-                const avg = Math.max(1, Math.round(100 / RATES[r]));
-                const have = keys.filter((k) => owned[k]).length;
-                return (
-                  <div key={r} className="rounded-2xl border bg-[#111a2e] p-3" style={{ borderColor: st.border, boxShadow: st.glow }}>
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg font-black" style={{ color: st.color }}>{r}</span>
-                      <span className="rounded-full px-2 py-0.5 text-[10px] font-black text-black" style={{ background: st.color }}>{inf.label}</span>
-                      <span className="ml-auto text-sm font-black text-amber-300" aria-label={inf.stars + ' dari 4 bintang'}>
-                        {'★'.repeat(inf.stars)}<span className="text-white/20">{'★'.repeat(4 - inf.stars)}</span>
-                      </span>
-                    </div>
-                    <div className="mt-2 flex items-center gap-2">
-                      <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/10">
-                        <div className="h-full rounded-full" style={{ width: Math.max(RATES[r], 3) + '%', background: st.color }} />
-                      </div>
-                      <span className="text-sm font-black" style={{ color: st.color }}>{RATES[r]}%</span>
-                    </div>
-                    <p className="mt-2 text-[13px] font-bold text-white/70">{inf.desc}</p>
-                    <p className="mt-1 text-xs font-bold text-white/45">
-                      Rata-rata ±{avg}x summon (±{(avg * COST_1).toLocaleString('id-ID')} WibuGem) · {keys.length} wallpaper · koleksimu {have}/{keys.length}
-                    </p>
-                    <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
-                      {keys.map((k) => (
-                        <div key={k} className="w-14 shrink-0">
-                          <div className="relative h-16 overflow-hidden rounded-lg" style={{ background: wpBg(k), border: '1px solid ' + st.border, opacity: owned[k] ? 1 : 0.5 }}>
-                            {owned[k] ? <span className="absolute bottom-0.5 right-0.5 rounded-full bg-emerald-600/90 p-0.5"><Check className="w-2.5 h-2.5" /></span> : null}
-                          </div>
-                          <p className="mt-0.5 truncate text-center text-[9px] font-black text-white/70">{WALLPAPER_CATALOG[k].nama}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <p className="mt-4 text-center text-xs font-bold text-white/45">Summon 10x dijamin ada minimal 1 Rare. Perkiraan WibuGem dihitung dari peluang; hasil sebenarnya bisa lebih cepat atau lebih lama. Wallpaper yang sudah kamu punya tidak bertambah lagi: duplikatnya otomatis jadi token untuk ditukar di Toko Token.</p>
-            <button onClick={() => setInfo(false)} className="mt-4 w-full rounded-2xl bg-violet-500 py-3 font-black">Oke</button>
-          </div>
-        </div>
-      )}
-
-      {toast && <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[60] rounded-full bg-slate-900/90 px-4 py-2 text-sm font-bold">{toast}</div>}
-    </div>
+    </>
   );
 }
