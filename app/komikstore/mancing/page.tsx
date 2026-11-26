@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getFirebase } from '@/lib/firebase-client';
 import FishingGame from '@/components/fishing/FishingGame';
+import { GameLoading } from '@/components/GameMode';
 import {
   DEFAULT_ROD, GACHA_DUPLICATE_REFUND, GACHA_PRICE, ROD_MAX_LV, RODS_BY_ID, SPECIES_BY_ID, clampRodLv, fishPrice, rodAt, rodUpgradeCost, rollGacha, nextPity, sanitizeBag, sanitizeRodLv, sanitizeRods,
 } from '@/lib/fishing';
@@ -217,11 +218,7 @@ export default function MancingPage() {
     }
   }, []);
 
-  if (!ready) {
-    return (
-      <div className="fixed inset-0 z-[70] flex items-center justify-center bg-[#0b1a2b] font-bold text-white/70">Memuat pulau...</div>
-    );
-  }
+  if (!ready) return <GameLoading text="Memuat pulau..." />;
 
   return (
     <>

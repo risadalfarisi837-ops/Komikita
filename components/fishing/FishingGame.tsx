@@ -18,7 +18,7 @@ import ShopScreen, { RodArt } from './Shop';
 import RodScreen from './RodScreen';
 import type { ShopTab } from './Shop';
 import type { DevStats, SellMode } from './DevTools';
-import { GAME_BACK_EVENT, cancelLeavingGame, markLeavingGame } from '@/components/GameMode';
+import { GAME_BACK_EVENT, cancelLeavingGame, isTouchDevice, markLeavingGame } from '@/components/GameMode';
 
 interface Props {
   name: string;
@@ -337,7 +337,7 @@ export default function FishingGame(props: Props) {
   const rotRef = useRef(false);
   rotRef.current = rot;
   useEffect(() => {
-    const upd = () => setVp({ w: window.innerWidth, h: window.innerHeight, touch: window.matchMedia('(pointer: coarse)').matches });
+    const upd = () => setVp({ w: window.innerWidth, h: window.innerHeight, touch: isTouchDevice() });
     upd();
     window.addEventListener('resize', upd);
     window.addEventListener('orientationchange', upd);
