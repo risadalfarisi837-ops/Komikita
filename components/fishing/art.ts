@@ -547,6 +547,8 @@ export const ROD_SKINS: Record<string, RodSkin> = {
   kristal: { shaft: '#58d6ff', shaftD: '#2b8fc9', grip: '#2a3f7a', tip: '#e6fbff', ring: '#a8ecff', glow: '#7df9ff', spark: '#ffffff' },
   bulan: { shaft: '#d9d2ff', shaftD: '#8f86d6', grip: '#3a2f78', tip: '#fffbe0', ring: '#f0ecff', glow: '#c9bfff', spark: '#fff7c2' },
   naga: { shaft: '#c0392b', shaftD: '#7a1d14', grip: '#1f3b2a', tip: '#ffcf5a', ring: '#ffa14a', glow: '#ff6a3a', spark: '#ffd27a' },
+  sisik: { shaft: '#d9482b', shaftD: '#7a1d14', grip: '#2a1a10', tip: '#ffe27a', ring: '#ffb347', glow: '#ff7a3a', spark: '#ffd27a' },
+  tentakel: { shaft: '#8e44d6', shaftD: '#4a1d7a', grip: '#1a1030', tip: '#f0b8ff', ring: '#c58bff', glow: '#b05cff', spark: '#f6d6ff' },
 };
 
 // Posisi joran saat dipegang santai (belum dilempar): tegak di samping badan

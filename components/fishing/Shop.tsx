@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
-import { GACHA_DUPLICATE_REFUND, GACHA_ODDS, GACHA_PRICE, RARITY, RODS, formatNum } from '@/lib/fishing';
+import { GACHA_DUPLICATE_REFUND, GACHA_ODDS, GACHA_PITY, GACHA_PRICE, GACHA_RODS, RARITY, RODS, formatNum } from '@/lib/fishing';
 import type { Rod } from '@/lib/fishing';
 
-export type ShopTab = 'toko' | 'gacha';
+export type ShopTab = 'toko' | 'gachagaya' | 'gacha' | 'gaya' | 'tas';
 
 interface Props {
   px: (n: number) => number;
@@ -21,6 +21,9 @@ interface Props {
   onBuy: (id: string) => void;
   onEquip: (id: string) => void;
   onPull: (n: 1 | 5) => void;
+  pity: number;
+  starterClaimed: boolean;
+  onClaimStarter: () => void;
 }
 
 const BROWN = '#5a3b1e';
@@ -107,17 +110,29 @@ export default function ShopScreen(p: Props) {
 
   const shopRods = RODS.filter((r) => !r.gachaOnly && r.price > 0);
   const feat = shopRods.filter((r) => !rods.includes(r.id)).sort((a, b) => a.price - b.price)[0];
-  const gachaRods = RODS.filter((r) => r.gachaOnly);
+  const gachaRods = GACHA_RODS;
+  const monthly = RODS.find((r) => r.monthly);
+  const leftMs = Math.max(0, new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).getTime() - Date.now());
+  const leftD = Math.floor(leftMs / 86400000);
+  const leftH = Math.floor((leftMs % 86400000) / 3600000);
   const ownedG = gachaRods.filter((r) => rods.includes(r.id)).length;
   const topG = [...gachaRods].sort((a, b) => (GACHA_ODDS[a.id] ?? 0) - (GACHA_ODDS[b.id] ?? 0));
   const rarest = topG[0];
-  const legPct = gachaRods.filter((r) => r.rarity === 'legendary').reduce((s, r) => s + (GACHA_ODDS[r.id] ?? 0), 0);
+  const legPct = gachaRods.filter((r) => r.rarity === rarest.rarity).reduce((s, r) => s + (GACHA_ODDS[r.id] ?? 0), 0);
   const topRar = RARITY[rarest.rarity];
 
   const rays = (a: string, b: string) => `repeating-conic-gradient(from 0deg at 50% 50%, ${a} 0 8deg, ${b} 8deg 16deg)`;
 
+  const soon = (title: string, desc: string) => (
+    <div style={{ borderRadius: px(22), border: `${px(3)}px solid #e6d4b0`, background: '#fffaf0', padding: `${px(36)}px ${px(20)}px`, textAlign: 'center', boxShadow: `0 ${px(3)}px 0 #e6d4b0` }}>
+      <div style={{ fontSize: px(46) }}>🚧</div>
+      <div style={{ fontSize: px(24), fontWeight: 800, marginTop: px(6) }}>{title}</div>
+      <div style={{ fontSize: px(15), fontWeight: 700, color: '#8a6d4a', marginTop: px(6) }}>{desc}</div>
+    </div>
+  );
+
   const sideTab = (k: ShopTab, ico: string) => (
-    <button key={k} onClick={() => onTab(k)} aria-label={k === 'toko' ? 'Toko' : 'Gacha joran'}
+    <button key={k} onClick={() => onTab(k)} aria-label={k}
       style={{ width: px(68), height: px(58), borderRadius: px(16), border: 0, background: tab === k ? 'linear-gradient(180deg,#3b8cf0,#1f64cc)' : 'transparent', boxShadow: tab === k ? `0 ${px(4)}px 0 #164b9c` : 'none', fontSize: px(32), cursor: 'pointer', padding: 0 }}>{ico}</button>
   );
 
@@ -138,36 +153,66 @@ export default function ShopScreen(p: Props) {
       <div style={{ flex: 1, minHeight: 0, display: 'flex', gap: px(14), padding: `${px(12)}px ${px(12)}px 0` }}>
         {/* sidebar */}
         <div style={{ width: px(84), flex: 'none', alignSelf: 'stretch', background: '#f5e8cf', borderRadius: `${px(28)}px ${px(28)}px 0 0`, padding: `${px(10)}px ${px(8)}px`, display: 'grid', alignContent: 'start', justifyItems: 'center', gap: px(8) }}>
-          {sideTab('toko', '🏷️')}
-          {sideTab('gacha', '🎣')}
+          {sideTab('toko', '\u{1F3F7}\u{FE0F}')}
+          {sideTab('gachagaya', '\u{1F381}')}
+          {sideTab('gacha', '\u{1F3A3}')}
+          {sideTab('gaya', '\u{1F455}')}
+          {sideTab('tas', '\u{1F392}')}
         </div>
 
         <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', paddingBottom: px(18) }}>
-          {tab === 'toko' ? (
+          {tab === 'gachagaya' ? soon('Gacha Gaya', 'Gaya rambut dan aksesori punggung karakter segera hadir.') : tab === 'gaya' ? soon('Gaya', 'Ganti gaya karakter di sini setelah Gacha Gaya dibuka.') : tab === 'tas' ? soon('Tas', 'Upgrade ransel dan umpan segera hadir.') : tab === 'toko' ? (
             <div>
-              {feat && (
-                <div style={{ display: 'flex', alignItems: 'stretch', borderRadius: px(22), border: `${px(3)}px solid #7b9be8`, background: '#fff9ea', overflow: 'hidden', boxShadow: `0 ${px(4)}px 0 #d9c7a4`, minHeight: px(112) }}>
-                  <div style={{ width: px(126), flex: 'none', position: 'relative', background: `radial-gradient(circle at 50% 50%, #d9e0f2 0 24%, transparent 25%), ${rays('#34507e', '#28406a')}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <RodArt color={RARITY[feat.rarity].color} size={px(86)} />
+              {monthly && (
+                <div style={{ display: 'flex', alignItems: 'stretch', borderRadius: px(22), border: `${px(3)}px solid #7b9be8`, background: '#fff9ea', overflow: 'hidden', boxShadow: `0 ${px(4)}px 0 #d6c9ad` }}>
+                  <div style={{ width: px(126), flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', background: `radial-gradient(circle at 50% 50%, #d9e0f2 0 24%, transparent 25%), ${rays('#34507e', '#28406a')}` }}>
+                    <RodArt color={RARITY[monthly.rarity].color} size={px(86)} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0, padding: `${px(10)}px ${px(14)}px`, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: px(6) }}>
-                    <div style={{ color: '#c98d12', fontWeight: 800, fontSize: px(14) }}>Pilihan toko · {RARITY[feat.rarity].label}</div>
-                    <div style={{ color: '#2b2a52', fontWeight: 700, fontSize: px(24), lineHeight: 1.1 }}>{feat.name}</div>
+                    <div style={{ color: '#c98d12', fontWeight: 800, fontSize: px(14) }}>Joran Bulanan · sisa {leftD} hari {leftH} jam</div>
+                    <div style={{ color: '#2b2a52', fontWeight: 700, fontSize: px(24), lineHeight: 1.1 }}>{monthly.name}</div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: px(6) }}>
-                      <span style={{ ...chip, background: '#fff1c4', color: '#a86b00', fontSize: px(14) }}>⚡{feat.power}</span>
-                      <span style={{ ...chip, fontSize: px(14) }}>🍀+{Math.round(feat.luck * 100)}%</span>
-                      <span style={{ ...chip, fontSize: px(14) }}>💰+{Math.round(feat.money * 100)}%</span>
-                      <span style={{ ...chip, fontSize: px(14) }}>✨+{Math.round(feat.xp * 100)}%</span>
+                      <span style={{ ...chip, background: '#fff1c4', color: '#a86b00', fontSize: px(14) }}>⚡{monthly.power}</span>
+                      <span style={{ ...chip, fontSize: px(14) }}>🍀+{Math.round(monthly.luck * 100)}%</span>
+                      <span style={{ ...chip, fontSize: px(14) }}>💰+{Math.round(monthly.money * 100)}%</span>
+                      <span style={{ ...chip, fontSize: px(14) }}>✨+{Math.round(monthly.xp * 100)}%</span>
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', padding: `0 ${px(16)}px` }}>
-                    <button onClick={() => p.onBuy(feat.id)} disabled={buying === feat.id} style={{ ...GOLD, fontSize: px(22), padding: `${px(12)}px ${px(22)}px`, opacity: buying === feat.id ? 0.6 : 1 }}>
-                      <GemIcon size={px(24)} />{formatNum(feat.price)}
-                    </button>
+                    {equippedRod === monthly.id ? (
+                      <div style={{ background: '#e1f5e6', border: `${px(2.5)}px solid #9ad8ae`, color: '#1f7a3c', fontWeight: 800, fontSize: px(17), borderRadius: px(12), padding: `${px(8)}px ${px(16)}px` }}>✓ Dipakai</div>
+                    ) : rods.includes(monthly.id) ? (
+                      <button onClick={() => p.onEquip(monthly.id)} style={{ ...BLUE, fontSize: px(20), padding: `${px(10)}px ${px(22)}px` }}>Pakai</button>
+                    ) : (
+                      <button onClick={() => p.onBuy(monthly.id)} disabled={buying === monthly.id} style={{ ...GOLD, fontSize: px(22), padding: `${px(12)}px ${px(22)}px`, opacity: buying === monthly.id ? 0.6 : 1 }}>
+                        <GemIcon size={px(24)} />{formatNum(monthly.price)}
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
-
+              <div style={{ fontSize: px(18), fontWeight: 800, margin: `${px(12)}px 0 ${px(8)}px` }}>Paket terbatas</div>
+              <div style={{ width: px(260), borderRadius: px(20), border: `${px(3)}px solid #e6d4b0`, background: '#fffaf0', overflow: 'hidden', boxShadow: `0 ${px(3)}px 0 #e6d4b0` }}>
+                <div style={{ background: 'linear-gradient(90deg,#1f64cc,#3b8cf0)', color: '#fff', fontWeight: 800, fontSize: px(18), padding: `${px(4)}px ${px(14)}px` }}>Paket Pemula</div>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: px(12), padding: `${px(14)}px 0 ${px(2)}px` }}>
+                  <span style={{ position: 'relative', width: px(60), height: px(60), borderRadius: px(14), background: '#f5ecd9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <GemIcon size={px(36)} />
+                    <span style={{ position: 'absolute', right: px(-6), bottom: px(-6), background: '#7b7b8a', color: '#fff', fontWeight: 800, fontSize: px(12), borderRadius: 99, padding: `0 ${px(7)}px` }}>600</span>
+                  </span>
+                  <span style={{ position: 'relative', width: px(60), height: px(60), borderRadius: px(14), background: '#f5ecd9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <RodArt color={RARITY.common.color} size={px(44)} />
+                    <span style={{ position: 'absolute', right: px(-6), bottom: px(-6), background: '#7b7b8a', color: '#fff', fontWeight: 800, fontSize: px(12), borderRadius: 99, padding: `0 ${px(7)}px` }}>1</span>
+                  </span>
+                </div>
+                <div style={{ textAlign: 'center', fontWeight: 800, fontSize: px(14), color: '#8a6d4a', marginTop: px(8) }}>Crystal + Joran Fiber · sekali per akun</div>
+                <div style={{ padding: px(10) }}>
+                  {p.starterClaimed ? (
+                    <div style={{ textAlign: 'center', background: '#e1f5e6', border: `${px(2.5)}px solid #9ad8ae`, color: '#1f7a3c', fontWeight: 800, fontSize: px(17), borderRadius: px(14), padding: `${px(8)}px 0` }}>✓ Sudah diambil</div>
+                  ) : (
+                    <button onClick={p.onClaimStarter} style={{ ...GREEN, width: '100%', fontSize: px(17) }}>Ambil gratis</button>
+                  )}
+                </div>
+              </div>
               <div style={{ fontSize: px(18), fontWeight: 800, margin: `${px(12)}px 0 ${px(8)}px` }}>Semua joran</div>
               <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(${px(150)}px, 1fr))`, gap: px(12) }}>
                 {RODS.filter((r) => !r.gachaOnly).map((r) => {
@@ -222,9 +267,9 @@ export default function ShopScreen(p: Props) {
                     <div style={{ fontSize: px(28), fontWeight: 800 }}>Gacha Rod</div>
                     <button onClick={() => setOdds(true)} style={{ background: '#fffaf0', border: `${px(3)}px solid #e6d4b0`, boxShadow: `0 ${px(3)}px 0 #e6d4b0`, color: BROWN, fontFamily: font, fontWeight: 800, fontSize: px(14), borderRadius: 99, padding: `${px(5)}px ${px(14)}px`, cursor: 'pointer', whiteSpace: 'nowrap' }}>Lihat peluang</button>
                   </div>
-                  <div style={{ fontSize: px(16), fontWeight: 700, color: '#7a5c36' }}>Dapat joran yang sudah dimiliki? Crystal balik <b style={{ color: '#7a3fd0', fontSize: px(19) }}>{formatNum(GACHA_DUPLICATE_REFUND)}</b></div>
+                  <div style={{ fontSize: px(16), fontWeight: 700, color: '#7a5c36' }}>Joran <b style={{ color: '#7a3fd0' }}>Epic</b> dijamin dalam <b style={{ color: '#7a3fd0', fontSize: px(22) }}>{Math.max(1, GACHA_PITY - p.pity)}</b> peti</div>
                   <div style={{ height: px(14), borderRadius: 99, background: '#eadfc9', overflow: 'hidden' }}>
-                    <div style={{ width: (ownedG / gachaRods.length) * 100 + '%', height: '100%', background: 'linear-gradient(90deg,#a66cf0,#7a3fd0)', borderRadius: 99 }} />
+                    <div style={{ width: Math.min(100, (p.pity / GACHA_PITY) * 100) + '%', height: '100%', background: 'linear-gradient(90deg,#a66cf0,#7a3fd0)', borderRadius: 99 }} />
                   </div>
                   <div style={{ display: 'flex', gap: px(10) }}>
                     <button onClick={() => p.onPull(1)} disabled={pulling} style={{ ...BLUE, flex: 1, flexDirection: 'column', gap: px(2), padding: `${px(8)}px 0`, opacity: pulling ? 0.6 : 1 }}>
@@ -239,8 +284,8 @@ export default function ShopScreen(p: Props) {
                 </div>
               </div>
 
-              <div style={{ fontSize: px(22), fontWeight: 800, margin: `${px(14)}px 0 ${px(4)}px` }}>Isi peti · {ownedG}/{gachaRods.length} dimiliki</div>
-              {(['legendary', 'epic'] as const).map((rk) => {
+              <div style={{ fontSize: px(22), fontWeight: 800, margin: `${px(14)}px 0 ${px(4)}px` }}>Peluang joran · {ownedG}/{gachaRods.length} dimiliki</div>
+              {(['mythic', 'legendary', 'epic', 'rare', 'uncommon', 'common'] as const).map((rk) => {
                 const list = gachaRods.filter((r) => r.rarity === rk);
                 if (!list.length) return null;
                 const rc = RARITY[rk].color;

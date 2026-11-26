@@ -13,6 +13,7 @@ import { SPECIES as KSPECIES, sizeRatio as kSizeRatio } from '@/lib/fishing';
 import type { BagItem, Rarity, Rod, SizeTier } from '@/lib/fishing';
 import DevTools, { DevFab, EMPTY_STATS } from './DevTools';
 import ShopScreen, { RodArt } from './Shop';
+import type { ShopTab } from './Shop';
 import type { DevStats, SellMode } from './DevTools';
 
 interface Props {
@@ -28,6 +29,9 @@ interface Props {
   onBuyRod: (id: string) => Promise<'ok' | 'kurang' | 'gagal'>;
   onEquipRod: (id: string) => void;
   onGacha: () => Promise<{ rod: Rod; duplicate: boolean } | 'kurang' | 'gagal'>;
+  pity?: number;
+  starterClaimed?: boolean;
+  onClaimStarter?: () => Promise<boolean>;
   onExit: () => void;
   dev?: boolean; // role Developer: buka Dev Tools (auto fishing dll)
 }
@@ -252,7 +256,7 @@ export default function FishingGame(props: Props) {
   const [sel, setSel] = useState('');
   const [shopOpen, setShopOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [shopTab, setShopTab] = useState<'toko' | 'gacha'>('toko');
+  const [shopTab, setShopTab] = useState<ShopTab>('toko');
   const [buying, setBuying] = useState('');
   const [pulling, setPulling] = useState(false);
   const [gachaResult, setGachaResult] = useState<{ rod: Rod; duplicate: boolean } | null>(null);
@@ -532,6 +536,10 @@ export default function FishingGame(props: Props) {
     if (got.length === 1) setGachaResult(got[0]);
     else if (got.length > 1) setGachaMulti(got);
     setPulling(false);
+  };
+  const claimStarter = async () => {
+    const ok = await props.onClaimStarter?.();
+    say(ok ? 'Paket Pemula diambil: 600 Crystal + Joran Fiber!' : 'Gagal mengambil paket, coba lagi');
   };
   const closePopup = () => { setPopup(null); engineRef.current?.resume(); };
   const sell = async (ids: string[]) => {
@@ -991,6 +999,7 @@ export default function FishingGame(props: Props) {
           px={(n: number) => px(n * 0.64)} font={HUD} crystal={crystal} rods={rods} equippedRod={equippedRod}
           tab={shopTab} onTab={setShopTab} buying={buying} pulling={pulling}
           onClose={() => setShopOpen(false)} onBuy={buyRod} onEquip={props.onEquipRod} onPull={pullGachaN}
+          pity={props.pity ?? 0} starterClaimed={!!props.starterClaimed} onClaimStarter={claimStarter}
         />
       )}
 

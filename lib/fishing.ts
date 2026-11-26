@@ -1,6 +1,6 @@
 // Data & aturan game Mancing (murni logika, tanpa tampilan).
 
-export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'mythic';
 export type Shape = 'oval' | 'round' | 'long' | 'flat' | 'big' | 'shark';
 export type Pattern = 'none' | 'stripes' | 'spots' | 'band';
 
@@ -10,6 +10,7 @@ export const RARITY: Record<Rarity, { label: string; color: string; weight: numb
   rare: { label: 'Langka', color: '#7dd3fc', weight: 12, xp: 34, diff: 1.45 },
   epic: { label: 'Epik', color: '#c4b5fd', weight: 6, xp: 80, diff: 1.75 },
   legendary: { label: 'Legendary', color: '#fcd34d', weight: 2, xp: 220, diff: 2.05 },
+  mythic: { label: 'Mythic', color: '#ff5d7a', weight: 0, xp: 400, diff: 2.4 },
 };
 
 export interface Species {
@@ -121,6 +122,7 @@ export function rollFish(level: number, luck: number = 0, rnd: () => number = Ma
     rare: RARITY.rare.weight + 8 * b + 6 * lk,
     epic: RARITY.epic.weight + 8 * b + 6 * lk,
     legendary: RARITY.legendary.weight + 4 * b + 3 * lk,
+    mythic: 0,
   };
   const order: Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
   const total = order.reduce((a, r) => a + w[r], 0);
@@ -217,6 +219,7 @@ export interface Rod {
   xp: number;    // bonus XP, mis. 0.2 = +20%
   price: number; // harga di Toko (Crystal); 0 = tidak dijual langsung, hanya lewat Gacha
   gachaOnly?: boolean;
+  monthly?: boolean; // joran bulanan: dijual di tab Toko walau ada di gacha
 }
 
 export const DEFAULT_ROD = 'default';
@@ -228,8 +231,10 @@ export const RODS: Rod[] = [
   { id: 'perak', name: 'Joran Perak Laut', rarity: 'rare', power: 4, luck: 0.24, money: 0.26, xp: 0.26, price: 2400 },
   { id: 'emas', name: 'Joran Emas Samudra', rarity: 'epic', power: 5, luck: 0.36, money: 0.38, xp: 0.36, price: 6000 },
   { id: 'kristal', name: 'Joran Kristal Badai', rarity: 'epic', power: 6, luck: 0.46, money: 0.44, xp: 0.42, price: 0, gachaOnly: true },
-  { id: 'bulan', name: 'Joran Bulan Purnama', rarity: 'legendary', power: 7, luck: 0.6, money: 0.55, xp: 0.5, price: 0, gachaOnly: true },
+  { id: 'bulan', name: 'Joran Bulan Purnama', rarity: 'legendary', power: 7, luck: 0.6, money: 0.55, xp: 0.5, price: 25000, gachaOnly: true, monthly: true },
   { id: 'naga', name: 'Joran Naga Laut', rarity: 'legendary', power: 8, luck: 0.75, money: 0.68, xp: 0.6, price: 0, gachaOnly: true },
+  { id: 'sisik', name: 'Joran Sisik Naga', rarity: 'mythic', power: 9, luck: 0.9, money: 0.8, xp: 0.7, price: 0, gachaOnly: true },
+  { id: 'tentakel', name: 'Joran Tentakel Laut Dalam', rarity: 'mythic', power: 10, luck: 1.0, money: 0.9, xp: 0.8, price: 0, gachaOnly: true },
 ];
 export const RODS_BY_ID: Record<string, Rod> = Object.fromEntries(RODS.map((r) => [r.id, r]));
 
@@ -247,27 +252,30 @@ export function sanitizeRods(raw: unknown): string[] {
 export const GACHA_PRICE = 500;
 // Dapat joran yang sudah dimiliki? dikembalikan jadi Crystal supaya nggak sia-sia.
 export const GACHA_DUPLICATE_REFUND = Math.round(GACHA_PRICE * 0.5);
-
-const GACHA_POOL: { rod: Rod; weight: number }[] = RODS.filter((r) => r.gachaOnly).map((r) => ({
-  rod: r,
-  weight: r.id === 'naga' ? 6 : r.id === 'bulan' ? 16 : 60,
-}));
-
-export function rollGacha(rnd: () => number = Math.random): Rod {
-  const total = GACHA_POOL.reduce((a, p) => a + p.weight, 0);
-  let roll = rnd() * total;
-  for (const p of GACHA_POOL) {
-    if (roll < p.weight) return p.rod;
-    roll -= p.weight;
-  }
-  return GACHA_POOL[GACHA_POOL.length - 1].rod;
-}
+export const GACHA_PITY = 22; // joran Epic atau lebih tinggi dijamin dalam 22 peti
+const TOP_RARITY: Rarity[] = ['epic', 'legendary', 'mythic'];
+// Peluang per rarity (persen, jumlah = 100), dibagi rata ke joran di rarity itu
+const GACHA_RARITY_PCT: Record<Rarity, number> = { common: 36, uncommon: 28, rare: 20, epic: 11, legendary: 4.9, mythic: 0.1 };
+export const GACHA_RODS: Rod[] = RODS.filter((r) => r.id !== DEFAULT_ROD);
 
 // Peluang tiap joran gacha dalam persen (jumlah = 100)
 export const GACHA_ODDS: Record<string, number> = (() => {
-  const total = GACHA_POOL.reduce((a, p) => a + p.weight, 0);
-  return Object.fromEntries(GACHA_POOL.map((p) => [p.rod.id, (p.weight / total) * 100]));
+  const out: Record<string, number> = {};
+  for (const r of GACHA_RODS) out[r.id] = GACHA_RARITY_PCT[r.rarity] / GACHA_RODS.filter((x) => x.rarity === r.rarity).length;
+  return out;
 })();
+
+export function rollGacha(rnd: () => number = Math.random, pity = 0): Rod {
+  const pool = pity >= GACHA_PITY - 1 ? GACHA_RODS.filter((r) => TOP_RARITY.includes(r.rarity)) : GACHA_RODS;
+  const total = pool.reduce((a, r) => a + GACHA_ODDS[r.id], 0);
+  let roll = rnd() * total;
+  for (const r of pool) {
+    if (roll < GACHA_ODDS[r.id]) return r;
+    roll -= GACHA_ODDS[r.id];
+  }
+  return pool[pool.length - 1];
+}
+export const nextPity = (rod: Rod, pity: number) => (TOP_RARITY.includes(rod.rarity) ? 0 : pity + 1);
 
 
 // ---------- umpan ----------
