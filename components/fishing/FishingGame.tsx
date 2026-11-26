@@ -988,7 +988,7 @@ export default function FishingGame(props: Props) {
       {/* Toko & Gacha */}
       {shopOpen && (
         <ShopScreen
-          px={px} font={HUD} crystal={crystal} rods={rods} equippedRod={equippedRod}
+          px={(n: number) => px(n * 0.64)} font={HUD} crystal={crystal} rods={rods} equippedRod={equippedRod}
           tab={shopTab} onTab={setShopTab} buying={buying} pulling={pulling}
           onClose={() => setShopOpen(false)} onBuy={buyRod} onEquip={props.onEquipRod} onPull={pullGachaN}
         />
