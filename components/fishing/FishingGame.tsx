@@ -787,23 +787,22 @@ export default function FishingGame(props: Props) {
         const soon = () => say('Fitur ini segera hadir');
         const go = (path: string) => () => { window.location.assign(path); };
         const items: { k: string; icon: string; label: string; act: () => void }[] = [
+          { k: 'rumahku', icon: '🏠', label: 'Rumahku', act: soon },
           { k: 'misi', icon: '📜', label: 'Misi', act: go('/misi') },
-          { k: 'koleksi', icon: '📘', label: 'Koleksi', act: soon },
-          { k: 'joran', icon: '🎣', label: 'Joran', act: () => setRodOpen(true) },
-          { k: 'lemari', icon: '👕', label: 'Lemari', act: soon },
-          { k: 'akuarium', icon: '🐠', label: 'Akuarium', act: soon },
-          { k: 'toko', icon: '🛍️', label: 'Toko', act: () => { setShopTab('toko'); setShopOpen(true); } },
+          { k: 'hadiah', icon: '🎁', label: 'Hadiah', act: () => say('Belum ada hadiah hari ini 🎁') },
+          { k: 'buku', icon: '📘', label: 'Buku', act: soon },
           { k: 'peringkat', icon: '🏆', label: 'Peringkat', act: go('/ranking') },
-          { k: 'surat', icon: '📮', label: 'Kotak Surat', act: soon },
+          { k: 'lemari', icon: '👕', label: 'Lemari', act: soon },
           { k: 'skill', icon: '🌳', label: 'Skill', act: soon },
+          { k: 'surat', icon: '✉️', label: 'Surat', act: soon },
         ];
         return (
           <>
             <div onClick={() => setMenu2(false)} style={{ position: 'absolute', inset: 0, zIndex: 25 }} />
-            <div style={{ position: 'absolute', zIndex: 26, right: `calc(env(safe-area-inset-right, 0px) + ${hx(7)}px)`, top: `calc(env(safe-area-inset-top, 0px) + ${hx(56)}px)`, width: `min(${hx(600)}px, calc(100% - ${hx(120)}px))`, boxSizing: 'border-box', padding: hx(8), display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: hx(6), background: CREAM_BG, border: `${hx(3)}px solid ${CREAM_EDGE}`, borderRadius: hx(20), boxShadow: `0 ${hx(4)}px 0 #d9c08a, 0 8px 22px rgba(0,0,0,0.35)` }}>
+            <div style={{ position: 'absolute', zIndex: 26, right: `calc(env(safe-area-inset-right, 0px) + ${hx(68)}px)`, top: `calc(env(safe-area-inset-top, 0px) + ${hx(56)}px)`, width: `min(${hx(376)}px, calc(100% - ${hx(140)}px))`, boxSizing: 'border-box', padding: hx(8), display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: hx(6), background: CREAM_BG, border: `${hx(3)}px solid ${CREAM_EDGE}`, borderRadius: hx(20), boxShadow: `0 ${hx(4)}px 0 #d9c08a, 0 8px 22px rgba(0,0,0,0.35)` }}>
               {items.map((it) => (
-                <button key={it.k} onClick={() => { setMenu2(false); it.act(); }} style={{ height: hx(70), boxSizing: 'border-box', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', gap: hx(3), padding: `${hx(8)}px ${hx(2)}px 0`, borderRadius: hx(14), border: `${hx(2)}px solid ${CREAM_EDGE}`, background: '#fff8e8', boxShadow: '0 2px 0 #d9c08a', color: CREAM_INK, fontFamily: HUD, fontWeight: 800, fontSize: hx(13.5), lineHeight: 1.1, cursor: 'pointer' }}>
-                  <span style={{ fontSize: hx(24), lineHeight: 1 }}>{it.icon}</span>
+                <button key={it.k} onClick={() => { setMenu2(false); it.act(); }} style={{ height: hx(78), boxSizing: 'border-box', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', gap: hx(4), padding: `${hx(9)}px ${hx(2)}px 0`, borderRadius: hx(14), border: `${hx(2)}px solid ${CREAM_EDGE}`, background: '#fff8e8', boxShadow: '0 2px 0 #d9c08a', color: CREAM_INK, fontFamily: HUD, fontWeight: 800, fontSize: hx(14.5), lineHeight: 1.1, cursor: 'pointer' }}>
+                  <span style={{ fontSize: hx(28), lineHeight: 1 }}>{it.icon}</span>
                   <span>{it.label}</span>
                 </button>
               ))}
