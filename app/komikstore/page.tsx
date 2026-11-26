@@ -220,7 +220,7 @@ export default function KomikStorePage() {
         <Diamond cx={15.6} cy={64.3} d={26} from="#0b8f7e" to="#087a6d" edge="#33d1b9" title="Misi" tsize={5.4} float={2} onClick={go('/misi')}
           art={<Target style={{ width: '100%', height: '100%' }} strokeWidth={2.4} />} artSize={7.5} artDy={-1.5} />
 
-        <Diamond cx={72.2} cy={68.9} d={62.4} from="#3aa3ee" to="#2a58a8" edge="#8ad4ff" ghost="#0d4a78" gx={-0.09} gy={-0.06} title="Gacha" sub="Wallpaper, Latar, Border & Efek" float={1} onClick={go('/komikstore/gacha-wallpaper')}
+        <Diamond cx={72.2} cy={68.9} d={62.4} from="#3aa3ee" to="#2a58a8" edge="#8ad4ff" ghost="#0d4a78" gx={-0.09} gy={-0.06} title="Gacha" sub="Wallpaper & Border" float={1} onClick={go('/komikstore/gacha-wallpaper')}
           art={<GachaArt />} artSize={21} artDy={-6} tsize={6.6} />
 
         <Diamond cx={27.8} cy={119.1} d={61.5} from="#ffd21f" to="#ffae3a" edge="#ffd400" ghost="#8a6a12" gx={0.1} gy={0.12} dark title="Pet" sub="Pelihara Pet dan Hasilkan Koin" float={3} onClick={go('/komikstore/pet')}

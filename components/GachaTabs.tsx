@@ -3,12 +3,10 @@ import { useRouter, usePathname } from 'next/navigation';
 
 const TABS = [
   { href: '/komikstore/gacha-wallpaper', label: 'Wallpaper' },
-  { href: '/komikstore/gacha-background', label: 'Latar' },
   { href: '/komikstore/avatar-border', label: 'Border' },
-  { href: '/komikstore/profile-effects', label: 'Efek' },
 ];
 
-// Tab pindah antar kategori gacha (Wallpaper / Latar / Border / Efek)
+// Tab pindah antar kategori gacha (Wallpaper / Border)
 export default function GachaTabs() {
   const router = useRouter();
   const path = usePathname();

@@ -1,6 +1,6 @@
-'use client';
-import ItemGacha from '@/components/ItemGacha';
+import { redirect } from 'next/navigation';
 
-export default function ProfileEffectsPage() {
-  return <ItemGacha kind="effect" />;
+// Gacha ini sudah dihapus, arahkan ke Wallpaper
+export default function Page() {
+  redirect('/komikstore/gacha-wallpaper');
 }
