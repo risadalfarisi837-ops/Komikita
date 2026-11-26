@@ -263,6 +263,12 @@ export function rollGacha(rnd: () => number = Math.random): Rod {
   return GACHA_POOL[GACHA_POOL.length - 1].rod;
 }
 
+// Peluang tiap joran gacha dalam persen (jumlah = 100)
+export const GACHA_ODDS: Record<string, number> = (() => {
+  const total = GACHA_POOL.reduce((a, p) => a + p.weight, 0);
+  return Object.fromEntries(GACHA_POOL.map((p) => [p.rod.id, (p.weight / total) * 100]));
+})();
+
 
 // ---------- umpan ----------
 // Dipakai 1 setiap melempar joran; menambah peluang ikan langka (bonus luck) selama masih ada stok.
