@@ -1,13 +1,11 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Search, Sparkles, Check, RefreshCw, Info, Coins, ShoppingBag } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Search, Check, Coins, ShoppingBag, Eye, EyeOff, Lock } from 'lucide-react';
 import { getFirebase } from '@/lib/firebase-client';
 import { WALLPAPER_CATALOG, RARITY_STYLE, RARITY_INFO, RARITIES, RATES, COST_1, COST_10, TOKEN_DUP, TOKEN_PRICE, rollMany, wpBg, type Rarity } from '@/lib/wallpapers';
 import WallpaperBg from '@/components/WallpaperBg';
-import GachaTabs from '@/components/GachaTabs';
 
-const fmt = (n: number) => (n >= 1e3 ? (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'K' : String(n));
 const rank = (k: string) => RARITIES.indexOf(WALLPAPER_CATALOG[k].rarity);
 // Urut dari rarity terbaik, untuk panel info
 const INFO_ORDER = [...RARITIES].reverse().map((r) => ({ r, keys: Object.keys(WALLPAPER_CATALOG).filter((k) => WALLPAPER_CATALOG[k].rarity === r) }));
@@ -15,6 +13,31 @@ const INFO_ORDER = [...RARITIES].reverse().map((r) => ({ r, keys: Object.keys(WA
 function Pill({ r }: { r: Rarity }) {
   return <span className="rounded-full bg-black/70 border border-white/15 px-3 py-1 text-xs font-black" style={{ color: RARITY_STYLE[r].color }}>{r}</span>;
 }
+
+function Gem({ size = 24, dim = false }: { size?: number; dim?: boolean }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" style={{ opacity: dim ? 0.8 : 1, flexShrink: 0 }}>
+      <polygon points="6,2 18,2 22,9 12,22 2,9" fill="#3b9cff" />
+      <polygon points="6,2 12,9 2,9" fill="#8fd0ff" />
+      <polygon points="18,2 22,9 12,9" fill="#5db4ff" />
+      <polygon points="2,9 12,9 12,22" fill="#2f7fe0" />
+      <polygon points="22,9 12,9 12,22" fill="#1f63c4" />
+      <polygon points="6,2 18,2 12,9" fill="#b9e3ff" />
+    </svg>
+  );
+}
+
+// Bonus EXP sesuai tampilan (hanya wallpaper yang sedang dipakai yang memberi bonus)
+const EXP_BONUS: { name: string; pct: number; color: string; bg: string; border: string }[] = [
+  { name: 'Mythic', pct: 25, color: '#f5d0fe', bg: '#3b0f3a', border: '#ec4899' },
+  { name: 'Legendary', pct: 20, color: '#fde68a', bg: '#3d3208', border: '#f5b301' },
+  { name: 'Epic', pct: 15, color: '#e9d5ff', bg: '#2a1a5e', border: '#7c3aed' },
+  { name: 'Rare', pct: 10, color: '#cfe6ff', bg: '#0f2a52', border: '#2f81f7' },
+  { name: 'Normal', pct: 5, color: '#ffffff', bg: '#0b0d14', border: '#ffffff' },
+];
+const bonusPill = (b: (typeof EXP_BONUS)[number]) => (
+  <span className="rounded-xl border-2 px-3.5 py-1 text-[19px] font-extrabold" style={{ color: b.color, background: b.bg, borderColor: b.border }}>{b.name}</span>
+);
 
 const KFX = `
 @keyframes kgFade{from{opacity:0}to{opacity:1}}
@@ -38,6 +61,7 @@ export default function GachaWallpaperPage() {
   const [info, setInfo] = useState(false);
   const [shop, setShop] = useState(false);
   const [gain, setGain] = useState(0);
+  const [showLocked, setShowLocked] = useState(false);
 
   const load = async (f: any, id: string, photo = '') => {
     try {
@@ -73,12 +97,12 @@ export default function GachaWallpaperPage() {
   const summon = async (n: 1 | 10) => {
     if (!fb || !uid || busy || fx) return;
     const cost = n === 1 ? COST_1 : COST_10;
-    if (koin < cost) { say('Crystal kurang'); return; }
+    if (koin < cost) { say('WibuGem kurang'); return; }
     setBusy(true);
     try {
       // potong saldo pakai transaction supaya nggak bisa dobel dari 2 tab
       const res = await ref().child('koin').transaction((cur: any) => (typeof cur !== 'number' ? cur : cur >= cost ? cur - cost : undefined));
-      if (!res.committed) { say('Crystal kurang'); setBusy(false); return; }
+      if (!res.committed) { say('WibuGem kurang'); setBusy(false); return; }
       const picks = rollMany(n);
       const counts: Record<string, number> = {};
       picks.forEach((k) => { counts[k] = (counts[k] || 0) + 1; });
@@ -173,96 +197,78 @@ export default function GachaWallpaperPage() {
   };
 
   const list = useMemo(
-    () => Object.keys(owned)
-      .filter((k) => WALLPAPER_CATALOG[k] && WALLPAPER_CATALOG[k].nama.toLowerCase().includes(q.trim().toLowerCase()))
-      .sort((a, b) => rank(b) - rank(a)),
-    [owned, q]
+    () => Object.keys(WALLPAPER_CATALOG)
+      .filter((k) => (owned[k] || showLocked) && WALLPAPER_CATALOG[k].nama.toLowerCase().includes(q.trim().toLowerCase()))
+      .sort((a, b) => (owned[b] ? 1 : 0) - (owned[a] ? 1 : 0) || rank(b) - rank(a)),
+    [owned, q, showLocked]
   );
   const total = Object.keys(owned).filter((k) => WALLPAPER_CATALOG[k]).length;
-  const card = 'rounded-3xl border border-white/10 bg-[#111a2e]';
+  const card = 'rounded-2xl border border-white/10 bg-[#171c2b]';
   const last = result && result[0];
   const fxc = fx ? RARITY_STYLE[fx].color : '#ffffff';
   const fxDur = fx ? FX_MS[fx] / 1000 : 1.6;
 
   return (
-    <div className="fixed inset-0 overflow-y-auto text-white" style={{ background: 'radial-gradient(ellipse at top,#131b33 0%,#0a0f1e 60%,#070a14 100%)' }}>
+    <div className="fixed inset-0 overflow-y-auto text-white" style={{ background: '#131418' }}>
       <style>{KFX}</style>
-      <div className="max-w-md mx-auto pb-16">
-        <div className="flex items-center gap-4 px-5 pt-8 pb-5">
+      <div className="max-w-md mx-auto pb-32">
+        <div className="flex items-center gap-5 px-5 pt-8 pb-5">
           <button onClick={() => router.back()} className="active:scale-90 transition-transform"><ArrowLeft className="w-7 h-7" /></button>
-          <h1 className="text-2xl font-black">Gacha Wallpaper</h1>
+          <h1 className="text-[28px] font-extrabold">Wibuku Gacha</h1>
         </div>
-        <GachaTabs />
 
         {ready && !uid && <p className="px-5 pt-6 text-white/60">Login dulu buat summon wallpaper.</p>}
 
         {uid && (
           <>
-            <div className={card + ' mx-4 p-5 text-center'}>
-              <div className="flex items-center justify-center gap-2">
-                <Sparkles className="w-7 h-7 text-sky-400" />
-                <span className="text-4xl font-black">{koin.toLocaleString('id-ID')}</span>
-              </div>
-              <p className="mt-1 font-bold text-white/50">Crystal</p>
-              <div className="mt-3 flex items-center justify-center gap-2 border-t border-white/10 pt-3">
-                <Coins className="w-5 h-5 text-amber-300" />
-                <span className="text-2xl font-black text-amber-300">{token.toLocaleString('id-ID')}</span>
-                <span className="font-bold text-white/50">Token</span>
-              </div>
-            </div>
-            <button onClick={() => setShop(true)} className="mx-4 mt-3 flex w-[calc(100%-2rem)] items-center gap-3 rounded-2xl border border-amber-300/30 bg-[#2a2112] p-3 text-left active:scale-95 transition-transform">
-              <ShoppingBag className="w-6 h-6 text-amber-300" />
-              <div className="min-w-0">
-                <p className="text-sm font-black text-amber-200">Toko Token</p>
-                <p className="text-xs font-bold text-white/50">Duplikat jadi token, tukar dengan wallpaper yang belum kamu punya</p>
-              </div>
-              <span className="ml-auto text-xs font-bold text-white/45">Buka ›</span>
-            </button>
+            <img src="/gacha/banner.jpg" alt="" className="mx-4 block w-[calc(100%-2rem)] rounded-[28px] object-cover" style={{ aspectRatio: '996 / 560' }} />
 
-            <div className="mx-4 mt-4 rounded-3xl border border-white/10 overflow-hidden relative h-60 flex flex-col items-center justify-center text-center px-5"
-              style={{ background: last ? wpBg(last.key) : 'radial-gradient(circle at 50% 40%,#2c3f8f,#0a0f1e 70%)' }}>
-              <div className="absolute inset-0 bg-black/35" />
-              <div className="relative">
-                <h2 className="text-3xl font-black drop-shadow">{last ? WALLPAPER_CATALOG[last.key].nama : 'Wallpaper Summon'}</h2>
-                {last
-                  ? <div className="mt-3 flex justify-center"><Pill r={WALLPAPER_CATALOG[last.key].rarity} /></div>
-                  : <><Sparkles className="w-14 h-14 mx-auto mt-3 text-sky-200" /><p className="mt-3 font-bold text-white/80">Wallpaper langka akan muncul di sini setelah summon.</p></>}
-              </div>
-            </div>
-            <button onClick={() => setInfo(true)} className="mx-4 mt-3 block w-[calc(100%-2rem)] rounded-2xl border border-white/10 bg-[#111a2e] p-3 text-left active:scale-95 transition-transform">
-              <div className="flex items-center gap-2">
-                <Info className="w-5 h-5 text-sky-300" />
-                <span className="text-sm font-black">Info rarity &amp; peluang</span>
-                <span className="ml-auto text-xs font-bold text-white/45">Lihat ›</span>
-              </div>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {[...RARITIES].reverse().map((r) => (
-                  <span key={r} className="rounded-full border border-white/10 bg-black/40 px-2 py-0.5 text-[10px] font-black" style={{ color: RARITY_STYLE[r].color }}>{r} {RATES[r]}%</span>
-                ))}
-                <span className="rounded-full border border-white/10 bg-black/40 px-2 py-0.5 text-[10px] font-black text-white/60">10x dijamin min. Rare</span>
-              </div>
-            </button>
-
-            <div className="mx-4 mt-3 grid grid-cols-2 gap-3">
+            <div className="mx-4 mt-9 grid grid-cols-2 gap-4">
               <button onClick={() => summon(1)} disabled={busy}
-                className="rounded-3xl py-4 font-black active:scale-95 transition-transform disabled:opacity-60"
-                style={{ background: '#38b6ff', border: '2px solid #5cc3ff' }}>
-                <div className="text-xl">Summon 1x</div>
-                <div className="mt-2 mx-auto w-fit rounded-full bg-[#143a5c] px-5 py-1.5 flex items-center gap-1.5 text-xl"><Sparkles className="w-5 h-5 text-sky-300" />{fmt(COST_1)}</div>
+                className="rounded-[20px] p-[3px] active:scale-95 transition-transform disabled:opacity-60"
+                style={{ background: 'linear-gradient(180deg,#4ea9ff,#2f86e8)', filter: koin < COST_1 ? 'brightness(.55)' : 'none' }}>
+                <div className="rounded-[17px] px-3 pt-3 pb-3 text-center" style={{ background: 'linear-gradient(180deg,#8fd0ff,#5fb3fb 55%,#4a9fee)', boxShadow: 'inset 0 0 0 2px rgba(255,255,255,.35)' }}>
+                  <div className="text-[27px] font-extrabold leading-tight" style={{ color: '#12305a' }}>Summon 1x</div>
+                  <div className="mt-1.5 flex items-center justify-center gap-2 rounded-full py-1.5 text-[20px] font-extrabold text-white" style={{ background: 'rgba(38,52,72,.85)', border: '2px solid rgba(255,255,255,.35)' }}><Gem size={20} />{COST_1}</div>
+                </div>
               </button>
               <button onClick={() => summon(10)} disabled={busy}
-                className="rounded-3xl py-4 font-black active:scale-95 transition-transform disabled:opacity-60"
-                style={{ background: '#f5b84d', border: '2px solid #fcd34d' }}>
-                <div className="text-xl">Summon 10x</div>
-                <div className="mt-2 mx-auto w-fit rounded-full bg-[#5a3a12] px-5 py-1.5 flex items-center gap-1.5 text-xl"><Sparkles className="w-5 h-5 text-sky-300" />{fmt(COST_10)}</div>
+                className="rounded-[20px] p-[3px] active:scale-95 transition-transform disabled:opacity-60"
+                style={{ background: 'linear-gradient(180deg,#f2b94d,#c98a1f)', filter: koin < COST_10 ? 'brightness(.5) saturate(.85)' : 'none' }}>
+                <div className="rounded-[17px] px-3 pt-3 pb-3 text-center" style={{ background: 'linear-gradient(180deg,#ffd886,#f0b448 55%,#dd9a2c)', boxShadow: 'inset 0 0 0 2px rgba(255,255,255,.35)' }}>
+                  <div className="text-[27px] font-extrabold leading-tight" style={{ color: '#4a2f0a' }}>Summon 10x</div>
+                  <div className="mt-1.5 flex items-center justify-center gap-2 rounded-full py-1.5 text-[20px] font-extrabold text-white" style={{ background: 'rgba(52,44,34,.85)', border: '2px solid rgba(255,255,255,.35)' }}><Gem size={20} />{COST_10}</div>
+                </div>
               </button>
             </div>
 
-            <div className="flex items-center gap-3 px-5 pt-7 pb-3">
-              <h2 className="text-xl font-black">Koleksi Wallpaper</h2>
-              <span className="rounded-full border border-white/15 px-3 py-0.5 font-black text-emerald-400">{total}</span>
-              <button onClick={() => fb && uid && load(fb, uid, d.photoURL)} className="ml-auto flex items-center gap-1 font-black text-emerald-400 active:scale-95">
-                <RefreshCw className="w-4 h-4" />Refresh
+            <button onClick={() => setInfo(true)} className={card + ' mx-4 mt-8 flex w-[calc(100%-2rem)] items-center gap-4 px-5 py-4 text-left active:scale-[.98] transition-transform'}>
+              <Gem size={34} />
+              <span className="text-[17px] font-extrabold">Cara mendapatkan WibuGem</span>
+              <span className="ml-auto flex items-center gap-1.5 text-[16px] font-medium text-[#3b9cff]">Lihat info <ArrowRight className="w-5 h-5" /></span>
+            </button>
+
+            <div className="mx-4 mt-7 rounded-2xl border bg-[#171c2b] p-5" style={{ borderColor: '#3a3a42' }}>
+              <h2 className="text-[22px] font-extrabold">Bonus EXP Wallpaper</h2>
+              <p className="mt-1 text-[16px] text-white/70">Hanya wallpaper yang sedang dipakai yang memberi bonus.</p>
+              <div className="mt-4 space-y-3">
+                <div className="flex items-center justify-between rounded-2xl border border-white/20 bg-[#0b0d17] px-6 py-3.5">
+                  {bonusPill(EXP_BONUS[0])}<span className="text-[21px] font-extrabold">+{EXP_BONUS[0].pct}%</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {EXP_BONUS.slice(1).map((b) => (
+                    <div key={b.name} className="flex items-center justify-between rounded-2xl border border-white/20 bg-[#0b0d17] px-4 py-3.5">
+                      {bonusPill(b)}<span className="text-[21px] font-extrabold">+{b.pct}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between px-5 pt-9 pb-4">
+              <h2 className="text-[28px] font-extrabold">Koleksi</h2>
+              <button onClick={() => setShowLocked((v) => !v)} className="flex items-center gap-3 rounded-2xl bg-[#1c2336] px-5 py-3.5 text-[17px] font-extrabold active:scale-95 transition-transform">
+                {showLocked ? <EyeOff className="w-7 h-7" /> : <Eye className="w-7 h-7" />}Tampilkan terkunci
               </button>
             </div>
 
@@ -280,25 +286,27 @@ export default function GachaWallpaperPage() {
               </div>
             )}
 
-            <div className={card + ' mx-4 flex items-center gap-3 px-4 py-3'}>
+            <div className={card + ' mx-4 flex items-center gap-3 px-5 py-4'}>
               <Search className="w-5 h-5 text-white/50" />
-              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari wallpaper..." className="flex-1 bg-transparent outline-none font-bold placeholder:text-white/35" />
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari koleksi wallpaper" className="flex-1 bg-transparent text-[18px] outline-none placeholder:text-white/60" />
             </div>
 
-            {list.length === 0 && <p className="px-5 pt-8 text-center text-white/40 font-bold">Belum ada wallpaper. Summon dulu!</p>}
+            {list.length === 0 && <p className="px-5 pt-8 text-center text-white/40 font-bold">{total === 0 ? 'Belum ada wallpaper. Summon dulu!' : 'Tidak ditemukan.'}</p>}
 
-            <div className="grid grid-cols-2 gap-3 px-4 pt-3">
+            <div className="grid grid-cols-2 gap-3 px-4 pt-4">
               {list.map((k) => {
                 const w = WALLPAPER_CATALOG[k];
+                const have = !!owned[k];
                 const on = active === k;
                 return (
-                  <button key={k} onClick={() => !on && equip(k)} disabled={busy}
+                  <button key={k} onClick={() => have && !on && equip(k)} disabled={busy || !have}
                     className={card + ' p-2.5 text-left active:scale-95 transition-transform'}
                     style={on ? { border: '2px solid #fcd34d' } : undefined}>
-                    <div className="relative h-28 rounded-2xl overflow-hidden" style={{ background: wpBg(k) }}>
+                    <div className="relative h-28 rounded-xl overflow-hidden" style={{ background: wpBg(k), filter: have ? 'none' : 'grayscale(1) brightness(.45)' }}>
                       <span className="absolute left-2 top-2"><Pill r={w.rarity} /></span>
                       {on && <span className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-amber-300 px-3 py-1 text-xs font-black text-black">★ Aktif</span>}
-                      {!on && <span className="absolute bottom-2 right-2 rounded-full bg-emerald-600/80 p-1"><Check className="w-3.5 h-3.5" /></span>}
+                      {!have && <span className="absolute inset-0 flex items-center justify-center"><Lock className="w-7 h-7 text-white/80" /></span>}
+                      {have && !on && <span className="absolute bottom-2 right-2 rounded-full bg-emerald-600/80 p-1"><Check className="w-3.5 h-3.5" /></span>}
                     </div>
                     <p className="mt-2 text-center font-black truncate">{w.nama}{owned[k] > 1 ? ' x' + owned[k] : ''}</p>
                   </button>
@@ -308,6 +316,16 @@ export default function GachaWallpaperPage() {
           </>
         )}
       </div>
+
+      {uid && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-6 z-40">
+          <div className="mx-auto flex max-w-md justify-end px-4">
+            <div className="pointer-events-auto flex items-center gap-4 rounded-2xl bg-[#1c2233] px-6 py-3 shadow-lg shadow-black/40">
+              <Gem size={34} /><span className="text-[26px] font-extrabold">{koin.toLocaleString('id-ID')}</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {fx && (
         <div className="fixed inset-0 z-[55] flex items-center justify-center overflow-hidden" style={{ background: 'radial-gradient(circle at 50% 45%,rgba(10,15,30,.75),#05070f 75%)', animation: 'kgFade .25s ease-out' }}>
@@ -390,6 +408,10 @@ export default function GachaWallpaperPage() {
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70" onClick={() => setInfo(false)}>
           <div className="w-full max-w-md max-h-[85vh] overflow-y-auto rounded-t-3xl bg-[#1a2238] p-5" onClick={(e) => e.stopPropagation()}>
             <p className="text-center text-xl font-black">Info Rarity</p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <button onClick={() => { setInfo(false); setShop(true); }} className="flex items-center justify-center gap-2 rounded-2xl border border-amber-300/30 bg-[#2a2112] py-2.5 text-sm font-black text-amber-200 active:scale-95"><ShoppingBag className="w-4 h-4" />Toko Token ({token.toLocaleString('id-ID')})</button>
+              <button onClick={() => router.push('/komikstore/avatar-border')} className="rounded-2xl border border-white/10 bg-[#111a2e] py-2.5 text-sm font-black active:scale-95">Gacha Border</button>
+            </div>
             <p className="mt-1 text-center text-xs font-bold text-white/50">Makin tinggi rarity, makin langka dan makin bagus tampilannya.</p>
             <div className="mt-4 space-y-3">
               {INFO_ORDER.map(({ r, keys }) => {
@@ -414,7 +436,7 @@ export default function GachaWallpaperPage() {
                     </div>
                     <p className="mt-2 text-[13px] font-bold text-white/70">{inf.desc}</p>
                     <p className="mt-1 text-xs font-bold text-white/45">
-                      Rata-rata ±{avg}x summon (±{(avg * COST_1).toLocaleString('id-ID')} Crystal) · {keys.length} wallpaper · koleksimu {have}/{keys.length}
+                      Rata-rata ±{avg}x summon (±{(avg * COST_1).toLocaleString('id-ID')} WibuGem) · {keys.length} wallpaper · koleksimu {have}/{keys.length}
                     </p>
                     <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
                       {keys.map((k) => (
@@ -430,7 +452,7 @@ export default function GachaWallpaperPage() {
                 );
               })}
             </div>
-            <p className="mt-4 text-center text-xs font-bold text-white/45">Summon 10x dijamin ada minimal 1 Rare. Perkiraan Crystal dihitung dari peluang; hasil sebenarnya bisa lebih cepat atau lebih lama. Wallpaper yang sudah kamu punya tidak bertambah lagi: duplikatnya otomatis jadi token untuk ditukar di Toko Token.</p>
+            <p className="mt-4 text-center text-xs font-bold text-white/45">Summon 10x dijamin ada minimal 1 Rare. Perkiraan WibuGem dihitung dari peluang; hasil sebenarnya bisa lebih cepat atau lebih lama. Wallpaper yang sudah kamu punya tidak bertambah lagi: duplikatnya otomatis jadi token untuk ditukar di Toko Token.</p>
             <button onClick={() => setInfo(false)} className="mt-4 w-full rounded-2xl bg-violet-500 py-3 font-black">Oke</button>
           </div>
         </div>
