@@ -266,6 +266,27 @@ export default function FishingGame(props: Props) {
   const [sel, setSel] = useState('');
   const [shopOpen, setShopOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmExit, setConfirmExit] = useState(false);
+  const exitOkRef = useRef(false);
+  // tombol back HP / browser: tampilkan "Yakin keluar?" dulu (history ditahan satu langkah)
+  useEffect(() => {
+    history.pushState({ fishGuard: true }, '');
+    const onPop = () => {
+      if (exitOkRef.current) return;
+      history.pushState({ fishGuard: true }, '');
+      setMenuOpen(false);
+      setConfirmExit(true);
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+  const doExit = () => {
+    exitOkRef.current = true;
+    setConfirmExit(false);
+    try { history.go(-2); } catch { /* abaikan */ }
+    // kalau tidak ada halaman sebelumnya, pakai jalur keluar biasa
+    setTimeout(() => { if (location.pathname.includes('mancing')) props.onExit(); }, 400);
+  };
   const [shopTab, setShopTab] = useState<ShopTab>('toko');
   const [buying, setBuying] = useState('');
   const [pulling, setPulling] = useState(false);
@@ -995,11 +1016,24 @@ export default function FishingGame(props: Props) {
       })()}
 
       {/* menu pengaturan */}
+      {confirmExit && (
+        <div style={{ ...ov, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 }} onClick={() => setConfirmExit(false)}>
+          <div style={{ width: px(300), maxWidth: '90%', background: '#141a28', borderRadius: px(20), padding: px(18), textAlign: 'center', color: '#fff', boxShadow: '0 12px 40px rgba(0,0,0,0.5)' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontFamily: HUD, fontWeight: 800, fontSize: px(24) }}>Yakin keluar?</div>
+            <div style={{ marginTop: px(6), fontSize: px(14), fontWeight: 600, color: 'rgba(255,255,255,0.65)' }}>Kamu akan meninggalkan pulau mancing.</div>
+            <div style={{ display: 'flex', gap: px(10), marginTop: px(16) }}>
+              <button onClick={() => setConfirmExit(false)} style={{ flex: 1, borderRadius: px(12), border: 0, background: 'rgba(255,255,255,0.12)', color: '#fff', fontFamily: HUD, fontWeight: 700, fontSize: px(16), padding: `${px(11)}px 0`, cursor: 'pointer' }}>Tetap main</button>
+              <button onClick={doExit} style={{ flex: 1, borderRadius: px(12), border: 0, background: '#e11d48', color: '#fff', fontFamily: HUD, fontWeight: 700, fontSize: px(16), padding: `${px(11)}px 0`, cursor: 'pointer' }}>Ya, keluar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {menuOpen && (
         <div style={{ ...ov, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setMenuOpen(false)}>
           <div style={{ width: px(260), background: '#141a28', borderRadius: px(18), padding: px(12), display: 'grid', gap: px(8) }} onClick={(e) => e.stopPropagation()}>
             <button onClick={() => { setMenuOpen(false); landscape(); }} style={{ borderRadius: px(12), border: 0, background: 'rgba(255,255,255,0.1)', color: '#fff', fontFamily: HUD, fontWeight: 700, fontSize: px(15), padding: `${px(10)}px 0`, cursor: 'pointer' }}>Layar penuh landscape</button>
-            <button onClick={props.onExit} style={{ borderRadius: px(12), border: 0, background: '#e11d48', color: '#fff', fontFamily: HUD, fontWeight: 700, fontSize: px(15), padding: `${px(10)}px 0`, cursor: 'pointer' }}>Keluar dari game</button>
+            <button onClick={() => { setMenuOpen(false); setConfirmExit(true); }} style={{ borderRadius: px(12), border: 0, background: '#e11d48', color: '#fff', fontFamily: HUD, fontWeight: 700, fontSize: px(15), padding: `${px(10)}px 0`, cursor: 'pointer' }}>Keluar dari game</button>
             <button onClick={() => setMenuOpen(false)} style={{ borderRadius: px(12), border: 0, background: 'transparent', color: 'rgba(255,255,255,0.6)', fontFamily: HUD, fontWeight: 600, fontSize: px(14), padding: `${px(6)}px 0`, cursor: 'pointer' }}>Tutup</button>
           </div>
         </div>
