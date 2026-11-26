@@ -115,8 +115,10 @@ function Header({ onSearch }: { onSearch: () => void }) {
     return () => { alive = false; clearTimeout(t); };
   }, []);
 
-  const EXP_PER_LEVEL = 200;
-  const cur = me ? me.exp % EXP_PER_LEVEL : 0;
+  const EXP_PER_LEVEL = 200; // 200 poin per level
+  const points = me ? me.exp : 0;
+  const level = Math.floor(points / EXP_PER_LEVEL) + 1; // level murni dari poin
+  const cur = points % EXP_PER_LEVEL;
   const pct = Math.min(100, (cur / EXP_PER_LEVEL) * 100);
   const BOX: React.CSSProperties = { background: '#26252C', border: '1px solid #3A3942', borderRadius: 20 };
 
@@ -133,8 +135,9 @@ function Header({ onSearch }: { onSearch: () => void }) {
         </Link>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ ...ell, fontSize: 19, fontWeight: 800, letterSpacing: -0.5 }}>{me?.name || 'Komikita'}</div>
-          <span style={{ display: 'inline-block', marginTop: 6, fontSize: 13, fontWeight: 800, color: '#F5C451', background: 'rgba(245,196,81,.16)', border: '1px solid rgba(245,196,81,.3)', padding: '3px 10px', borderRadius: 99 }}>
-            Lvl. {me?.level ?? 1}
+          <span className="gold-pill" style={{ marginTop: 6 }}>
+            <svg width={14} height={14} viewBox="0 0 24 24" aria-hidden style={{ position: 'relative', zIndex: 1 }}><path d="M3 17h18l-1.6 3.2H4.6z" fill="#ffe9a0" /><path d="M5 11.5h14l-1.5 3.2h-11z" fill="#ffd45a" /><path d="M7 6h10l-1.4 3.2H8.4z" fill="#fff3c4" /></svg>
+            <span style={{ position: 'relative', zIndex: 1 }}>Lvl. {level}</span>
           </span>
         </div>
         <button onClick={() => { window.location.assign('/notifikasi'); }} aria-label="Notifikasi" style={{ position: 'relative', flex: '0 0 auto', width: 52, height: 52, borderRadius: '50%', background: '#3A3942', border: 0, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -143,9 +146,9 @@ function Header({ onSearch }: { onSearch: () => void }) {
         </button>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14 }}>
-        <span style={{ fontSize: 13, fontWeight: 800, color: MUTED }}>EXP</span>
+        <span style={{ fontSize: 13, fontWeight: 800, color: MUTED }}>Poin</span>
         <div style={{ flex: 1, height: 7, borderRadius: 99, background: '#3A3942', overflow: 'hidden' }}>
-          <div style={{ width: `${pct}%`, height: '100%', borderRadius: 99, background: 'linear-gradient(90deg,#C99A2E,#F5C451)', transition: 'width .6s' }} />
+          <div className="gold-fill" style={{ width: `${pct}%`, height: '100%', borderRadius: 99, transition: 'width .6s' }} />
         </div>
         <span style={{ fontSize: 13, fontWeight: 800, color: '#D6D4DE' }}>{cur.toLocaleString('id-ID')} / {EXP_PER_LEVEL.toLocaleString('id-ID')}</span>
       </div>
