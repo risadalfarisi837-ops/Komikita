@@ -37,10 +37,15 @@ async function enterGameMode(): Promise<boolean> {
   return lockLandscape();
 }
 
+// aplikasi terpasang (PWA) sudah layar penuh sendiri: jangan minta fullscreen lagi supaya tidak muncul notifikasi sistem
+function isApp() {
+  try { return window.matchMedia('(display-mode: fullscreen)').matches || window.matchMedia('(display-mode: standalone)').matches; } catch { return false; }
+}
+
 // harus dipanggil dari dalam sentuhan pemain
 async function enterFullscreenLandscape() {
   try {
-    if (!document.fullscreenElement) await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
+    if (!document.fullscreenElement && !isApp()) await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
   } catch { /* ditolak (mis. iPhone): cukup pakai rotasi sendiri */ }
   await lockLandscape();
 }
@@ -70,7 +75,7 @@ export default function GameMode() {
     const canFs = typeof document.documentElement.requestFullscreen === 'function';
     const coarse = window.matchMedia('(pointer: coarse)').matches;
     if (!document.fullscreenElement) {
-      enterFullscreenLandscape().then(() => { if (!document.fullscreenElement && canFs && coarse) setNeedTap(true); });
+      enterFullscreenLandscape().then(() => { if (!document.fullscreenElement && canFs && coarse && !isApp()) setNeedTap(true); });
     }
     let armed = false;
     const onTap = () => {
