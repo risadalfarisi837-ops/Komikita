@@ -205,7 +205,7 @@ async function makeShareCard(item: BagItem, player: string, level: number): Prom
 }
 
 // >>> kartu-tangkapan (helper)
-const RARITY_EN: Record<keyof typeof RARITY, string> = { common: 'COMMON', uncommon: 'UNCOMMON', rare: 'RARE', epic: 'EPIC', legendary: 'LEGENDARY' };
+const RARITY_EN: Record<keyof typeof RARITY, string> = { mythic: 'Mythic', common: 'COMMON', uncommon: 'UNCOMMON', rare: 'RARE', epic: 'EPIC', legendary: 'LEGENDARY' };
 const LEN_FACTOR: Record<string, number> = { long: 5, oval: 4, round: 2.8, flat: 6, big: 4.2, shark: 6 };
 // panjang perkiraan (cm) dari berat & bentuk ikan
 function fishLengthCm(shape: string, kg: number): number {
