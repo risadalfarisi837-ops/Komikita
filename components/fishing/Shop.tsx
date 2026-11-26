@@ -1,17 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
-import { GACHA_DUPLICATE_REFUND, GACHA_ODDS, GACHA_PITY, GACHA_PRICE, GACHA_RODS, RARITY, RODS, formatNum } from '@/lib/fishing';
-import type { Rod } from '@/lib/fishing';
+import { GACHA_ODDS, GACHA_PITY, GACHA_PRICE, GACHA_RODS, RARITY, RODS, formatNum } from '@/lib/fishing';
 import PixelRod from './RodArt';
 
-export type ShopTab = 'toko' | 'gachagaya' | 'gacha' | 'gaya' | 'tas';
+export type ShopTab = 'toko' | 'bajulimited' | 'gacha' | 'gachagaya' | 'gacharumah' | 'gaya' | 'tas';
 
 interface Props {
   px: (n: number) => number;
   font: string;
   crystal: number;
+  gems?: number;
   rods: string[];
   equippedRod: string;
   tab: ShopTab;
@@ -25,10 +25,21 @@ interface Props {
   pity: number;
   starterClaimed: boolean;
   onClaimStarter: () => void;
+  onAddGems?: () => void;
+  onPack?: (id: 'monthly' | 'monsun' | 'kenalan' | 'buah') => void;
+  freeBaitClaimed?: boolean;
+  onClaimBait?: () => void;
 }
 
 const BROWN = '#5a3b1e';
 const pct = (n: number) => n.toFixed(1).replace('.', ',') + '%';
+const rupiah = (n: number) => 'Rp' + Math.round(n).toLocaleString('id-ID');
+
+// harga paket uang asli (tampilan; pembayaran dihubungkan lewat onPack)
+export const PRICE_MONTHLY = 99000;
+export const PRICE_MONSUN = 129000;
+export const PRICE_KENALAN = 5000;
+export const PRICE_BUAH = 15000;
 
 // ---------- ikon piksel ----------
 export function GemIcon({ size }: { size: number }) {
@@ -38,6 +49,131 @@ export function GemIcon({ size }: { size: number }) {
       <path d="M6 3h12l4 6H2z" fill="#7cf0b8" />
       <path d="M12 21L7.5 9h9z" fill="#1fa86a" />
       <path d="M6 3h12l4 6-10 12L2 9z" fill="none" stroke="#0f7a4a" strokeWidth="1.2" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+// Crystal biru (mata uang utama) & Permata ungu (mata uang premium), sesuai referensi
+export function CrystalIcon({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden style={{ flex: 'none' }}>
+      <path d="M12 1.5l7 6.2v8.6L12 22.5 5 16.3V7.7z" fill="#2f9bff" />
+      <path d="M12 1.5l7 6.2-7 3.2-7-3.2z" fill="#8fd2ff" />
+      <path d="M12 10.9l7-3.2v8.6l-7 6.2z" fill="#1c6fe0" />
+      <path d="M8 7.2l4-3.4" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" opacity=".8" />
+    </svg>
+  );
+}
+export function PermataIcon({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden style={{ flex: 'none' }}>
+      <path d="M6 3h12l4.5 6L12 21.5 1.5 9z" fill="#d23fe6" />
+      <path d="M6 3h12l4.5 6h-21z" fill="#f08cff" />
+      <path d="M12 21.5L7.5 9h9z" fill="#a51ec0" />
+      <path d="M6 3h12l4.5 6L12 21.5 1.5 9z" fill="none" stroke="#7a1090" strokeWidth="1.1" strokeLinejoin="round" />
+    </svg>
+  );
+}
+function StarIcon({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden shapeRendering="crispEdges" style={{ flex: 'none' }}>
+      <path d="M12 2l3 6.5 7 .8-5.2 4.7 1.5 7L12 17.3 5.7 21l1.5-7L2 9.3l7-.8z" fill="#ffd23a" stroke="#c98a00" strokeWidth="1.2" strokeLinejoin="round" />
+      <path d="M12 5l1.8 4.2L18 9.7" stroke="#fff6c0" strokeWidth="1.2" fill="none" />
+      <path d="M20 2v4M18 4h4" stroke="#fff" strokeWidth="1.4" />
+    </svg>
+  );
+}
+function FeatherIcon({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden style={{ flex: 'none' }}>
+      <path d="M20 3C11 4 5 10 4 20c8-1 15-7 16-17z" fill="#7fd4ff" stroke="#2a7fd0" strokeWidth="1.3" strokeLinejoin="round" />
+      <path d="M20 3C14 8 9 13 4 20" stroke="#fff" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+      <path d="M18 3l3 0M21 6l0-3" stroke="#fff" strokeWidth="1.2" />
+    </svg>
+  );
+}
+function BaitIcon({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden shapeRendering="crispEdges" style={{ flex: 'none' }}>
+      <rect x="9" y="6" width="9" height="9" fill="#f2b233" />
+      <rect x="11" y="8" width="5" height="3" fill="#ffd76a" />
+      <rect x="4" y="9" width="5" height="5" fill="#4a3220" />
+      <rect x="4" y="15" width="3" height="4" fill="#4a3220" />
+      <rect x="10" y="15" width="3" height="4" fill="#4a3220" />
+      <rect x="15" y="15" width="3" height="4" fill="#4a3220" />
+      <rect x="9" y="3" width="2" height="3" fill="#4a3220" />
+      <rect x="15" y="3" width="2" height="3" fill="#4a3220" />
+    </svg>
+  );
+}
+function FruitIcon({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden shapeRendering="crispEdges" style={{ flex: 'none' }}>
+      <rect x="4" y="7" width="16" height="11" rx="3" fill="#e5322d" />
+      <rect x="7" y="18" width="10" height="3" fill="#b8211d" />
+      <rect x="6" y="9" width="3" height="3" fill="#ff7b72" />
+      <rect x="8" y="3" width="8" height="4" fill="#2f9a43" />
+      <rect x="11" y="2" width="2" height="3" fill="#1f6f2f" />
+    </svg>
+  );
+}
+function BoltIcon({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden style={{ flex: 'none' }}>
+      <path d="M14 2L5 13.5h6L9 22l10-12.5h-6z" fill="#ffc21a" stroke="#c98a00" strokeWidth="1.2" strokeLinejoin="round" />
+    </svg>
+  );
+}
+function CloverIcon({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden style={{ flex: 'none' }}>
+      <circle cx="8.5" cy="8.5" r="4.6" fill="#38c24f" /><circle cx="15.5" cy="8.5" r="4.6" fill="#38c24f" />
+      <circle cx="8.5" cy="15" r="4.6" fill="#2fae45" /><circle cx="15.5" cy="15" r="4.6" fill="#2fae45" />
+      <path d="M12 12l5 9" stroke="#1d7a30" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+function SparkleIcon({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden style={{ flex: 'none' }}>
+      <path d="M11 3l2.6 6.4L20 12l-6.4 2.6L11 21l-2.6-6.4L2 12l6.4-2.6z" fill="#e66bff" />
+      <path d="M11 6.5l1.4 3.8 3.8 1.4-3.8 1.4L11 17l-1.4-3.9L5.800 11.700l3.800-1.400z" fill="#fff" opacity=".7" />
+      <path d="M19 2v5M16.5 4.5h5" stroke="#f6c3ff" strokeWidth="1.4" />
+    </svg>
+  );
+}
+function FishUpIcon({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden style={{ flex: 'none' }}>
+      <path d="M3 16c3-5 9-6 13-3l4-2.5v8L16 16c-4 3-10 3-13 0z" fill="#58b7ff" stroke="#2478d0" strokeWidth="1.1" strokeLinejoin="round" />
+      <circle cx="7.500" cy="14.200" r="1" fill="#10305e" />
+      <path d="M17 3l3 4h-2v4h-2V7h-2z" fill="#ffc21a" stroke="#c98a00" strokeWidth=".8" strokeLinejoin="round" />
+    </svg>
+  );
+}
+function GiftIcon({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden shapeRendering="crispEdges" style={{ flex: 'none' }}>
+      <rect x="2" y="8" width="20" height="5" fill="#ff5a4d" /><rect x="3.500" y="13" width="17" height="9" fill="#e8372f" />
+      <rect x="10.500" y="8" width="3" height="14" fill="#ffd23a" />
+      <rect x="6" y="3" width="5" height="5" fill="#ffd23a" /><rect x="13" y="3" width="5" height="5" fill="#ffd23a" />
+      <rect x="2" y="12" width="20" height="1.500" fill="#00000030" />
+    </svg>
+  );
+}
+function ShirtIcon({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden shapeRendering="crispEdges" style={{ flex: 'none' }}>
+      <path d="M8 3h8l1 2 5 2-2 5-3-1v11H7V11l-3 1-2-5 5-2z" fill="#18a6c9" stroke="#0b6a85" strokeWidth="1.200" strokeLinejoin="round" />
+      <path d="M9.500 3c1 2 4 2 5 0" fill="#0b6a85" />
+    </svg>
+  );
+}
+function BagIcon({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden shapeRendering="crispEdges" style={{ flex: 'none' }}>
+      <rect x="4" y="7" width="16" height="15" rx="3" fill="#d9532e" /><rect x="7" y="2" width="10" height="6" rx="3" fill="none" stroke="#8a3217" strokeWidth="2" />
+      <rect x="8" y="13" width="8" height="5" fill="#f08a52" />
     </svg>
   );
 }
@@ -85,12 +221,24 @@ function Chest({ body, lid, size }: { body: string; lid: string; size: number })
   );
 }
 
+const SIDE: { k: ShopTab; label: string; icon: (s: number) => ReactNode }[] = [
+  { k: 'toko', label: 'Promo', icon: (s) => <GiftIcon size={s} /> },
+  { k: 'bajulimited', label: 'Baju Limited', icon: (s) => <Chest body="#5a6272" lid="#7b8396" size={s} /> },
+  { k: 'gacha', label: 'Gacha Rod', icon: (s) => <Chest body="#7a3fb0" lid="#9a5fd0" size={s} /> },
+  { k: 'gachagaya', label: 'Gacha Gaya', icon: (s) => <Chest body="#d9609a" lid="#f08abf" size={s} /> },
+  { k: 'gacharumah', label: 'Gacha Rumah', icon: (s) => <Chest body="#2f8a6a" lid="#47b088" size={s} /> },
+  { k: 'gaya', label: 'Etalase', icon: (s) => <ShirtIcon size={s} /> },
+  { k: 'tas', label: 'Tas', icon: (s) => <BagIcon size={s} /> },
+];
+
 export default function ShopScreen(p: Props) {
   const { px, font, crystal, rods, equippedRod, tab, onTab, buying, pulling } = p;
+  const gems = p.gems ?? 0;
   const [odds, setOdds] = useState(false);
+  const sideRef = useRef<HTMLDivElement>(null);
 
   const chip: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: px(3), background: '#eaf1ff', color: '#2459c9', fontWeight: 800, fontSize: px(12), borderRadius: 99, padding: `${px(2)}px ${px(8)}px`, whiteSpace: 'nowrap' };
-  const Stats = ({ r }: { r: Rod }) => (
+  const Stats = ({ r }: { r: { power: number; luck: number; money: number; xp: number } }) => (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: px(4), justifyContent: 'center' }}>
       <span style={{ ...chip, background: '#fff1c4', color: '#a86b00' }}>⚡{r.power}</span>
       <span style={chip}>🍀+{Math.round(r.luck * 100)}%</span>
@@ -98,19 +246,17 @@ export default function ShopScreen(p: Props) {
       <span style={chip}>✨+{Math.round(r.xp * 100)}%</span>
     </div>
   );
-  const Pill = ({ r }: { r: Rod }) => (
+  const Pill = ({ r }: { r: { rarity: keyof typeof RARITY } }) => (
     <span style={{ display: 'inline-block', background: RARITY[r.rarity].color + '33', color: '#5a3b1e', border: `${px(1.5)}px solid ${RARITY[r.rarity].color}`, fontWeight: 800, fontSize: px(11), borderRadius: 99, padding: `0 ${px(9)}px` }}>{RARITY[r.rarity].label}</span>
   );
   const btn3d = (bg: string, edge: string, color: string): CSSProperties => ({
     border: 0, background: bg, boxShadow: `0 ${px(4)}px 0 ${edge}`, color, fontFamily: font, fontWeight: 800, borderRadius: px(14), cursor: 'pointer', padding: `${px(7)}px ${px(14)}px`,
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: px(6),
   });
-  const GREEN = btn3d('linear-gradient(180deg,#7ceab0,#4fd18c)', '#2ea36a', '#0b3b25');
   const GOLD = btn3d('linear-gradient(180deg,#ffd45a,#f5a623)', '#c47f10', '#4a2f00');
   const BLUE = btn3d('linear-gradient(180deg,#3b8cf0,#1f64cc)', '#164b9c', '#fff');
+  const SKY = btn3d('linear-gradient(180deg,#63d3ff,#2aa6f2)', '#1a78b8', '#fff');
 
-  const shopRods = RODS.filter((r) => !r.gachaOnly && r.price > 0);
-  const feat = shopRods.filter((r) => !rods.includes(r.id)).sort((a, b) => a.price - b.price)[0];
   const gachaRods = GACHA_RODS;
   const monthly = RODS.find((r) => r.monthly);
   const leftMs = Math.max(0, new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).getTime() - Date.now());
@@ -121,7 +267,6 @@ export default function ShopScreen(p: Props) {
   const rarest = topG[0];
   const legPct = gachaRods.filter((r) => r.rarity === rarest.rarity).reduce((s, r) => s + (GACHA_ODDS[r.id] ?? 0), 0);
   const topRar = RARITY[rarest.rarity];
-
   const rays = (a: string, b: string) => `repeating-conic-gradient(from 0deg at 50% 50%, ${a} 0 8deg, ${b} 8deg 16deg)`;
 
   const soon = (title: string, desc: string) => (
@@ -132,90 +277,77 @@ export default function ShopScreen(p: Props) {
     </div>
   );
 
-  const sideTab = (k: ShopTab, ico: string) => (
-    <button key={k} onClick={() => onTab(k)} aria-label={k}
-      style={{ width: px(68), height: px(58), borderRadius: px(16), border: 0, background: tab === k ? 'linear-gradient(180deg,#3b8cf0,#1f64cc)' : 'transparent', boxShadow: tab === k ? `0 ${px(4)}px 0 #164b9c` : 'none', fontSize: px(32), cursor: 'pointer', padding: 0 }}>{ico}</button>
+  // ---------- potongan UI promo ----------
+  const Slot = ({ children, n }: { children: ReactNode; n?: number }) => (
+    <span style={{ position: 'relative', width: px(46), height: px(46), borderRadius: px(12), background: 'linear-gradient(180deg,#fffaf0,#f1e4c8)', border: `${px(2)}px solid #e2d2ae`, boxShadow: `0 ${px(1.5)}px 0 #d8c59c`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box' }}>
+      {children}
+      {n != null && <span style={{ position: 'absolute', right: px(-5), bottom: px(-6), minWidth: px(22), textAlign: 'center', background: '#3b3b44', color: '#fff', fontWeight: 800, fontSize: px(13), lineHeight: 1, borderRadius: 99, padding: `${px(3)}px ${px(5)}px`, boxSizing: 'border-box', border: `${px(1.5)}px solid #fffaf0` }}>{n}</span>}
+    </span>
+  );
+  const PackCard = ({ title, items, note, action }: { title: string; items: ReactNode; note: string; action: ReactNode }) => (
+    <div style={{ borderRadius: px(20), border: `${px(3)}px solid #eadfc7`, background: 'linear-gradient(180deg,#ffffff,#fdf6e6)', boxShadow: `0 ${px(3)}px 0 #e3d4b3`, overflow: 'hidden', paddingBottom: px(10) }}>
+      <div style={{ width: '86%', background: 'linear-gradient(90deg,#1362cf,#1d7bea)', clipPath: 'polygon(0 0,100% 0,95% 100%,0 100%)', color: '#fff', fontWeight: 800, fontSize: px(17), padding: `${px(4)}px ${px(12)}px`, textShadow: '0 1.5px 0 rgba(0,0,60,.35)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</div>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: px(10), padding: `${px(14)}px 0 ${px(4)}px`, minHeight: px(48) }}>{items}</div>
+      <div style={{ textAlign: 'center', fontWeight: 800, fontSize: px(15), color: '#a8691f', margin: `${px(8)}px 0 ${px(6)}px` }}>{note}</div>
+      <div style={{ padding: `0 ${px(10)}px` }}>{action}</div>
+    </div>
+  );
+  const priceBtn = (label: string, onClick?: () => void) => (
+    <button onClick={onClick} style={{ ...GOLD, width: '100%', borderRadius: px(10), fontSize: px(19), padding: `${px(6)}px 0`, boxShadow: `0 ${px(3)}px 0 #b97a12` }}>{label}</button>
+  );
+  const doneBtn = (label: string) => (
+    <div style={{ textAlign: 'center', background: '#e1f6df', border: `${px(2.5)}px solid #86dc86`, color: '#1f7a30', fontWeight: 800, fontSize: px(19), borderRadius: px(10), padding: `${px(5)}px 0` }}>{label}</div>
   );
 
-  return (
-    <div style={{ position: 'absolute', inset: 0, zIndex: 30, display: 'flex', flexDirection: 'column', background: '#fff5e1', fontFamily: font, color: BROWN }}>
-      {/* header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: px(16), background: 'linear-gradient(180deg,#3d8ef2,#2069d2)', padding: `${px(10)}px ${px(18)}px`, boxShadow: `0 ${px(4)}px 0 #1559b8`, position: 'relative', zIndex: 2 }}>
-        <span style={{ width: px(48), height: px(48), borderRadius: '50%', background: '#fff2d1', border: `${px(3)}px solid #fff`, boxShadow: '0 2px 0 rgba(0,0,60,.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: px(26) }}>🛍️</span>
-        <span style={{ color: '#fff', fontWeight: 800, fontSize: px(26), textShadow: '0 2px 0 rgba(0,0,60,0.35)' }}>Toko</span>
-        <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: px(8), background: 'rgba(10,45,120,0.55)', color: '#fff', fontWeight: 800, fontSize: px(19), borderRadius: 99, padding: `${px(6)}px ${px(18)}px` }}>
-          <GemIcon size={px(22)} />{formatNum(crystal)}
-        </span>
-        <button onClick={p.onClose} aria-label="Tutup" style={{ width: px(48), height: px(46), borderRadius: px(12), border: 0, background: '#e5484d', boxShadow: `0 ${px(4)}px 0 #a62a2f`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
-          <svg width={px(26)} height={px(26)} viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19" stroke="#fff" strokeWidth="3.4" strokeLinecap="round" /></svg>
-        </button>
-      </div>
+  const monsunName = monthly ? monthly.name.replace(/^Joran\s+/, '') : 'Badai Monsun';
 
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', gap: px(14), padding: `${px(12)}px ${px(12)}px 0` }}>
-        {/* sidebar */}
-        <div style={{ width: px(84), flex: 'none', alignSelf: 'stretch', background: '#f5e8cf', borderRadius: `${px(28)}px ${px(28)}px 0 0`, padding: `${px(10)}px ${px(8)}px`, display: 'grid', alignContent: 'start', justifyItems: 'center', gap: px(8) }}>
-          {sideTab('toko', '\u{1F3F7}\u{FE0F}')}
-          {sideTab('gachagaya', '\u{1F381}')}
-          {sideTab('gacha', '\u{1F3A3}')}
-          {sideTab('gaya', '\u{1F455}')}
-          {sideTab('tas', '\u{1F392}')}
-        </div>
-
-        <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', paddingBottom: px(18) }}>
-          {tab === 'gachagaya' ? soon('Gacha Gaya', 'Gaya rambut dan aksesori punggung karakter segera hadir.') : tab === 'gaya' ? soon('Gaya', 'Ganti gaya karakter di sini setelah Gacha Gaya dibuka.') : tab === 'tas' ? soon('Tas', 'Upgrade ransel dan umpan segera hadir.') : tab === 'toko' ? (
-            <div>
-              {monthly && (
-                <div style={{ display: 'flex', alignItems: 'stretch', borderRadius: px(22), border: `${px(3)}px solid #7b9be8`, background: '#fff9ea', overflow: 'hidden', boxShadow: `0 ${px(4)}px 0 #d6c9ad` }}>
-                  <div style={{ width: px(126), flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', background: `radial-gradient(circle at 50% 50%, #d9e0f2 0 24%, transparent 25%), ${rays('#34507e', '#28406a')}` }}>
-                    <PixelRod id={monthly.id} size={px(86)} animate />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0, padding: `${px(10)}px ${px(14)}px`, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: px(6) }}>
-                    <div style={{ color: '#c98d12', fontWeight: 800, fontSize: px(14) }}>Joran Bulanan · sisa {leftD} hari {leftH} jam</div>
-                    <div style={{ color: '#2b2a52', fontWeight: 700, fontSize: px(24), lineHeight: 1.1 }}>{monthly.name}</div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: px(6) }}>
-                      <span style={{ ...chip, background: '#fff1c4', color: '#a86b00', fontSize: px(14) }}>⚡{monthly.power}</span>
-                      <span style={{ ...chip, fontSize: px(14) }}>🍀+{Math.round(monthly.luck * 100)}%</span>
-                      <span style={{ ...chip, fontSize: px(14) }}>💰+{Math.round(monthly.money * 100)}%</span>
-                      <span style={{ ...chip, fontSize: px(14) }}>✨+{Math.round(monthly.xp * 100)}%</span>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', padding: `0 ${px(16)}px` }}>
-                    {equippedRod === monthly.id ? (
-                      <div style={{ background: '#e1f5e6', border: `${px(2.5)}px solid #9ad8ae`, color: '#1f7a3c', fontWeight: 800, fontSize: px(17), borderRadius: px(12), padding: `${px(8)}px ${px(16)}px` }}>✓ Dipakai</div>
-                    ) : rods.includes(monthly.id) ? (
-                      <button onClick={() => p.onEquip(monthly.id)} style={{ ...BLUE, fontSize: px(20), padding: `${px(10)}px ${px(22)}px` }}>Pakai</button>
-                    ) : (
-                      <button onClick={() => p.onBuy(monthly.id)} disabled={buying === monthly.id} style={{ ...GOLD, fontSize: px(22), padding: `${px(12)}px ${px(22)}px`, opacity: buying === monthly.id ? 0.6 : 1 }}>
-                        <GemIcon size={px(24)} />{formatNum(monthly.price)}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-              <div style={{ fontSize: px(18), fontWeight: 800, margin: `${px(12)}px 0 ${px(8)}px` }}>Paket terbatas</div>
-              <div style={{ width: px(260), borderRadius: px(20), border: `${px(3)}px solid #e6d4b0`, background: '#fffaf0', overflow: 'hidden', boxShadow: `0 ${px(3)}px 0 #e6d4b0` }}>
-                <div style={{ background: 'linear-gradient(90deg,#1f64cc,#3b8cf0)', color: '#fff', fontWeight: 800, fontSize: px(18), padding: `${px(4)}px ${px(14)}px` }}>Paket Pemula</div>
-                <div style={{ display: 'flex', justifyContent: 'center', gap: px(12), padding: `${px(14)}px 0 ${px(2)}px` }}>
-                  <span style={{ position: 'relative', width: px(60), height: px(60), borderRadius: px(14), background: '#f5ecd9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <GemIcon size={px(36)} />
-                    <span style={{ position: 'absolute', right: px(-6), bottom: px(-6), background: '#7b7b8a', color: '#fff', fontWeight: 800, fontSize: px(12), borderRadius: 99, padding: `0 ${px(7)}px` }}>600</span>
-                  </span>
-                  <span style={{ position: 'relative', width: px(60), height: px(60), borderRadius: px(14), background: '#f5ecd9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <PixelRod id="fiber" size={px(48)} />
-                    <span style={{ position: 'absolute', right: px(-6), bottom: px(-6), background: '#7b7b8a', color: '#fff', fontWeight: 800, fontSize: px(12), borderRadius: 99, padding: `0 ${px(7)}px` }}>1</span>
-                  </span>
-                </div>
-                <div style={{ textAlign: 'center', fontWeight: 800, fontSize: px(14), color: '#8a6d4a', marginTop: px(8) }}>Crystal + Joran Fiber · sekali per akun</div>
-                <div style={{ padding: px(10) }}>
-                  {p.starterClaimed ? (
-                    <div style={{ textAlign: 'center', background: '#e1f5e6', border: `${px(2.5)}px solid #9ad8ae`, color: '#1f7a3c', fontWeight: 800, fontSize: px(17), borderRadius: px(14), padding: `${px(8)}px 0` }}>✓ Sudah diambil</div>
-                  ) : (
-                    <button onClick={p.onClaimStarter} style={{ ...GREEN, width: '100%', fontSize: px(17) }}>Ambil gratis</button>
-                  )}
-                </div>
-              </div>
+  const promo = (
+    <div>
+      {monthly && (
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: px(14), borderRadius: px(18), border: `${px(3)}px solid #f2b73a`, background: 'repeating-linear-gradient(72deg, rgba(120,160,255,.28) 0 1.5px, transparent 1.5px 16px), linear-gradient(180deg,#14337a,#0b1f52)', boxShadow: `0 ${px(4)}px 0 #c9993a`, padding: `${px(8)}px ${px(14)}px ${px(8)}px ${px(10)}px`, minHeight: px(88), boxSizing: 'border-box' }}>
+          <span style={{ width: px(76), height: px(76), flex: 'none', borderRadius: px(10), border: `${px(2)}px solid #8aa6e8`, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: `radial-gradient(circle at 50% 50%, #23366a 0 20%, transparent 21%), ${rays('#3a5a98', '#223a6e')}` }}>
+            <PixelRod id={monthly.id} size={px(70)} animate />
+          </span>
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: px(3) }}>
+            <div style={{ color: '#ffd04a', fontWeight: 800, fontSize: px(14), whiteSpace: 'nowrap' }}>Rod Bulanan · sisa {leftD} hari {leftH} jam</div>
+            <div style={{ color: '#fff', fontWeight: 700, fontSize: px(24), lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{monthly.name.replace(/^Joran/, 'Rod')}</div>
+            <div style={{ display: 'flex', gap: px(6), flexWrap: 'wrap' }}>
+              {([[<BoltIcon key="b" size={px(18)} />, String(monthly.power)], [<CloverIcon key="c" size={px(20)} />, '+' + Math.round(monthly.luck * 100) + '%'], [<SparkleIcon key="s" size={px(20)} />, '+' + Math.round(monthly.xp * 100) + '%'], [<FishUpIcon key="f" size={px(20)} />, '+' + Math.round(monthly.money * 100) + '%']] as [ReactNode, string][]).map(([ic, t], i) => (
+                <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: px(4), background: 'rgba(8,20,60,.62)', color: '#fff', fontWeight: 800, fontSize: px(22), lineHeight: 1, borderRadius: 99, padding: `${px(2)}px ${px(10)}px ${px(2)}px ${px(6)}px` }}>{ic}{t}</span>
+              ))}
             </div>
-          ) : (
+          </div>
+          <div style={{ flex: 'none', paddingRight: px(2) }}>
+            {equippedRod === monthly.id ? (
+              <div style={{ background: '#e1f5e6', border: `${px(2.5)}px solid #9ad8ae`, color: '#1f7a3c', fontWeight: 800, fontSize: px(18), borderRadius: px(12), padding: `${px(8)}px ${px(18)}px` }}>✓ Dipakai</div>
+            ) : rods.includes(monthly.id) ? (
+              <button onClick={() => p.onEquip(monthly.id)} style={{ ...BLUE, fontSize: px(20), padding: `${px(10)}px ${px(24)}px` }}>Pakai</button>
+            ) : (
+              <button onClick={() => p.onPack?.('monthly')} disabled={buying === monthly.id} style={{ ...SKY, fontSize: px(24), padding: `${px(12)}px ${px(28)}px`, borderRadius: px(12), boxShadow: `0 ${px(4)}px 0 #1a78b8`, opacity: buying === monthly.id ? 0.6 : 1 }}>{rupiah(PRICE_MONTHLY)}</button>
+            )}
+          </div>
+        </div>
+      )}
+      <div style={{ fontSize: px(17), fontWeight: 800, color: '#6a5a48', margin: `${px(10)}px 0 ${px(6)}px` }}>Paket terbatas</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: px(10), alignItems: 'start' }}>
+        <PackCard title={`Paket ${monsunName}`} note="Sekali per akun"
+          items={<>{monthly ? <Slot><PixelRod id={monthly.id} size={px(40)} /></Slot> : null}<Slot n={20}><StarIcon size={px(32)} /></Slot><Slot n={10}><FeatherIcon size={px(32)} /></Slot></>}
+          action={priceBtn(rupiah(PRICE_MONSUN), () => p.onPack?.('monsun'))} />
+        <PackCard title="Umpan Gratis" note="Sekali sehari"
+          items={<Slot n={3}><BaitIcon size={px(32)} /></Slot>}
+          action={p.freeBaitClaimed === false ? priceBtn('Ambil gratis', p.onClaimBait) : doneBtn('✓ Besok lagi')} />
+        <PackCard title="Paket Kenalan" note="Sekali per akun"
+          items={<><Slot n={600}><PermataIcon size={px(32)} /></Slot><Slot n={10}><StarIcon size={px(32)} /></Slot></>}
+          action={priceBtn(rupiah(PRICE_KENALAN), () => p.onPack?.('kenalan'))} />
+        <PackCard title="Paket Musim Buah" note="Sekali per akun"
+          items={<><Slot><FruitIcon size={px(32)} /></Slot><Slot n={10}><FeatherIcon size={px(32)} /></Slot></>}
+          action={priceBtn(rupiah(PRICE_BUAH), () => p.onPack?.('buah'))} />
+      </div>
+    </div>
+  );
+
+  const tabBody = tab === 'toko' ? promo
+    : tab === 'gacha' ? (
             <div>
               <div style={{ display: 'flex', borderRadius: px(22), border: `${px(3)}px solid #e6d4b0`, overflow: 'hidden', background: '#fffaf0', boxShadow: `0 ${px(3)}px 0 #e6d4b0` }}>
                 <div style={{ flex: '1 1 58%', minHeight: px(228), position: 'relative', background: `radial-gradient(circle at 50% 45%, #5a2a8a 0, #2a0f4a 75%), ${rays('#ffffff12', 'transparent')}`, backgroundBlendMode: 'screen', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', padding: `${px(14)}px ${px(18)}px` }}>
@@ -244,11 +376,11 @@ export default function ShopScreen(p: Props) {
                   <div style={{ display: 'flex', gap: px(10) }}>
                     <button onClick={() => p.onPull(1)} disabled={pulling} style={{ ...BLUE, flex: 1, flexDirection: 'column', gap: px(2), padding: `${px(8)}px 0`, opacity: pulling ? 0.6 : 1 }}>
                       <span style={{ fontSize: px(16) }}>Buka 1×</span>
-                      <span style={{ fontSize: px(22), display: 'inline-flex', alignItems: 'center', gap: px(6) }}><GemIcon size={px(22)} />{formatNum(GACHA_PRICE)}</span>
+                      <span style={{ fontSize: px(22), display: 'inline-flex', alignItems: 'center', gap: px(6) }}><CrystalIcon size={px(22)} />{formatNum(GACHA_PRICE)}</span>
                     </button>
                     <button onClick={() => p.onPull(5)} disabled={pulling} style={{ ...GOLD, flex: 1, flexDirection: 'column', gap: px(2), padding: `${px(8)}px 0`, opacity: pulling ? 0.6 : 1 }}>
                       <span style={{ fontSize: px(16) }}>Buka 5×</span>
-                      <span style={{ fontSize: px(22), display: 'inline-flex', alignItems: 'center', gap: px(6) }}><GemIcon size={px(22)} />{formatNum(GACHA_PRICE * 5)}</span>
+                      <span style={{ fontSize: px(22), display: 'inline-flex', alignItems: 'center', gap: px(6) }}><CrystalIcon size={px(22)} />{formatNum(GACHA_PRICE * 5)}</span>
                     </button>
                   </div>
                 </div>
@@ -286,7 +418,57 @@ export default function ShopScreen(p: Props) {
                 );
               })}
             </div>
-          )}
+    ) : tab === 'bajulimited' ? soon('Baju Limited', 'Baju edisi terbatas segera hadir.')
+    : tab === 'gachagaya' ? soon('Gacha Gaya', 'Gaya rambut dan aksesori punggung karakter segera hadir.')
+    : tab === 'gacharumah' ? soon('Gacha Rumah', 'Isi rumah dan dekorasi segera hadir.')
+    : tab === 'gaya' ? soon('Etalase', 'Ganti gaya karakter di sini setelah Gacha Gaya dibuka.')
+    : soon('Tas', 'Upgrade ransel dan umpan segera hadir.');
+
+  const BTN_SHADOW = `0 ${px(4)}px 0 #164b9c`;
+  const chipHdr: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: px(8), background: 'rgba(8,40,110,0.55)', color: '#fff', fontWeight: 800, fontSize: px(22), lineHeight: 1, borderRadius: 99, padding: `${px(6)}px ${px(16)}px ${px(6)}px ${px(10)}px`, boxShadow: 'inset 0 0 0 1.5px rgba(255,255,255,.08)' };
+
+  return (
+    <div style={{ position: 'absolute', inset: 0, zIndex: 30, background: 'rgba(0,12,40,.5)', fontFamily: font, color: BROWN }}>
+      <style>{`.kk-scroll{scrollbar-width:thin;scrollbar-color:#a89a84 transparent}.kk-scroll::-webkit-scrollbar{width:6px}.kk-scroll::-webkit-scrollbar-thumb{background:#a89a84;border-radius:99px}.kk-scroll::-webkit-scrollbar-track{background:transparent}`}</style>
+      <div style={{ position: 'absolute', inset: px(4), display: 'flex', flexDirection: 'column', background: '#fff5e1', borderRadius: px(26), border: `${px(4)}px solid #1a74e4`, boxShadow: '0 0 0 2px #0b3f8f', overflow: 'hidden' }}>
+        {/* header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: px(12), background: 'linear-gradient(180deg,#1479ec,#0b62cc)', padding: `${px(8)}px ${px(14)}px`, boxShadow: '0 3px 0 #0a4fa8', position: 'relative', zIndex: 2, flex: 'none' }}>
+          <span style={{ width: px(44), height: px(44), borderRadius: '50%', background: '#fff2d1', border: `${px(2.5)}px solid #fff`, boxShadow: '0 2px 0 rgba(0,0,60,.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: px(24), boxSizing: 'border-box' }}>🛍️</span>
+          <span style={{ color: '#fff', fontWeight: 700, fontSize: px(26) }}>Toko</span>
+          <span style={{ marginLeft: 'auto', ...chipHdr }}><CrystalIcon size={px(34)} />{formatNum(crystal)}</span>
+          <span style={chipHdr}>
+            <PermataIcon size={px(30)} />{formatNum(gems)}
+            <button onClick={p.onAddGems} aria-label="Tambah Permata" style={{ width: px(26), height: px(26), borderRadius: '50%', border: 0, background: 'radial-gradient(circle at 35% 30%,#58e89a,#1fa85a)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
+              <svg width={px(14)} height={px(14)} viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="#fff" strokeWidth="4" strokeLinecap="round" /></svg>
+            </button>
+          </span>
+          <button onClick={p.onClose} aria-label="Tutup" style={{ width: px(52), height: px(46), borderRadius: px(12), border: 0, background: 'linear-gradient(180deg,#ee5a4a,#d0392b)', boxShadow: `0 ${px(3)}px 0 #a02a20`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
+            <svg width={px(26)} height={px(26)} viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19" stroke="#fff" strokeWidth="3.4" strokeLinecap="round" /></svg>
+          </button>
+        </div>
+
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', gap: px(12), padding: `${px(10)}px ${px(10)}px 0 ${px(14)}px` }}>
+          {/* sidebar */}
+          <div style={{ width: px(186), flex: 'none', alignSelf: 'stretch', background: '#f5e6c8', borderRadius: `${px(24)}px ${px(24)}px 0 0`, padding: `${px(10)}px ${px(8)}px ${px(8)}px`, display: 'flex', flexDirection: 'column', gap: px(6), minHeight: 0, boxSizing: 'border-box' }}>
+            <div ref={sideRef} className="kk-scroll" style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: px(8), paddingRight: px(4) }}>
+              {SIDE.map((s) => {
+                const on = tab === s.k;
+                return (
+                  <button key={s.k} onClick={() => onTab(s.k)} style={{ flex: 'none', display: 'flex', alignItems: 'center', gap: px(10), width: '100%', height: px(56), padding: `0 ${px(8)}px`, borderRadius: px(14), border: 0, background: on ? 'linear-gradient(180deg,#1f86f2,#0f63d0)' : 'transparent', boxShadow: on ? BTN_SHADOW : 'none', color: on ? '#fff' : BROWN, fontFamily: font, fontWeight: 800, fontSize: px(18), cursor: 'pointer', textAlign: 'left', whiteSpace: 'nowrap' }}>
+                    <span style={{ width: px(32), height: px(32), display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>{s.icon(px(30))}</span>
+                    {s.label}
+                  </button>
+                );
+              })}
+            </div>
+            <button onClick={() => sideRef.current?.scrollBy({ top: px(120), behavior: 'smooth' })} aria-label="Gulir ke bawah" style={{ flex: 'none', height: px(34), borderRadius: px(12), border: 0, background: '#fffaf0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
+              <svg width={px(20)} height={px(20)} viewBox="0 0 24 24"><path d="M5 9l7 7 7-7" stroke="#1f64cc" strokeWidth="3.4" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </button>
+          </div>
+
+          <div className="kk-scroll" style={{ flex: 1, minWidth: 0, overflowY: 'auto', paddingBottom: px(18), paddingRight: px(8) }}>
+            {tabBody}
+          </div>
         </div>
       </div>
 
