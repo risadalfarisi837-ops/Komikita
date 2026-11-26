@@ -86,6 +86,7 @@ type D = {
   from: string; to: string; edge: string; ghost?: string;
   title: string; sub?: string; art?: ReactNode; artSize?: number; artDy?: number;
   dark?: boolean; tsize?: number; onClick?: () => void; float?: number; badge?: ReactNode; gx?: number; gy?: number;
+  enter?: 'l' | 'r' | 'p' | 'f'; delay?: number; // animasi muncul: l = dari kiri, r = dari kanan, p = fade+zoom, f = pop
 };
 function Diamond(p: D) {
   const L = p.d * SQ;
@@ -93,6 +94,7 @@ function Diamond(p: D) {
   const sq = (extra: CSSProperties): CSSProperties => ({ position: 'absolute', left: '50%', top: '50%', width: U(L), height: U(L), borderRadius: U(L * 0.2), transform: 'translate(-50%,-50%) rotate(45deg)', ...extra });
   const ink = p.dark ? '#3a2400' : '#fff';
   return (
+    <div className={p.enter ? 'k-in-' + p.enter : undefined} style={{ position: 'absolute', inset: 0, pointerEvents: 'none', animationDelay: (p.delay || 0) + 's' }}>
     <div style={posStyle}>
       {p.ghost && <div style={sq({ background: p.ghost, opacity: 0.55, transform: `translate(-50%,-50%) translate(${U(p.d * (p.gx ?? 0.1))},${U(p.d * (p.gy ?? -0.1))}) rotate(45deg) scale(0.92)` })} />}
       <button
@@ -107,6 +109,7 @@ function Diamond(p: D) {
         {p.sub && <div style={{ fontWeight: 500, fontSize: U(2.8), lineHeight: 1.15, marginTop: U(0.8), opacity: 0.95, maxWidth: '100%' }}>{p.sub}</div>}
       </div>
       {p.badge}
+    </div>
     </div>
   );
 }
@@ -126,6 +129,12 @@ const CSS = `
 @keyframes ktail{0%,100%{transform:rotate(-12deg)}50%{transform:rotate(14deg)}}
 @keyframes kline{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
 @keyframes kbubble{0%{transform:translateY(0);opacity:0}20%{opacity:.9}100%{transform:translateY(-34px);opacity:0}}
+@keyframes kinl{from{transform:translateX(-75%);opacity:0}60%{opacity:1}to{transform:none;opacity:1}}
+@keyframes kinr{from{transform:translateX(75%);opacity:0}60%{opacity:1}to{transform:none;opacity:1}}
+@keyframes kinp{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}
+@keyframes kinf{from{transform:translateY(25%) scale(.4);opacity:0}to{transform:none;opacity:1}}
+@keyframes kinh{from{transform:translateY(-30%);opacity:0}to{transform:none;opacity:1}}
+@keyframes kfade{from{opacity:0}to{opacity:1}}
 @keyframes kshine{0%,55%{transform:translateX(-160%) rotate(20deg)}100%{transform:translateX(260%) rotate(20deg)}}
 .k-spin,.k-pulse,.k-glow,.k-twinkle,.k-bob,.k-shadow,.k-heart,.k-blink,.k-swim,.k-tail,.k-line,.k-bubble{transform-box:fill-box;transform-origin:center}
 .k-spin{animation:kspin 14s linear infinite}
@@ -142,8 +151,12 @@ const CSS = `
 .k-bubble{animation:kbubble 3s ease-in infinite}
 .k-star{animation:ktwk 3.4s ease-in-out infinite}
 .k-shine{position:absolute;top:-20%;left:0;width:35%;height:140%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.28),transparent);animation:kshine 5.5s ease-in-out infinite}
+.k-in-l,.k-in-r,.k-in-p,.k-in-f{animation-duration:.6s;animation-timing-function:cubic-bezier(.16,.84,.24,1);animation-fill-mode:both}
+.k-in-l{animation-name:kinl}.k-in-r{animation-name:kinr}.k-in-p{animation-name:kinp}.k-in-f{animation-name:kinf;animation-timing-function:cubic-bezier(.3,1.5,.5,1)}
+.k-head{animation:kinh .45s ease-out both}
+.k-stars{animation:kfade .8s ease-out both}
 .k-tile{transition:filter .15s}.k-tile:active{filter:brightness(.88)}
-@media (prefers-reduced-motion:reduce){.k-spin,.k-pulse,.k-glow,.k-twinkle,.k-bob,.k-shadow,.k-heart,.k-blink,.k-swim,.k-tail,.k-line,.k-bubble,.k-star,.k-shine{animation:none!important}}
+@media (prefers-reduced-motion:reduce){.k-in-l,.k-in-r,.k-in-p,.k-in-f,.k-head,.k-stars,.k-spin,.k-pulse,.k-glow,.k-twinkle,.k-bob,.k-shadow,.k-heart,.k-blink,.k-swim,.k-tail,.k-line,.k-bubble,.k-star,.k-shine{animation:none!important}}
 `;
 
 const GemIcon = () => (
@@ -189,7 +202,7 @@ export default function KomikStorePage() {
       <style>{CSS}</style>
 
       {/* bintang latar */}
-      <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+      <div aria-hidden className="k-stars" style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
         {STARS.map((s, i) => (
           <span key={i} className="k-star" style={{ position: 'absolute', left: s.x + '%', top: s.y + '%', width: U(s.z), height: U(s.z), animationDelay: s.d + 's', color: s.c }}>
             {s.k === 'plus' ? (<><i style={{ position: 'absolute', left: 0, right: 0, top: '50%', height: 1, background: 'currentColor' }} /><i style={{ position: 'absolute', top: 0, bottom: 0, left: '50%', width: 1, background: 'currentColor' }} /></>)
@@ -199,7 +212,7 @@ export default function KomikStorePage() {
       </div>
 
       {/* header */}
-      <div className="relative flex items-center" style={{ gap: U(5), padding: `${U(3.5)} ${U(4)} 0` }}>
+      <div className="relative flex items-center k-head" style={{ gap: U(5), padding: `${U(3.5)} ${U(4)} 0` }}>
         <button onClick={() => router.back()} aria-label="Kembali" className="flex items-center justify-center rounded-2xl border border-white/20 bg-white/5 active:scale-95 transition-transform" style={{ width: U(12.5), height: U(12.5) }}>
           <ArrowLeft style={{ width: U(6), height: U(6) }} />
         </button>
@@ -210,26 +223,26 @@ export default function KomikStorePage() {
 
       {/* peta ubin (posisi & ukuran mengikuti desain Wibu Play) */}
       <div className="relative" style={{ height: U(192) }}>
-        <Diamond cx={25.5} cy={26.1} d={37.5} from="#14171d" to="#101318" edge="#2c313b" title={(name || 'Tamu').split(' ')[0]} tsize={5.4} float={0} onClick={() => router.push('/profile')}
+        <Diamond cx={25.5} cy={26.1} d={37.5} from="#14171d" to="#101318" edge="#2c313b" title={(name || 'Tamu').split(' ')[0]} tsize={5.4} float={0} enter="p" delay={0} onClick={() => router.push('/profile')}
           art={photo ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={photo} alt="" referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.15)' }} />
           ) : <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Sparkles style={{ width: '50%', height: '50%', opacity: 0.6 }} /></div>}
           artSize={11.6} artDy={-2.5} />
 
-        <Diamond cx={15.6} cy={64.3} d={26} from="#0b8f7e" to="#087a6d" edge="#33d1b9" title="Misi" tsize={5.4} float={2} onClick={go('/misi')}
+        <Diamond cx={15.6} cy={64.3} d={26} from="#0b8f7e" to="#087a6d" edge="#33d1b9" title="Misi" tsize={5.4} float={2} enter="l" delay={0.05} onClick={go('/misi')}
           art={<Target style={{ width: '100%', height: '100%' }} strokeWidth={2.4} />} artSize={7.5} artDy={-1.5} />
 
-        <Diamond cx={72.2} cy={68.9} d={62.4} from="#3aa3ee" to="#2a58a8" edge="#8ad4ff" ghost="#0d4a78" gx={-0.09} gy={-0.06} title="Gacha" sub="Wallpaper & Border" float={1} onClick={go('/komikstore/gacha-wallpaper')}
+        <Diamond cx={72.2} cy={68.9} d={62.4} from="#3aa3ee" to="#2a58a8" edge="#8ad4ff" ghost="#0d4a78" gx={-0.09} gy={-0.06} title="Gacha" sub="Wallpaper & Border" float={1} enter="r" delay={0.1} onClick={go('/komikstore/gacha-wallpaper')}
           art={<GachaArt />} artSize={21} artDy={-6} tsize={6.6} />
 
-        <Diamond cx={27.8} cy={119.1} d={61.5} from="#ffd21f" to="#ffae3a" edge="#ffd400" ghost="#8a6a12" gx={0.1} gy={0.12} dark title="Pet" sub="Pelihara Pet dan Hasilkan Koin" float={3} onClick={go('/komikstore/pet')}
+        <Diamond cx={27.8} cy={119.1} d={61.5} from="#ffd21f" to="#ffae3a" edge="#ffd400" ghost="#8a6a12" gx={0.1} gy={0.12} dark title="Pet" sub="Pelihara Pet dan Hasilkan Koin" float={3} enter="l" delay={0.15} onClick={go('/komikstore/pet')}
           art={<PetArt />} artSize={21} artDy={-4} tsize={7.4} />
 
-        <Diamond cx={69.9} cy={123.1} d={53.7} from="#13b88a" to="#0a5a62" edge="#5ff0c4" ghost="#0b4b4a" gx={-0.1} gy={-0.1} title="Mancing" sub="Mancing ikan, dan Hangout bareng teman" float={4} onClick={go('/komikstore/mancing')}
+        <Diamond cx={69.9} cy={123.1} d={53.7} from="#13b88a" to="#0a5a62" edge="#5ff0c4" ghost="#0b4b4a" gx={-0.1} gy={-0.1} title="Mancing" sub="Mancing ikan, dan Hangout bareng teman" float={4} enter="r" delay={0.2} onClick={go('/komikstore/mancing')}
           art={<FishArt />} artSize={19} artDy={-4} tsize={6.6} />
 
-        <Diamond cx={78.6} cy={170.4} d={29.8} from="#14171d" to="#101318" edge="#2c313b" title={koin === null ? '–' : koin.toLocaleString('id-ID')} sub="Crystal" tsize={4.2} float={5}
+        <Diamond cx={78.6} cy={170.4} d={29.8} from="#14171d" to="#101318" edge="#2c313b" title={koin === null ? '–' : koin.toLocaleString('id-ID')} sub="Crystal" tsize={4.2} float={5} enter="f" delay={0.45}
           art={<GemIcon />} artSize={8} artDy={-1.5} />
       </div>
     </div>
