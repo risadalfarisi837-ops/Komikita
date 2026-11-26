@@ -312,16 +312,6 @@ const SPARKS: { x: number; y: number; s: number; d: number }[] = [
 ];
 // <<< kartu-tangkapan
 
-// Keluar dari game: layar dikembalikan tegak (portrait), keluar layar penuh, lalu rotasi bebas lagi
-async function leaveLandscape() {
-  try {
-    const o = screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void>; unlock?: () => void };
-    try { await o.lock?.('portrait'); } catch { /* browser menolak, cukup di-unlock */ }
-    try { if (document.fullscreenElement) await document.exitFullscreen(); } catch { /* abaikan */ }
-    setTimeout(() => { try { o.unlock?.(); } catch { /* abaikan */ } }, 600);
-  } catch { /* abaikan */ }
-}
-
 export default function FishingGame(props: Props) {
   const { name, photo, crystal, xp, bag, rods, equippedRod } = props;
   const rod = rodAt(RODS_BY_ID[equippedRod] || RODS_BY_ID[DEFAULT_ROD], props.rodLv?.[equippedRod]);
@@ -365,12 +355,19 @@ export default function FishingGame(props: Props) {
   }, []);
   const cancelExit = () => { cancelLeavingGame(); setConfirmExit(false); };
   const doExit = () => {
+    if (exitingRef.current) return;
+    exitingRef.current = true;
     markLeavingGame();
     exitOkRef.current = true;
+    engineRef.current?.cancel();
     setConfirmExit(false);
-    try { history.go(-2); } catch { /* abaikan */ }
-    // kalau tidak ada halaman sebelumnya, pakai jalur keluar biasa
-    setTimeout(() => { if (location.pathname.includes('mancing')) props.onExit(); }, 400);
+    setExiting(true); // tampilan dibekukan + layar hitam, jadi putaran layar tidak terlihat glitch
+    // beri waktu satu frame supaya layar hitam tampil dulu, lalu pindah halaman
+    setTimeout(() => {
+      try { history.go(-2); } catch { /* abaikan */ }
+      // kalau tidak ada halaman sebelumnya, pakai jalur keluar biasa
+      setTimeout(() => { if (location.pathname.includes('mancing')) props.onExit(); }, 600);
+    }, 60);
   };
   const [shopTab, setShopTab] = useState<ShopTab>('toko');
   const [buying, setBuying] = useState('');
@@ -402,15 +399,20 @@ export default function FishingGame(props: Props) {
   // HP masih portrait (kunci landscape tidak diizinkan browser) → game diputar 90° sendiri,
   // tanpa layar penuh & tanpa pesan sistem. Tinggal putar HP. Kalau layar sudah landscape, tidak ada rotasi.
   const [vp, setVp] = useState({ w: 0, h: 0, touch: false });
-  const rot = vp.h > vp.w;
+  const [exiting, setExiting] = useState(false);
+  const exitingRef = useRef(false);
+  const rot = vp.touch && vp.h > vp.w; // hanya HP/tablet yang diputar; di komputer tidak
   const rotRef = useRef(false);
   rotRef.current = rot;
   useEffect(() => {
-    const upd = () => setVp({ w: window.innerWidth, h: window.innerHeight, touch: isTouchDevice() });
-    upd();
+    let t: ReturnType<typeof setTimeout> | null = null;
+    const apply = () => { if (!exitingRef.current) setVp({ w: window.innerWidth, h: window.innerHeight, touch: isTouchDevice() }); };
+    // saat layar berputar, browser mengirim beberapa resize dengan ukuran setengah jadi → tunggu stabil dulu
+    const upd = () => { if (t) clearTimeout(t); t = setTimeout(apply, 140); };
+    apply();
     window.addEventListener('resize', upd);
     window.addEventListener('orientationchange', upd);
-    return () => { window.removeEventListener('resize', upd); window.removeEventListener('orientationchange', upd); };
+    return () => { if (t) clearTimeout(t); window.removeEventListener('resize', upd); window.removeEventListener('orientationchange', upd); };
   }, []);
   const toastT = useRef<ReturnType<typeof setTimeout> | null>(null);
   const px = (n: number) => Math.round(n * u);
@@ -711,8 +713,6 @@ export default function FishingGame(props: Props) {
     await sell(bag.map((b) => b.id));
     setBagOpen(false);
   };
-  // saat komponen dilepas (tombol keluar / tombol back), layar kembali tegak
-  useEffect(() => () => { leaveLandscape(); }, []);
   // tombol menu "Layar penuh landscape": fullscreen dulu (pesan sistem Android muncul sebentar)
   const landscape = async () => {
     const o = screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> };
@@ -793,8 +793,9 @@ export default function FishingGame(props: Props) {
   const rotate = guide ? (guide.ang * 180) / Math.PI + 90 : 0;
 
   return (
-    <div ref={wrapRef} style={{ position: 'fixed', ...(rot ? { top: 0, left: vp.w, width: vp.h, height: vp.w, transform: 'rotate(90deg)', transformOrigin: 'top left' } : { inset: 0 }), zIndex: 70, userSelect: 'none', overflow: 'hidden', background: '#2872b4', color: '#fff', touchAction: 'none', fontFamily: HUD }}>
+    <div ref={wrapRef} style={{ position: 'fixed', ...(rot ? { top: 0, left: vp.w, width: vp.h, height: vp.w, transform: 'rotate(90deg)', transformOrigin: 'top left' } : { inset: 0 }), zIndex: 70, userSelect: 'none', overflow: 'hidden', background: '#2872b4', color: '#fff', touchAction: 'none', fontFamily: HUD, opacity: vp.w > 0 ? 1 : 0, transition: 'opacity .25s ease' }}>
       <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0 }} />
+      {exiting && <div style={{ position: 'absolute', inset: 0, background: '#0b1a2b', zIndex: 200 }} />}
 
       {/* kiri atas: kartu pemain + pulau, lalu deretan tombol (chat, mic, headset, emoji) */}
       <div style={{ position: 'absolute', left: `calc(env(safe-area-inset-left, 0px) + ${hx(6)}px)`, top: `calc(env(safe-area-inset-top, 0px) + ${hx(6)}px)`, display: fishing ? 'none' : 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: hx(8) }}>
