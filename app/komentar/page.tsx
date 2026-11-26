@@ -8,7 +8,7 @@ import { useMissions } from '@/lib/missions';
 import { findLencana } from '@/lib/lencana';
 import DevBadge from '@/components/DevBadge';
 import PremiumName from '@/components/PremiumName';
-import { isPremiumRole } from '@/lib/premium';
+import { isPremiumRole, isStaffRole } from '@/lib/premium';
 import VerifiedBadge from '@/components/VerifiedBadge';
 import { LencanaIcon } from '@/components/LencanaBadge';
 import WallpaperBg from '@/components/WallpaperBg';
@@ -247,7 +247,12 @@ function KomentarContent() {
             {me && menu.uid === me.uid ? (
               <button onClick={() => hapus(menu)} style={{ width: '100%', textAlign: 'left', background: 'none', border: 0, color: CORAL, fontSize: 20, fontWeight: 800, padding: '14px 8px' }}>Hapus komentar</button>
             ) : (
-              <button onClick={() => laporkan(menu)} style={{ width: '100%', textAlign: 'left', background: 'none', border: 0, color: '#fff', fontSize: 20, fontWeight: 800, padding: '14px 8px' }}>Laporkan komentar</button>
+              <>
+                {me && isStaffRole(meData?.role) && (
+                  <button onClick={() => hapus(menu)} style={{ width: '100%', textAlign: 'left', background: 'none', border: 0, color: CORAL, fontSize: 20, fontWeight: 800, padding: '14px 8px' }}>Hapus komentar (admin)</button>
+                )}
+                <button onClick={() => laporkan(menu)} style={{ width: '100%', textAlign: 'left', background: 'none', border: 0, color: '#fff', fontSize: 20, fontWeight: 800, padding: '14px 8px' }}>Laporkan komentar</button>
+              </>
             )}
             <button onClick={() => setMenu(null)} style={{ width: '100%', textAlign: 'left', background: 'none', border: 0, color: MUTED, fontSize: 20, fontWeight: 800, padding: '14px 8px' }}>Batal</button>
           </div>

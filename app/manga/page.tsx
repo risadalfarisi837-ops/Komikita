@@ -6,7 +6,7 @@ import { numericId } from '@/lib/utils';
 import DevBadge from '@/components/DevBadge';
 import PremiumName from '@/components/PremiumName';
 import VerifiedBadge from '@/components/VerifiedBadge';
-import { isPremiumRole } from '@/lib/premium';
+import { isPremiumRole, isStaffRole } from '@/lib/premium';
 import Image from 'next/image';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Loader2, ChevronLeft, Heart, Send, ArrowLeft, Share2, MoreVertical, Bookmark, MessageSquare, Download, BookOpen, Search, ArrowUpDown, Star, X } from 'lucide-react';
@@ -124,10 +124,10 @@ interface CommentData {
   role: string; level: number; teks: string; waktu: number; activeBorder?: string; activeWallpaper?: string;
 }
 
-function CommentItem({ c, currentUid, onDelete }: { c: CommentData; currentUid: string | null; onDelete: (id: string) => void }) {
+function CommentItem({ c, currentUid, onDelete, canMod }: { c: CommentData; currentUid: string | null; onDelete: (id: string) => void; canMod?: boolean }) {
   const isMine = currentUid === c.uid;
   const timerRef = useRef<any>(null);
-  const start = () => { if (!isMine) return; timerRef.current = setTimeout(() => onDelete(c.id), 650); };
+  const start = () => { if (!isMine && !canMod) return; timerRef.current = setTimeout(() => onDelete(c.id), 650); };
   const stop  = () => { if (timerRef.current) clearTimeout(timerRef.current); };
 
   return (
@@ -143,7 +143,7 @@ function CommentItem({ c, currentUid, onDelete }: { c: CommentData; currentUid: 
           <PremiumName premium={isPremiumRole(c.role)} dev={c.role === 'Developer'} className="text-[13px] font-bold text-white truncate max-w-[130px]">{c.nama}</PremiumName>
           <RoleBadge role={c.role} />
           <span className="text-[11px] text-gray-500">• {timeAgo(c.waktu)}</span>
-          {isMine && <span className="text-[10px] text-gray-400 font-bold ml-auto opacity-60">Tahan hapus</span>}
+          {(isMine || canMod) && <span className="text-[10px] text-gray-400 font-bold ml-auto opacity-60">{isMine ? 'Tahan hapus' : 'Tahan hapus · admin'}</span>}
         </div>
         {/* Text */}
         <p className="text-[13px] text-gray-200 leading-relaxed">{c.teks}</p>
@@ -281,7 +281,7 @@ function ReviewsTab({ mangaUrl, mangaTitle }: { mangaUrl: string; mangaTitle: st
       {comments.length === 0
         ? <p className="text-center text-gray-600 text-sm py-8">Belum ada komentar. Jadilah yang pertama!</p>
         : comments.map(c => (
-            <CommentItem key={c.id} c={c} currentUid={currentUser?.uid ?? null} onDelete={deleteComment} />
+            <CommentItem key={c.id} c={c} currentUid={currentUser?.uid ?? null} onDelete={deleteComment} canMod={isStaffRole(userData?.role)} />
           ))
       }
     </div>

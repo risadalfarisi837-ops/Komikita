@@ -24,3 +24,6 @@ export const premiumMult = () => (isPremiumCached() ? PREMIUM_POINT_MULT : 1);
 
 // Role premium yang tampil sebagai centang biru
 export const isPremiumRole = (role?: string) => role === 'Komikita Premium' || role === 'Wibu Premium';
+
+// Staff: Developer (akses penuh) & Admin (moderasi komentar saja, tanpa akses level/premium/crystal)
+export const isStaffRole = (role?: string) => role === 'Developer' || role === 'Admin';

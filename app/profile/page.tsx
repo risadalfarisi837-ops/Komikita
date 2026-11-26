@@ -211,7 +211,7 @@ const DEV_MODES = [['add', 'Tambah'], ['sub', 'Kurangi'], ['set', 'Set jadi']] a
 type DevMode = typeof DEV_MODES[number][0];
 const DEV_PRESETS: Record<'koin' | 'level' | 'exp' | 'poin', number[]> = { koin: [100, 500, 1000, 5000, 10000], level: [1, 5, 10, 50], exp: [100, 200, 1000, 5000], poin: [100, 300, 700, 1500, 5000, 8000] };
 const DEV_UNIT: Record<'koin' | 'level' | 'exp' | 'poin', string> = { koin: 'Crystal', level: 'level', exp: 'EXP', poin: 'poin musim ini' };
-const DEV_ROLES = ['Member', 'Komikita Premium', 'Developer'];
+const DEV_ROLES = ['Member', 'Komikita Premium', 'Admin', 'Developer'];
 const DEV_RESETS = [['poin', 'Poin musim'], ['level', 'Level & EXP'], ['koin', 'Crystal'], ['hapus', 'Hapus data user']] as const;
 type DevReset = typeof DEV_RESETS[number][0];
 type GType = 'koin' | 'level' | 'exp' | 'poin' | 'border' | 'wallpaper' | 'effect';
@@ -344,7 +344,7 @@ function DevPanel({ open, onClose, uid, db, userData, onUpdate }: {
       const upd: Record<string, any> = {};
       upd[`users/${o.uid}/premiumUntil`] = until;
       upd[`users/${o.uid}/premiumPlan`] = o.plan;
-      if (u.role !== 'Developer') upd[`users/${o.uid}/role`] = 'Komikita Premium';
+      if (u.role !== 'Developer' && u.role !== 'Admin') upd[`users/${o.uid}/role`] = 'Komikita Premium';
       upd[`users/${o.uid}/koin`] = (Number(u.koin) || 0) + plan.crystal;
       upd[`premiumOrders/${o.id}/status`] = 'approved';
       upd[`premiumOrders/${o.id}/approvedAt`] = now;
@@ -1090,6 +1090,7 @@ export default function ProfilePage() {
 
   const role         = userData?.role ?? 'Member';
   const isDev        = role === 'Developer';
+  const isAdmin      = role === 'Admin';
   const isPremium    = role === 'Komikita Premium';
   const level        = userData?.level ?? 1;
   const koin         = userData?.koin ?? 0;
@@ -1172,6 +1173,9 @@ export default function ProfilePage() {
           </span>
           {isDev && (
             <span style={{ background: 'linear-gradient(90deg,#22d3ee,#818cf8,#e879f9)', color: '#0b0b14', padding: '3px 12px', borderRadius: 99, fontSize: 13, fontWeight: 800 }}>DEVELOPER</span>
+          )}
+          {isAdmin && (
+            <span style={{ background: '#0E8A6A', color: '#fff', padding: '3px 12px', borderRadius: 99, fontSize: 13, fontWeight: 800 }}>ADMIN</span>
           )}
           {isPremium && !isDev && (
             <span style={{ background: GOLD, color: '#2E2615', padding: '3px 12px', borderRadius: 99, fontSize: 13, fontWeight: 800 }}>PREMIUM</span>

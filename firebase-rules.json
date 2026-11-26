@@ -92,7 +92,7 @@
       ".read": true,
       "$key": {
         "$id": {
-          ".write": "auth != null && ((!data.exists() && newData.child('uid').val() === auth.uid) || (data.exists() && !newData.exists() && (data.child('uid').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'Developer' || (data.child('parentId').exists() && root.child('chapterComments').child($key).child(data.child('parentId').val()).child('uid').val() === auth.uid))))",
+          ".write": "auth != null && ((!data.exists() && newData.child('uid').val() === auth.uid) || (data.exists() && !newData.exists() && (data.child('uid').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'Developer' || root.child('users').child(auth.uid).child('role').val() === 'Admin' || (data.child('parentId').exists() && root.child('chapterComments').child($key).child(data.child('parentId').val()).child('uid').val() === auth.uid))))",
           "teks": {
             ".validate": "newData.isString() && newData.val().length <= 1000"
           },
@@ -108,7 +108,7 @@
       ".read": true,
       "$key": {
         "$id": {
-          ".write": "auth != null && ((!data.exists() && newData.child('uid').val() === auth.uid) || (data.exists() && !newData.exists() && (data.child('uid').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'Developer' || (data.child('parentId').exists() && root.child('mangaComments').child($key).child(data.child('parentId').val()).child('uid').val() === auth.uid))))",
+          ".write": "auth != null && ((!data.exists() && newData.child('uid').val() === auth.uid) || (data.exists() && !newData.exists() && (data.child('uid').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'Developer' || root.child('users').child(auth.uid).child('role').val() === 'Admin' || (data.child('parentId').exists() && root.child('mangaComments').child($key).child(data.child('parentId').val()).child('uid').val() === auth.uid))))",
           "teks": {
             ".validate": "newData.isString() && newData.val().length <= 1000"
           },
