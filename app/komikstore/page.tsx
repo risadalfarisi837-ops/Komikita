@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Sparkles, Smile, Info, Target, Mountain } from 'lucide-react';
+import { ArrowLeft, Sparkles, Target } from 'lucide-react';
 import { getFirebase } from '@/lib/firebase-client';
 import { primeGameFullscreen } from '@/components/GameMode';
 
@@ -101,10 +101,10 @@ function Diamond(p: D) {
       >
         <span className="k-shine" />
       </button>
-      <div style={{ position: 'absolute', left: '50%', top: '50%', width: U(p.d * 0.8), height: U(p.d * 0.8), transform: 'translate(-50%,-50%)', pointerEvents: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', color: ink, textShadow: p.dark ? 'none' : '0 1px 3px rgba(0,0,0,0.35)' }}>
+      <div style={{ position: 'absolute', left: '50%', top: '50%', width: U(p.d * (p.sub && p.sub.length > 12 ? 0.62 : 0.8)), height: U(p.d * 0.8), transform: 'translate(-50%,-50%)', pointerEvents: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', color: ink, textShadow: p.dark ? 'none' : '0 1px 3px rgba(0,0,0,0.35)' }}>
         {p.art && <div style={{ width: U(p.artSize || p.d * 0.34), height: U(p.artSize || p.d * 0.34), marginTop: U(p.artDy || 0), flex: '0 0 auto' }}>{p.art}</div>}
         <div style={{ fontWeight: 800, fontSize: U(p.tsize || 5), lineHeight: 1.05, marginTop: U(p.art ? 1.2 : 0) }}>{p.title}</div>
-        {p.sub && <div style={{ fontWeight: 500, fontSize: U(3.1), lineHeight: 1.15, marginTop: U(0.8), opacity: 0.95, maxWidth: '90%' }}>{p.sub}</div>}
+        {p.sub && <div style={{ fontWeight: 500, fontSize: U(2.8), lineHeight: 1.15, marginTop: U(0.8), opacity: 0.95, maxWidth: '100%' }}>{p.sub}</div>}
       </div>
       {p.badge}
     </div>
@@ -209,7 +209,7 @@ export default function KomikStorePage() {
       </div>
 
       {/* peta ubin */}
-      <div className="relative" style={{ height: U(236), marginTop: U(2) }}>
+      <div className="relative" style={{ height: U(200), marginTop: U(2) }}>
         {/* profil */}
         <Diamond cx={26} cy={26} d={38} from="#14171d" to="#101318" edge="#2c313b" title={name || 'Tamu'} tsize={5.4} float={0} onClick={() => router.push('/profile')}
           art={photo ? (
@@ -223,30 +223,20 @@ export default function KomikStorePage() {
           art={<Target style={{ width: '100%', height: '100%' }} strokeWidth={2.4} />} artSize={7.5} artDy={-1} />
 
         {/* gacha wallpaper (besar, biru) */}
-        <Diamond cx={72} cy={68.5} d={59} from="#3aa3ee" to="#2a58a8" edge="#8ad4ff" ghost="#0d4a78" title="Gacha" sub="Cari Wallpaper Penambah Exp" float={1} onClick={go('/komikstore/gacha-wallpaper')}
+        <Diamond cx={72} cy={68.5} d={59} from="#3aa3ee" to="#2a58a8" edge="#8ad4ff" ghost="#0d4a78" title="Gacha" sub="Wallpaper, Latar, Border & Efek" float={1} onClick={go('/komikstore/gacha-wallpaper')}
           art={<GachaArt />} artSize={19} artDy={-5} tsize={7} />
 
         {/* pet (kuning) */}
-        <Diamond cx={28} cy={119.5} d={59} from="#ffd21f" to="#ffae3a" edge="#ffd400" ghost="#8a6a12" dark title="Pet" sub="Pelihara Pet dan Hasilkan Koin" float={3} onClick={go('/komikstore/pet')}
+        <Diamond cx={27} cy={119} d={56} from="#ffd21f" to="#ffae3a" edge="#ffd400" ghost="#8a6a12" dark title="Pet" sub="Pelihara Pet dan Hasilkan Koin" float={3} onClick={go('/komikstore/pet')}
           art={<PetArt />} artSize={21} artDy={-3} tsize={8} />
 
         {/* mancing (hijau) */}
-        <Diamond cx={70} cy={123} d={49} from="#13b88a" to="#0a5a62" edge="#5ff0c4" ghost="#0b4b4a" title="Mancing" sub="Mancing ikan, dan Hangout bareng teman" float={4} onClick={go('/komikstore/mancing')}
+        <Diamond cx={73} cy={124} d={46} from="#13b88a" to="#0a5a62" edge="#5ff0c4" ghost="#0b4b4a" title="Mancing" sub="Mancing ikan, dan Hangout bareng teman" float={4} onClick={go('/komikstore/mancing')}
           art={<FishArt />} artSize={19} artDy={-3} tsize={7} />
 
         {/* saldo */}
         <Diamond cx={79} cy={172} d={30} from="#14171d" to="#101318" edge="#2c313b" title={koin === null ? '–' : koin.toLocaleString('id-ID')} sub="Crystal" tsize={5.2} float={5}
           art={<GemIcon />} artSize={8} artDy={-1} />
-
-        {/* menu lain */}
-        <Diamond cx={21} cy={172} d={30} from="#6d1f86" to="#4a0e66" edge="#c084fc" title="Border" tsize={4.2} float={6} onClick={go('/komikstore/avatar-border')}
-          art={<Smile style={{ width: '100%', height: '100%' }} strokeWidth={2.2} />} artSize={7.5} />
-        <Diamond cx={50} cy={196} d={30} from="#c2410c" to="#9f1239" edge="#fb7185" title="Efek" tsize={4.2} float={7} onClick={go('/komikstore/profile-effects')}
-          art={<Sparkles style={{ width: '100%', height: '100%' }} strokeWidth={2.2} />} artSize={7.5} />
-        <Diamond cx={21} cy={216} d={30} from="#0e7490" to="#5b21b6" edge="#67e8f9" title="Latar" tsize={4.2} float={8} onClick={go('/komikstore/gacha-background')}
-          art={<Mountain style={{ width: '100%', height: '100%' }} strokeWidth={2.2} />} artSize={7.5} />
-        <Diamond cx={79} cy={216} d={30} from="#1e293b" to="#334155" edge="#64748b" title="Info" tsize={4.2} float={9} onClick={soon('Info')}
-          art={<Info style={{ width: '100%', height: '100%' }} strokeWidth={2.2} />} artSize={7.5} />
       </div>
     </div>
   );

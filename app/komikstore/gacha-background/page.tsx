@@ -8,6 +8,7 @@ import { BG_CATALOG, rollBg } from '@/lib/backgrounds';
 import { COST_1, COST_10, TOKEN_DUP, RARITY_STYLE, RATES, RARITIES, type Rarity } from '@/lib/wallpapers';
 import { fmtC } from '@/lib/season';
 import ProfileBg from '@/components/ProfileBg';
+import GachaTabs from '@/components/GachaTabs';
 
 type Res = { key: string; isNew: boolean; dup?: number };
 
@@ -110,6 +111,7 @@ export default function GachaBackgroundPage() {
         <button onClick={() => router.back()} aria-label="Kembali" className="p-1"><ArrowLeft className="w-7 h-7" /></button>
         <h1 className="text-3xl font-extrabold tracking-tight">Gacha Background</h1>
       </div>
+      <div className="mx-1"><GachaTabs /></div>
 
       <div className="mx-5 flex rounded-3xl border border-white/10 bg-white/5 py-3">
         <div className="flex-1 text-center"><p className="text-2xl font-extrabold flex items-center justify-center gap-2" style={{ color: '#f1c40f' }}><Gem className="w-5 h-5" />{fmtC(koin)}</p><p className="text-sm font-bold text-white/50">Crystal</p></div>

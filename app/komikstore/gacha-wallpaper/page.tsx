@@ -5,6 +5,7 @@ import { ArrowLeft, Search, Sparkles, Check, RefreshCw, Info, Coins, ShoppingBag
 import { getFirebase } from '@/lib/firebase-client';
 import { WALLPAPER_CATALOG, RARITY_STYLE, RARITY_INFO, RARITIES, RATES, COST_1, COST_10, TOKEN_DUP, TOKEN_PRICE, rollMany, wpBg, type Rarity } from '@/lib/wallpapers';
 import WallpaperBg from '@/components/WallpaperBg';
+import GachaTabs from '@/components/GachaTabs';
 
 const fmt = (n: number) => (n >= 1e3 ? (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'K' : String(n));
 const rank = (k: string) => RARITIES.indexOf(WALLPAPER_CATALOG[k].rarity);
@@ -191,6 +192,7 @@ export default function GachaWallpaperPage() {
           <button onClick={() => router.back()} className="active:scale-90 transition-transform"><ArrowLeft className="w-7 h-7" /></button>
           <h1 className="text-2xl font-black">Gacha Wallpaper</h1>
         </div>
+        <GachaTabs />
 
         {ready && !uid && <p className="px-5 pt-6 text-white/60">Login dulu buat summon wallpaper.</p>}
 
