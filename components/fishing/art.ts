@@ -711,21 +711,126 @@ export function drawRodSkin(ctx: CanvasRenderingContext2D, g: RodGeo, rodId: str
   const t = performance.now() / 1000;
   const dx = g.tx - g.hx;
   const dy = g.ty - g.hy;
+  const len = Math.max(Math.abs(dx), Math.abs(dy)) || 1;
+  const nx = -dy / (Math.hypot(dx, dy) || 1); // arah tegak lurus joran
+  const ny = dx / (Math.hypot(dx, dy) || 1);
+  const at = (k: number): [number, number] => [Math.round(g.hx + dx * k), Math.round(g.hy + dy * k)];
+
+  // cahaya lembut di sekitar joran langka
+  if (sk.glow) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const [mx, my] = at(0.55);
+    const gr = ctx.createRadialGradient(mx, my, 1, mx, my, 13);
+    gr.addColorStop(0, sk.glow + '55');
+    gr.addColorStop(1, sk.glow + '00');
+    ctx.fillStyle = gr;
+    ctx.fillRect(mx - 14, my - 14, 28, 28);
+    ctx.restore();
+  }
+
+  // batang: garis tepi gelap + badan + genggaman
   line(ctx, g.hx, g.hy, g.tx, g.ty, sk.shaftD, 2);
   line(ctx, g.hx, g.hy, g.tx, g.ty, sk.shaft, 1);
   line(ctx, g.hx, g.hy, g.hx + dx * 0.28, g.hy + dy * 0.28, sk.grip, 2);
-  R(ctx, g.hx + dx * 0.5, g.hy + dy * 0.5, 2, 2, sk.ring);
-  R(ctx, g.hx + dx * 0.74, g.hy + dy * 0.74, 2, 2, sk.ring);
-  R(ctx, g.tx, g.ty, 2, 2, sk.tip);
+  const acc = sk.accent || sk.ring;
+
+  // pola khas tiap joran
+  for (let i = 0; i <= len; i++) {
+    const k = i / len;
+    const [px, py] = at(k);
+    switch (sk.style) {
+      case 'wood': if (k > 0.3 && i % 5 === 0) R(ctx, px, py, 2, 1, acc); break;
+      case 'stripe': if (k > 0.3 && i % 6 < 2) R(ctx, px, py, 1, 1, acc); break;
+      case 'weave': if (k > 0.3 && i % 2 === 0) R(ctx, px, py, 1, 1, i % 4 === 0 ? acc : '#4a5062'); break;
+      case 'shine': {
+        const pos = (t * 0.8) % 1.4;
+        if (k > 0.3 && Math.abs(k - pos) < 0.07) R(ctx, px, py, 1, 1, '#ffffff');
+        if (k > 0.3 && i % 7 === 0) R(ctx, px, py, 1, 1, acc);
+        break;
+      }
+      case 'gem': if (k > 0.3 && i % 4 === 0) R(ctx, px, py, 1, 1, '#fff3b0'); break;
+      case 'dragon': if (k > 0.3 && i % 3 === 0) R(ctx, px, py, 1, 1, i % 6 === 0 ? acc : '#7a1d14'); break;
+      default: break;
+    }
+  }
+
+  // kumparan (reel) dekat genggaman
+  const [rx, ry] = at(0.16);
+  const bx = Math.round(rx + nx * 2);
+  const by = Math.round(ry + ny * 2);
+  R(ctx, bx - 1, by - 1, 3, 3, sk.shaftD);
+  R(ctx, bx - 1, by - 1, 2, 2, sk.reel || sk.ring);
+  R(ctx, bx, by, 1, 1, sk.shaftD);
+  R(ctx, bx + 1, by + 1, 1, 1, acc);
+
+  // pemandu tali
+  for (const k of [0.5, 0.72, 0.9]) {
+    const [qx, qy] = at(k);
+    R(ctx, qx, qy, 2, 2, sk.ring);
+  }
+
+  // hiasan khusus
+  const [tx, ty] = [g.tx, g.ty];
+  if (sk.style === 'gem') {
+    const [qx, qy] = at(0.3);
+    R(ctx, qx - 1, qy - 1, 3, 3, '#7a1d36');
+    R(ctx, qx - 1, qy - 1, 2, 2, acc);
+    R(ctx, qx - 1, qy - 1, 1, 1, '#ffffff');
+  } else if (sk.style === 'crystal') {
+    for (const k of [0.46, 0.66, 0.86]) {
+      const [qx, qy] = at(k);
+      const ox = Math.round(qx + nx * 2);
+      const oy = Math.round(qy + ny * 2);
+      R(ctx, ox, oy - 1, 1, 3, sk.tip);
+      R(ctx, ox - 1, oy, 3, 1, sk.tip);
+      R(ctx, ox, oy, 1, 1, '#58d6ff');
+    }
+    ctx.globalAlpha = 0.5 + 0.5 * Math.sin(t * 5);
+    R(ctx, tx - 1, ty - 2, 3, 1, '#ffffff');
+    R(ctx, tx, ty - 3, 1, 3, '#ffffff');
+    ctx.globalAlpha = 1;
+  } else if (sk.style === 'moon') {
+    R(ctx, tx - 1, ty - 3, 2, 1, sk.tip);
+    R(ctx, tx - 2, ty - 2, 1, 3, sk.tip);
+    R(ctx, tx - 1, ty + 1, 2, 1, sk.tip);
+    R(ctx, tx, ty - 2, 1, 1, sk.ring);
+    R(ctx, tx, ty, 1, 1, sk.ring);
+    for (let i = 0; i < 3; i++) {
+      const a = t * 1.6 + i * 2.1;
+      ctx.globalAlpha = 0.45 + 0.55 * Math.abs(Math.sin(t * 3 + i));
+      R(ctx, Math.round(tx + Math.cos(a) * 6), Math.round(ty - 1 + Math.sin(a) * 4), 1, 1, '#fff7c2');
+    }
+    ctx.globalAlpha = 1;
+  } else if (sk.style === 'dragon') {
+    // kepala naga di ujung joran
+    R(ctx, tx - 1, ty - 2, 4, 3, '#7a1d14');
+    R(ctx, tx - 1, ty - 2, 3, 1, sk.shaft);
+    R(ctx, tx + 2, ty - 1, 2, 1, '#7a1d14');
+    R(ctx, tx + 1, ty - 1, 1, 1, '#ffe27a');
+    R(ctx, tx - 2, ty - 3, 1, 2, acc);
+    R(ctx, tx + 1, ty - 3, 1, 2, acc);
+    // api naik dari ujung
+    for (let i = 0; i < 5; i++) {
+      const k = (t * 1.3 + i / 5) % 1;
+      ctx.globalAlpha = Math.max(0, 1 - k);
+      R(ctx, Math.round(tx + Math.sin(t * 6 + i * 2) * 1.5), Math.round(ty - 3 - k * 10), 1, 1, k < 0.35 ? '#fff2a0' : k < 0.7 ? '#ff9a3a' : '#ff3b1e');
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // ujung joran dan cahaya ujung
+  R(ctx, tx, ty, 2, 2, sk.tip);
   if (sk.glow) {
     ctx.save();
     ctx.globalAlpha = 0.25 + 0.15 * Math.sin(t * 4);
     ctx.fillStyle = sk.glow;
     ctx.beginPath();
-    ctx.arc(g.tx + 1, g.ty + 1, 5, 0, Math.PI * 2);
+    ctx.arc(tx + 1, ty + 1, 5, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
+  // kilau berjalan sepanjang joran
   if (sk.spark) {
     for (let i = 0; i < 3; i++) {
       const k = (t * 0.7 + i / 3) % 1;
@@ -738,6 +843,18 @@ export function drawRodSkin(ctx: CanvasRenderingContext2D, g: RodGeo, rodId: str
     ctx.globalAlpha = 1;
   }
   R(ctx, g.hx - 1, g.hy, 2, 2, skinCol);
+}
+
+// Gambar joran sendirian (untuk ikon di Toko / Gacha): sama persis dengan yang dipegang karakter, plus tali & pelampung.
+export const ROD_PREVIEW = 44;
+export function drawRodPreview(ctx: CanvasRenderingContext2D, rodId: string) {
+  const g: RodGeo = { hx: 7, hy: 38, tx: 34, ty: 15 };
+  const t = performance.now() / 1000;
+  drawRodSkin(ctx, g, rodId, '#f6d4b8');
+  const by = 30 + Math.round(Math.sin(t * 2.2));
+  line(ctx, g.tx + 1, g.ty + 1, g.tx + 3, by - 1, 'rgba(235,240,255,0.9)', 1);
+  R(ctx, g.tx + 2, by, 3, 2, '#ff5a4d');
+  R(ctx, g.tx + 2, by + 2, 3, 1, '#ffffff');
 }
 
 export interface Pal { skin: string; skinD: string; hair: string; shirt: string; shirtD: string; pants: string; boot: string; hat: string; hatD: string; band: string; cap?: boolean }
