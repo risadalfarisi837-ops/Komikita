@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 // Mode game: masuk halaman → layar landscape. Keluar halaman → kembali ke mode HP (portrait).
 // Android hanya mengizinkan kunci landscape di dalam layar penuh (atau aplikasi terpasang), dan layar penuh
@@ -45,6 +45,11 @@ async function enterFullscreenLandscape() {
   await lockLandscape();
 }
 
+// dipanggil dari sentuhan pemain di menu (mis. kartu "Mancing"): layar penuh + landscape sudah aktif saat game terbuka
+export function primeGameFullscreen() {
+  try { void enterFullscreenLandscape(); } catch { /* abaikan */ }
+}
+
 async function leaveGameMode() {
   const my = ++seq;
   const o = getOrient();
@@ -57,8 +62,16 @@ async function leaveGameMode() {
 }
 
 export default function GameMode() {
+  const [needTap, setNeedTap] = useState(false);
   useEffect(() => {
     enterGameMode();
+    // Sentuhan yang membuka halaman ini biasanya masih berlaku (± 5 detik): langsung masuk layar penuh + landscape.
+    // Kalau ditolak (mis. dibuka lewat refresh), tampilkan "Ketuk untuk mulai" supaya jelas apa yang harus dilakukan.
+    const canFs = typeof document.documentElement.requestFullscreen === 'function';
+    const coarse = window.matchMedia('(pointer: coarse)').matches;
+    if (!document.fullscreenElement) {
+      enterFullscreenLandscape().then(() => { if (!document.fullscreenElement && canFs && coarse) setNeedTap(true); });
+    }
     let armed = false;
     const onTap = () => {
       armed = false;
@@ -76,6 +89,7 @@ export default function GameMode() {
     const onFs = () => {
       const isFs = !!document.fullscreenElement;
       if (!isFs) arm();
+      else setNeedTap(false);
       // keluar layar penuh karena tombol back (bukan karena pindah aplikasi) → minta konfirmasi keluar
       if (wasFs && !isFs && !leaving && document.visibilityState === 'visible' && Date.now() - visChangedAt > 1500) {
         window.dispatchEvent(new Event(GAME_BACK_EVENT));
@@ -92,5 +106,15 @@ export default function GameMode() {
       leaveGameMode();
     };
   }, []);
-  return null;
+  if (!needTap) return null;
+  return (
+    <div
+      onPointerDown={() => setNeedTap(false)}
+      style={{ position: 'fixed', inset: 0, zIndex: 75, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'rgba(5,16,30,0.82)', color: '#fff', textAlign: 'center', touchAction: 'none' }}
+    >
+      <div style={{ fontSize: 40 }}>🎣</div>
+      <div style={{ fontSize: 22, fontWeight: 800 }}>Ketuk untuk mulai</div>
+      <div style={{ fontSize: 14, fontWeight: 600, opacity: 0.7 }}>Layar akan masuk mode game (landscape)</div>
+    </div>
+  );
 }

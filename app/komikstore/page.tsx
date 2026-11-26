@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Sparkles, Shield, PawPrint, Mic, Fish, Smile, Info, Gift, Target, Mountain } from 'lucide-react';
 import { getFirebase } from '@/lib/firebase-client';
+import { primeGameFullscreen } from '@/components/GameMode';
 
 type Tile = {
   title: string;
@@ -82,7 +83,11 @@ export default function KomikStorePage() {
         {MENU.map((m, i) => (
           <button
             key={i}
-            onClick={() => (m.href ? router.push(m.href) : alert(m.title + ' segera hadir.'))}
+            onClick={() => {
+              if (!m.href) { alert(m.title + ' segera hadir.'); return; }
+              if (m.href === '/komikstore/mancing') primeGameFullscreen(); // masuk mode game langsung dari sentuhan ini
+              router.push(m.href);
+            }}
             className="relative rounded-3xl px-4 py-6 text-center flex flex-col items-center justify-center gap-2 min-h-[190px] active:scale-95 transition-transform"
             style={{ background: 'linear-gradient(145deg,' + m.from + ',' + m.to + ')', border: '1.5px solid ' + m.border, color: m.dark ? '#451a03' : '#fff' }}
           >
