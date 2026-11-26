@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, FileText } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import PetSvg from '@/components/PetArt';
 import { getFirebase, loginWithGoogle } from '@/lib/firebase-client';
 
@@ -19,10 +19,10 @@ const MIGRATE_CAP = 5000; // saldo ✦ lama dipindah ke Crystal sekali per akun,
 const KEY = 'kz-pet-v1';
 const ORDER: Rar[] = ['Common', 'Rare', 'Epic', 'Legend', 'Mythic'];
 const RAR: Record<Rar, { l: string; bg: string; fg: string; rate: number; w: number }> = {
-  Common: { l: 'C', bg: '#64748b', fg: '#fff', rate: 50, w: 50 },
-  Rare: { l: 'R', bg: '#0ea5e9', fg: '#fff', rate: 100, w: 28 },
-  Epic: { l: 'E', bg: '#8b5cf6', fg: '#fff', rate: 200, w: 14 },
-  Legend: { l: 'L', bg: 'linear-gradient(135deg,#fde047,#f59e0b)', fg: '#713f12', rate: 500, w: 6 },
+  Common: { l: 'C', bg: '#6b6f7a', fg: '#fff', rate: 50, w: 50 },
+  Rare: { l: 'R', bg: '#1b9ad6', fg: '#fff', rate: 100, w: 28 },
+  Epic: { l: 'E', bg: '#9b5cf0', fg: '#fff', rate: 200, w: 14 },
+  Legend: { l: 'L', bg: 'linear-gradient(135deg,#fff176,#fbbf24)', fg: '#713f12', rate: 500, w: 6 },
   Mythic: { l: 'M', bg: 'linear-gradient(135deg,#f472b6,#8b5cf6)', fg: '#fff', rate: 1200, w: 2 },
 };
 const POOL: Species[] = [
@@ -40,8 +40,8 @@ const POOL: Species[] = [
 ];
 const START = ['Glacius the Ice', 'Blazon the Rare', 'Ceruh the Dragon'];
 const POS: number[][] = [
-  [50, 38], [28, 34], [72, 34], [38, 50], [62, 50], [16, 42], [84, 42], [50, 60],
-  [24, 52], [76, 52], [40, 28], [60, 28], [34, 42], [66, 42], [50, 48],
+  [62, 24], [36, 20], [72, 48], [26, 50], [52, 70], [14, 30], [84, 30], [48, 44],
+  [20, 74], [80, 74], [50, 8], [34, 90], [68, 90], [10, 56], [88, 54],
 ];
 
 const short = (n: string) => n.split(' ')[0];
@@ -51,7 +51,6 @@ const fmt = (ms: number) => {
   const m = Math.floor(ms / 60000);
   return Math.floor(m / 60) + 'h ' + (m % 60) + 'm';
 };
-const btn3d = (c: string) => ({ boxShadow: '0 5px 0 ' + c });
 
 const CSS = `
 @keyframes kzBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
@@ -66,6 +65,7 @@ const CSS = `
 @keyframes kzSpin{to{transform:rotate(360deg)}}
 @keyframes kzUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
 @keyframes kzTwinkle{0%,100%{opacity:.35}50%{opacity:1}}
+@keyframes kzSway{0%,100%{transform:rotate(-1.2deg)}50%{transform:rotate(1.2deg)}}
 `;
 
 function useSprite(src: string) {
@@ -91,37 +91,94 @@ function PetArt({ s, size }: { s: Species; size: number }) {
   );
 }
 
-function Chip({ r, big }: { r: Rar; big?: boolean }) {
+function Gem({ s = 16 }: { s?: number }) {
   return (
-    <span className={'inline-block rounded-full font-extrabold ' + (big ? 'px-3 py-1 text-sm' : 'px-2.5 py-0.5 text-xs')} style={{ background: RAR[r].bg, color: RAR[r].fg }}>{r}</span>
+    <svg width={s} height={s} viewBox="0 0 24 24" aria-hidden="true" className="shrink-0">
+      <defs>
+        <linearGradient id="kzgem" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#9fe0ff" /><stop offset="1" stopColor="#3b9be0" /></linearGradient>
+      </defs>
+      <path d="M12 2.5 20.5 8.5 12 21.5 3.5 8.5Z" fill="url(#kzgem)" stroke="#2b7fc4" strokeWidth="1.4" strokeLinejoin="round" />
+      <path d="M3.8 8.7h16.4M12 2.7 8.6 8.7 12 21 15.4 8.7Z" fill="none" stroke="#e8f7ff" strokeWidth=".9" strokeLinejoin="round" opacity=".85" />
+    </svg>
   );
 }
 
-function Island() {
-  const ok = useSprite('/pet/island.png');
-  if (ok) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src="/pet/island.png" alt="" draggable={false} className="w-full h-full object-contain" />;
-  }
+function Chip({ r, big }: { r: Rar; big?: boolean }) {
   return (
-    <svg viewBox="0 0 400 345" className="w-full h-full">
-      <defs>
-        <radialGradient id="kzg" cx="50%" cy="40%" r="65%"><stop offset="0" stopColor="#92d452" /><stop offset="1" stopColor="#4a9828" /></radialGradient>
-        <linearGradient id="kzr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#bf9a6e" /><stop offset="1" stopColor="#7a5b3d" /></linearGradient>
-        <linearGradient id="kzd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#a98557" /><stop offset="1" stopColor="#5f4630" /></linearGradient>
-      </defs>
-      <path d="M28 150 L36 190 L58 214 L80 246 L112 262 L134 296 L168 306 L190 338 L216 318 L240 304 L268 284 L300 262 L330 236 L350 206 L366 178 L372 150 Z" fill="url(#kzd)" />
-      <path d="M60 200 L90 236 L120 226 Z M250 270 L290 250 L270 232 Z M170 280 L200 260 L214 296 Z" fill="#000" opacity=".12" />
-      <path d="M96 232 L124 214 L150 250 L128 268 Z M300 220 L330 206 L322 240 Z" fill="#fff" opacity=".12" />
-      <path d="M30 130 Q40 90 90 66 L108 44 L128 64 L158 50 L176 66 L236 66 L258 48 L284 64 L316 56 L338 80 Q372 96 372 130 Z" fill="url(#kzr)" />
-      <ellipse cx="200" cy="150" rx="170" ry="82" fill="url(#kzg)" stroke="#9a7a52" strokeWidth="9" />
-      <ellipse cx="96" cy="122" rx="32" ry="11" fill="#2f86c9" stroke="#e6d27a" strokeWidth="5" />
-      <ellipse cx="108" cy="205" rx="34" ry="10" fill="#2f86c9" stroke="#e6d27a" strokeWidth="5" />
-      <ellipse cx="300" cy="206" rx="36" ry="10" fill="#2f86c9" stroke="#e6d27a" strokeWidth="5" />
-      <path d="M22 168 L40 150 L52 176 L36 196 Z M376 168 L360 150 L348 176 L364 196 Z M150 236 L176 226 L190 246 L160 256 Z M240 238 L270 228 L282 248 L252 256 Z" fill="url(#kzr)" />
-      <ellipse cx="150" cy="300" rx="52" ry="13" fill="#fff" opacity=".6" />
-      <ellipse cx="290" cy="270" rx="46" ry="12" fill="#fff" opacity=".55" />
-      <ellipse cx="205" cy="322" rx="36" ry="10" fill="#fff" opacity=".6" />
+    <span
+      className={'inline-block rounded-full font-extrabold leading-none ' + (big ? 'px-3.5 py-1.5 text-sm' : 'px-2.5 py-[3px] text-[11px]')}
+      style={{ background: RAR[r].bg, color: RAR[r].fg, boxShadow: r === 'Legend' ? '0 0 8px rgba(251,191,36,.7)' : undefined }}
+    >{r}</span>
+  );
+}
+
+function Tree({ x, y, k, flip }: { x: number; y: number; k: number; flip?: boolean }) {
+  return (
+    <g transform={`translate(${x} ${y}) scale(${flip ? -k : k} ${k})`} style={{ transformOrigin: `${x}px ${y}px` }}>
+      <rect x="-6" y="0" width="12" height="46" rx="5" fill="#8b5a3c" />
+      <rect x="1" y="0" width="5" height="46" rx="2.5" fill="#6f4529" opacity=".55" />
+      <circle cx="-16" cy="-8" r="30" fill="#52bd5c" />
+      <circle cx="14" cy="-18" r="34" fill="#46b052" />
+      <circle cx="-2" cy="-34" r="28" fill="#5cc666" />
+      <circle cx="-14" cy="-24" r="14" fill="#7bdc7f" opacity=".55" />
+    </g>
+  );
+}
+
+function Tufts({ pts }: { pts: number[][] }) {
+  return (
+    <g stroke="#4aa24f" strokeWidth="2" strokeLinecap="round" fill="none" opacity=".75">
+      {pts.map(([x, y], i) => <path key={i} d={`M${x} ${y}l-4-9M${x} ${y}l0-11M${x} ${y}l4-9`} />)}
+    </g>
+  );
+}
+
+function Meadow() {
+  return (
+    <>
+      <svg viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 w-full h-full" aria-hidden="true">
+        <defs>
+          <linearGradient id="kzm" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#8fd56d" /><stop offset=".5" stopColor="#7acb5e" /><stop offset="1" stopColor="#66bd5b" />
+          </linearGradient>
+        </defs>
+        <rect width="400" height="800" fill="url(#kzm)" />
+        <rect y="250" width="400" height="150" fill="#9be07a" opacity=".45" />
+        <rect y="400" width="400" height="140" fill="#86d36a" opacity=".55" />
+        <circle cx="330" cy="520" r="150" fill="#c4eea0" opacity=".35" />
+        <circle cx="110" cy="470" r="110" fill="#c4eea0" opacity=".22" />
+        <circle cx="48" cy="650" r="82" fill="#f2b84a" opacity=".88" />
+        <ellipse cx="170" cy="860" rx="340" ry="200" fill="#5cb866" />
+        <ellipse cx="60" cy="800" rx="120" ry="40" fill="#4fae5e" opacity=".7" />
+        <ellipse cx="400" cy="835" rx="130" ry="60" fill="#e9c872" />
+        <Tufts pts={[[120, 260], [200, 250], [70, 330], [250, 330], [330, 300], [110, 420], [300, 470], [40, 520]]} />
+        <Tree x={68} y={228} k={0.62} />
+        <Tree x={392} y={200} k={1.05} flip />
+        <Tree x={352} y={330} k={0.5} />
+      </svg>
+      {[[22, 22, '#f9a8d4'], [28, 24, '#fff'], [66, 20, '#fff'], [72, 26, '#f9a8d4'], [55, 30, '#fde047'], [14, 40, '#f9a8d4'], [88, 38, '#fff'], [40, 56, '#fde047'], [74, 62, '#fff'], [18, 62, '#f9a8d4']].map((d, i) => (
+        <span key={i} className="absolute rounded-full" style={{ left: d[0] + '%', top: d[1] + '%', width: 5 + (i % 3) * 2, height: 5 + (i % 3) * 2, background: d[2] as string, animation: 'kzTwinkle 2.6s ease-in-out ' + i * 0.35 + 's infinite' }} />
+      ))}
+    </>
+  );
+}
+
+function EggIcon() {
+  return (
+    <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true">
+      <ellipse cx="17" cy="19" rx="11" ry="13" fill="#fff4dc" stroke="#f3d9a8" strokeWidth="2" />
+      <ellipse cx="17" cy="24" rx="8" ry="6" fill="#fde7b8" />
+      <circle cx="13" cy="15" r="1.6" fill="#f6c98a" /><circle cx="20" cy="18" r="1.3" fill="#f6c98a" />
+    </svg>
+  );
+}
+
+function CatalogIcon() {
+  return (
+    <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true">
+      <rect x="2" y="2" width="26" height="26" rx="7" fill="#fff" stroke="#2b3a55" strokeWidth="3" />
+      <rect x="7" y="7" width="7" height="16" rx="2" fill="#3aa0e6" />
+      <rect x="16" y="7" width="7" height="16" rx="2" fill="#f7c948" />
     </svg>
   );
 }
@@ -130,6 +187,7 @@ export default function PetPage() {
   const router = useRouter();
   const [koin, setKoin] = useState(0);   // Crystal akun (users/{uid}/koin), sama dengan toko lain
   const [uid, setUid] = useState('');
+  const [who, setWho] = useState<{ n: string; ph: string }>({ n: '', ph: '' });
   const [fb, setFb] = useState<any>(null);
   const [busy, setBusy] = useState(false);
   const lock = useRef(false);
@@ -185,8 +243,9 @@ export default function PetPage() {
       setFb(f);
       off = f.auth.onAuthStateChanged(async (u: any) => {
         if (stop) return;
-        if (!u) { setUid(''); setKoin(0); return; }
+        if (!u) { setUid(''); setKoin(0); setWho({ n: '', ph: '' }); return; }
         setUid(u.uid);
+        setWho({ n: String(u.displayName || ''), ph: String(u.photoURL || '') });
         const ref = f.db.ref('users/' + u.uid);
         try {
           if (legacy.current > 0) {
@@ -261,93 +320,102 @@ export default function PetPage() {
 
   const owned = (n: string) => pets.filter(p => p.name === n).length;
 
-  return (
-    <div onContextMenu={e => e.preventDefault()} className="min-h-screen max-w-md mx-auto relative overflow-hidden text-slate-800 select-none [-webkit-touch-callout:none] [-webkit-tap-highlight-color:transparent]" style={{ background: 'linear-gradient(180deg,#86c8e8 0%,#a9dcef 50%,#c4e6f4 100%)' }}>
-      <style>{CSS}</style>
-      <div className="absolute top-20 right-4 w-24 h-24 rounded-full bg-yellow-100" style={{ animation: 'kzSun 5s ease-in-out infinite' }} />
-      <div className="absolute top-[22%] -left-6 w-56 h-72 rounded-full bg-white/30" style={{ animation: 'kzDrift 14s ease-in-out infinite alternate' }} />
-      <div className="absolute top-[30%] left-[28%] w-40 h-80 rounded-full bg-white/30" style={{ animation: 'kzDrift 18s ease-in-out infinite alternate-reverse' }} />
-      <div className="absolute top-[26%] -right-10 w-52 h-80 rounded-full bg-white/30" style={{ animation: 'kzDrift 16s ease-in-out infinite alternate' }} />
-      {[[12, 14], [30, 8], [62, 12], [44, 20]].map((q, i) => (
-        <span key={i} className="absolute text-white text-sm" style={{ left: q[0] + '%', top: q[1] + '%', animation: 'kzTwinkle 2.4s ease-in-out ' + i * 0.6 + 's infinite' }}>✦</span>
-      ))}
+  const flat = '0 3px 0 rgba(0,0,0,.07), 0 8px 14px rgba(0,0,0,.07)';
 
-      <div className="relative z-20 flex items-center gap-1.5 px-3 pt-6">
-        <button onClick={() => router.back()} aria-label="Kembali" className="p-1 shrink-0"><ArrowLeft className="w-6 h-6" style={{ color: '#1b4a6b' }} /></button>
-        <h1 className="text-xl leading-none font-extrabold whitespace-nowrap shrink-0" style={{ color: '#1b4a6b' }}>KomikZoo</h1>
-        <div className="flex-1" />
-        <button
-          onClick={() => claim(ready.map(p => p.id))}
-          className={'rounded-full pl-3 pr-1.5 py-1.5 text-[13px] font-extrabold whitespace-nowrap flex items-center gap-1.5 shrink-0 ' + (ready.length ? 'bg-orange-400 text-white' : 'bg-orange-200/70 text-amber-800/70')}
-          style={{ ...btn3d(ready.length ? '#d97706' : 'rgba(180,120,60,.25)'), animation: ready.length ? 'kzPulse 1.2s ease-in-out infinite' : undefined }}
-        >
-          Klaim Semua
-          <span className={'min-w-[22px] h-[22px] rounded-full text-xs flex items-center justify-center text-white ' + (ready.length ? 'bg-red-500' : 'bg-rose-400/70')}>{ready.length}</span>
-        </button>
-        <button
-          onClick={() => { if (!uid) loginWithGoogle().catch(() => say('Login gagal, coba lagi')); }}
-          aria-label="Crystal"
-          className="rounded-full px-3 py-1.5 text-base font-extrabold text-white flex items-center gap-1 shrink-0"
-          style={{ background: 'linear-gradient(180deg,#4fb4ee,#2f95dc)', boxShadow: '0 4px 0 #2478b5' }}
-        >
-          <span className="text-sm">✦</span>{uid ? koin.toLocaleString('id-ID') : 'Login'}
-        </button>
+  return (
+    <div onContextMenu={e => e.preventDefault()} className="min-h-screen max-w-md mx-auto relative overflow-hidden text-slate-800 select-none [-webkit-touch-callout:none] [-webkit-tap-highlight-color:transparent]" style={{ background: '#7acb5e' }}>
+      <style>{CSS}</style>
+      <Meadow />
+
+      <div className="relative z-20 px-3 pt-5">
+        <div className="flex items-center gap-2">
+          <button onClick={() => router.back()} aria-label="Kembali" className="w-11 h-11 shrink-0 rounded-full bg-white/70 flex items-center justify-center" style={{ boxShadow: flat }}>
+            <ChevronLeft className="w-6 h-6" strokeWidth={3.5} style={{ color: '#17476b' }} />
+          </button>
+          <h1 className="text-[30px] leading-none font-black whitespace-nowrap" style={{ color: '#17476b', textShadow: '0 2px 0 rgba(255,255,255,.55)' }}>KomikZoo</h1>
+          <div className="flex-1" />
+          <button
+            onClick={() => { if (!uid) loginWithGoogle().catch(() => say('Login gagal, coba lagi')); }}
+            aria-label="Crystal"
+            className="h-11 rounded-full pl-2.5 pr-4 text-[15px] font-black text-slate-800 bg-white/75 flex items-center gap-1.5 shrink-0"
+            style={{ boxShadow: flat }}
+          >
+            <Gem s={20} />{uid ? koin.toLocaleString('id-ID') : 'Login'}
+          </button>
+        </div>
+
+        <div className="mt-3 rounded-[24px] bg-white/70 backdrop-blur-sm pl-2.5 pr-3 py-2.5 flex items-center gap-3" style={{ boxShadow: flat }}>
+          <div className="w-11 h-11 rounded-full overflow-hidden bg-emerald-100 border-2 border-white shrink-0 flex items-center justify-center text-lg">
+            {who.ph
+              // eslint-disable-next-line @next/next/no-img-element
+              ? <img src={who.ph} alt="" draggable={false} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+              : '🐾'}
+          </div>
+          <div className="min-w-0 flex-1 leading-tight">
+            <p className="text-[11px] font-extrabold text-slate-500">{uid ? 'Zoo milikmu' : 'Belum login'}</p>
+            <p className="text-[19px] font-black text-slate-800 truncate uppercase">{who.n || 'Tamu'}</p>
+          </div>
+          <button
+            onClick={() => claim(ready.map(p => p.id))}
+            className={'rounded-full pl-3 pr-1.5 py-1.5 text-[12px] font-extrabold whitespace-nowrap flex items-center gap-1.5 shrink-0 ' + (ready.length ? 'bg-orange-400 text-white' : 'bg-slate-200/80 text-slate-500')}
+            style={{ animation: ready.length ? 'kzPulse 1.2s ease-in-out infinite' : undefined }}
+          >
+            Klaim Semua
+            <span className={'min-w-[20px] h-5 rounded-full text-[11px] flex items-center justify-center text-white ' + (ready.length ? 'bg-red-500' : 'bg-slate-400/80')}>{ready.length}</span>
+          </button>
+        </div>
       </div>
 
-      <div className="relative z-[5]" style={{ height: 'calc(100vh - 230px)' }}>
-        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2">
-          <div className="relative w-full aspect-[400/345]" style={{ animation: 'kzFloat 7s ease-in-out infinite' }}>
-            <Island />
-            {pets.map((p, i) => {
-              const [x, y] = POS[i % POS.length];
-              const left = p.readyAt - now;
-              const ok = !!now && left <= 0;
-              return (
-                <div key={p.id} className="absolute -translate-x-1/2 -translate-y-[70%]" style={{ left: x + '%', top: y + '%', zIndex: Math.round(y) }}>
-                  <div className="flex flex-col items-center" style={{ animation: (ok ? 'kzHop 1.1s' : 'kzBob 2.6s') + ' ease-in-out ' + (i % 5) * 0.35 + 's infinite' }}>
-                    <button
-                      onClick={() => ok && claim([p.id])}
-                      className={'mb-0.5 rounded-full pl-2 pr-2.5 py-0.5 text-xs font-extrabold shadow-md flex items-center gap-1 ' + (ok ? 'bg-emerald-500 text-white' : 'bg-white text-slate-700')}
-                    >
-                      <span className={ok ? 'text-white' : 'text-sky-300'}>✦</span>{now ? fmt(left) : '...'}
-                    </button>
-                    <span className="drop-shadow-md"><PetArt s={p} size={64} /></span>
-                    <span className="-mt-1 flex items-center gap-1 rounded-full bg-white/90 pl-1 pr-2.5 py-0.5 text-sm font-extrabold shadow" style={{ color: '#2f4a3a' }}>
-                      <span className="w-5 h-5 rounded-full text-[10px] flex items-center justify-center" style={{ background: RAR[p.r].bg, color: RAR[p.r].fg }}>{RAR[p.r].l}</span>
-                      {short(p.name)}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+      <div className="absolute inset-x-0 z-[5]" style={{ top: 170, bottom: 96 }}>
+        {pets.map((p, i) => {
+          const [x, y] = POS[i % POS.length];
+          const left = p.readyAt - now;
+          const ok = !!now && left <= 0;
+          return (
+            <div key={p.id} className="absolute -translate-x-1/2 -translate-y-1/2" style={{ left: x + '%', top: y + '%', zIndex: Math.round(y) }}>
+              <div className="flex flex-col items-center" style={{ animation: (ok ? 'kzHop 1.1s' : 'kzBob 2.6s') + ' ease-in-out ' + (i % 5) * 0.35 + 's infinite' }}>
+                <button
+                  onClick={() => ok && claim([p.id])}
+                  className={'mb-1 rounded-full pl-1.5 pr-3 py-1 text-[13px] font-black flex items-center gap-1 whitespace-nowrap ' + (ok ? 'bg-emerald-500 text-white' : 'bg-white/95 text-slate-800')}
+                  style={{ boxShadow: '0 3px 8px rgba(0,0,0,.12)' }}
+                >
+                  {ok ? <span className="pl-1.5">Klaim</span> : <><Gem s={17} />{now ? fmt(left) : '...'}</>}
+                </button>
+                <span style={{ filter: 'drop-shadow(0 4px 3px rgba(0,0,0,.18))' }}><PetArt s={p} size={72} /></span>
+                <span className="-mt-1 flex items-center gap-1 rounded-full bg-white/85 pl-0.5 pr-2.5 py-0.5 text-[12px] font-extrabold" style={{ color: '#2f3b4a', boxShadow: '0 2px 6px rgba(0,0,0,.12)' }}>
+                  <span className="w-[18px] h-[18px] rounded-full text-[10px] font-black flex items-center justify-center" style={{ background: RAR[p.r].bg, color: RAR[p.r].fg }}>{RAR[p.r].l}</span>
+                  {short(p.name)}
+                </span>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {toast && <div key={toast.k} className="fixed top-24 left-1/2 z-40 rounded-full bg-slate-900/85 text-white px-4 py-2 text-sm font-bold" style={{ animation: 'kzToast 2.4s ease forwards' }}>{toast.m}</div>}
 
       {sheet && (
         <>
-          <div className="fixed inset-0 z-10 bg-slate-900/20" onClick={() => setSheet('')} />
-          <div className="fixed left-0 right-0 bottom-0 top-[110px] max-w-md mx-auto z-10 rounded-t-[28px] bg-white overflow-y-auto px-4 pb-40" style={{ animation: 'kzUp .25s ease-out' }}>
-            <div className="sticky top-0 bg-white pt-3 pb-3 z-10">
-              <div className="mx-auto w-14 h-1.5 rounded-full bg-slate-300 mb-3" />
+          <div className="fixed inset-0 z-10" onClick={() => setSheet('')} />
+          <div className="fixed left-0 right-0 top-[128px] bottom-[84px] max-w-md mx-auto z-10 rounded-t-[28px] bg-white/85 backdrop-blur-md overflow-y-auto px-4 pb-8" style={{ animation: 'kzUp .25s ease-out', boxShadow: '0 -6px 24px rgba(0,0,0,.08)' }}>
+            <div className="sticky top-0 z-10 -mx-4 px-4 pt-2.5 pb-3" style={{ background: 'linear-gradient(180deg,rgba(255,255,255,.96) 70%,rgba(255,255,255,0))' }}>
+              <div className="mx-auto w-14 h-1.5 rounded-full bg-slate-300/90 mb-2.5" />
               <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-extrabold">{sheet === 'kelola' ? 'Kelola Pet (' + pets.length + '/' + MAX + ')' : 'Katalog Pet'}</h2>
-                <button onClick={() => setSheet('')} aria-label="Tutup" className="w-11 h-11 rounded-xl bg-slate-100 text-2xl font-extrabold leading-none">×</button>
+                <h2 className="text-[18px] font-black text-slate-800">{sheet === 'kelola' ? 'Kelola Pet (' + pets.length + '/' + MAX + ')' : 'Katalog Pet'}</h2>
+                <button onClick={() => setSheet('')} aria-label="Tutup" className="w-10 h-10 rounded-xl bg-slate-100/80 text-[20px] font-black leading-none text-slate-700">x</button>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2.5">
               {(sheet === 'kelola' ? pets : POOL).map((p, i) => {
                 const pet = p as Pet;
                 return (
-                  <div key={i} className="rounded-2xl border border-slate-200 bg-[#fbfbf6] p-2.5 flex gap-2.5 items-center">
-                    <div className="w-12 h-12 shrink-0 rounded-xl bg-white flex items-center justify-center"><PetArt s={p} size={40} /></div>
+                  <div key={i} className="rounded-2xl border border-[#dbe6d3] bg-[#f6f9ec] p-2 flex gap-2 items-center" style={{ boxShadow: '0 1px 0 rgba(255,255,255,.9) inset' }}>
+                    <div className="w-11 h-11 shrink-0 flex items-center justify-center"><PetArt s={p} size={44} /></div>
                     <div className="min-w-0">
-                      <p className="text-[15px] font-extrabold leading-tight">{p.name}</p>
+                      <p className="text-[14px] font-black leading-tight text-[#243044]">{p.name}</p>
                       <div className="mt-1"><Chip r={p.r} /></div>
-                      <p className="mt-1 inline-block rounded-full border border-emerald-100 bg-emerald-50 px-2 py-0.5 text-[11px] font-extrabold text-emerald-800 whitespace-nowrap">
-                        HASILKAN {RAR[p.r].rate} Crystal/hari
+                      <p className="mt-1 inline-flex items-center gap-1 rounded-full border border-teal-200 bg-[#e9fbf8] px-1.5 py-[2px] text-[10px] font-black text-teal-700 whitespace-nowrap">
+                        HASILKAN <Gem s={13} /> {RAR[p.r].rate} /hari
                       </p>
                       {sheet === 'katalog' && owned(p.name) > 0 && <p className="text-[11px] font-bold text-emerald-600">Dimiliki ×{owned(p.name)}</p>}
                       {sheet === 'kelola' && <p className="text-[11px] font-bold text-slate-500">{now ? (pet.readyAt - now <= 0 ? 'Siap klaim' : fmt(pet.readyAt - now)) : ''}</p>}
@@ -357,23 +425,29 @@ export default function PetPage() {
               })}
             </div>
             {sheet === 'kelola' && !pets.length && <p className="text-center text-slate-500 py-8">Belum punya pet. Coba Gacha dulu.</p>}
+            {sheet === 'katalog' && (
+              <div className="mt-3 rounded-2xl border border-[#cfe8f5] p-3.5" style={{ background: 'linear-gradient(180deg,#eef8ff,#e3f3fb)', boxShadow: '0 4px 10px rgba(80,150,200,.10)' }}>
+                <p className="text-[13px] font-black text-[#1b4a6b]">KomikZoo masih tahap uji coba</p>
+                <p className="mt-1 text-[12px] font-bold leading-snug text-slate-500">Akan ada fitur dan pet lain pada update berikutnya. Nantikan updatenya.</p>
+              </div>
+            )}
           </div>
         </>
       )}
 
-      <div className="fixed bottom-3 left-0 right-0 max-w-md mx-auto px-3 z-20">
-        <div className="flex gap-2.5 rounded-[28px] bg-white/95 p-3 shadow-xl">
-          <button onClick={gacha} disabled={busy} className="flex-[1.15] rounded-2xl text-white py-2 text-xl font-extrabold flex flex-col items-center justify-center leading-tight active:translate-y-1 disabled:opacity-60" style={{ background: 'linear-gradient(180deg,#a66cf0,#7a3fd0)', ...btn3d('#5b2aa8') }}>
-            Gacha
-            <span className="text-xs font-bold text-white/85">{COST} Crystal</span>
+      <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto z-20 px-3 pt-3 pb-4" style={{ background: '#fdf6ea', boxShadow: '0 -6px 18px rgba(0,0,0,.08)' }}>
+        <div className="flex gap-2.5 items-stretch">
+          <button onClick={gacha} disabled={busy} className="flex-[1.15] h-[60px] rounded-2xl text-white text-[16px] font-black flex items-center justify-center gap-2 active:translate-y-0.5 disabled:opacity-60" style={{ background: '#f9a99b', boxShadow: flat }}>
+            <EggIcon />
+            <span className="flex flex-col items-start leading-tight">Gacha<span className="text-[11px] font-extrabold text-white/90 flex items-center gap-0.5"><Gem s={11} />{COST}</span></span>
           </button>
-          <button onClick={() => setSheet(s => (s === 'kelola' ? '' : 'kelola'))} className="relative flex-[1.5] rounded-2xl text-white py-3 text-xl font-extrabold flex items-center justify-center gap-2 active:translate-y-1" style={{ background: 'linear-gradient(180deg,#2fd3a6,#14a98a)', ...btn3d('#0d7d68') }}>
+          <button onClick={() => setSheet(v => (v === 'kelola' ? '' : 'kelola'))} className="relative flex-[1.35] h-[60px] rounded-2xl text-white text-[15px] font-black flex items-center justify-center gap-1.5 active:translate-y-0.5" style={{ background: '#a8c9b3', boxShadow: flat }}>
             Kelola
-            <span className="rounded-xl bg-white/90 text-slate-800 px-2.5 text-lg">{pets.length}/{MAX}</span>
-            <span className="absolute -top-2 -right-1 min-w-[26px] h-[26px] rounded-full bg-red-500 text-white text-sm flex items-center justify-center border-2 border-white">{ready.length}</span>
+            <span className="rounded-lg bg-white/80 text-slate-600 px-2.5 py-0.5 text-[15px] font-black">{pets.length}/{MAX}</span>
+            <span className="absolute -top-2 -right-1 min-w-[22px] h-[22px] rounded-full bg-[#f28b82] text-white text-[12px] font-black flex items-center justify-center border-2 border-[#fdf6ea]">{ready.length}</span>
           </button>
-          <button onClick={() => setSheet(s => (s === 'katalog' ? '' : 'katalog'))} className="flex-1 rounded-2xl bg-white text-slate-800 py-2 text-base font-extrabold flex flex-col items-center justify-center border border-slate-200 active:translate-y-1" style={btn3d('#e2e8f0')}>
-            <FileText className="w-7 h-7 text-violet-500" /> Katalog
+          <button onClick={() => setSheet(v => (v === 'katalog' ? '' : 'katalog'))} className="flex-1 h-[60px] rounded-2xl bg-white text-slate-800 text-[14px] font-black flex flex-col items-center justify-center gap-0.5 active:translate-y-0.5" style={{ boxShadow: flat }}>
+            <CatalogIcon />Katalog
           </button>
         </div>
       </div>
