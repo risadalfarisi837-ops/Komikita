@@ -4,6 +4,7 @@ import { useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { GACHA_DUPLICATE_REFUND, GACHA_ODDS, GACHA_PITY, GACHA_PRICE, GACHA_RODS, RARITY, RODS, formatNum } from '@/lib/fishing';
 import type { Rod } from '@/lib/fishing';
+import PixelRod from './RodArt';
 
 export type ShopTab = 'toko' | 'gachagaya' | 'gacha' | 'gaya' | 'tas';
 
@@ -166,7 +167,7 @@ export default function ShopScreen(p: Props) {
               {monthly && (
                 <div style={{ display: 'flex', alignItems: 'stretch', borderRadius: px(22), border: `${px(3)}px solid #7b9be8`, background: '#fff9ea', overflow: 'hidden', boxShadow: `0 ${px(4)}px 0 #d6c9ad` }}>
                   <div style={{ width: px(126), flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', background: `radial-gradient(circle at 50% 50%, #d9e0f2 0 24%, transparent 25%), ${rays('#34507e', '#28406a')}` }}>
-                    <RodArt color={RARITY[monthly.rarity].color} size={px(86)} />
+                    <PixelRod id={monthly.id} size={px(86)} animate />
                   </div>
                   <div style={{ flex: 1, minWidth: 0, padding: `${px(10)}px ${px(14)}px`, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: px(6) }}>
                     <div style={{ color: '#c98d12', fontWeight: 800, fontSize: px(14) }}>Joran Bulanan · sisa {leftD} hari {leftH} jam</div>
@@ -200,7 +201,7 @@ export default function ShopScreen(p: Props) {
                     <span style={{ position: 'absolute', right: px(-6), bottom: px(-6), background: '#7b7b8a', color: '#fff', fontWeight: 800, fontSize: px(12), borderRadius: 99, padding: `0 ${px(7)}px` }}>600</span>
                   </span>
                   <span style={{ position: 'relative', width: px(60), height: px(60), borderRadius: px(14), background: '#f5ecd9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <RodArt color={RARITY.common.color} size={px(44)} />
+                    <PixelRod id="fiber" size={px(48)} />
                     <span style={{ position: 'absolute', right: px(-6), bottom: px(-6), background: '#7b7b8a', color: '#fff', fontWeight: 800, fontSize: px(12), borderRadius: 99, padding: `0 ${px(7)}px` }}>1</span>
                   </span>
                 </div>
@@ -221,7 +222,7 @@ export default function ShopScreen(p: Props) {
                   <div style={{ position: 'absolute', inset: 0, background: rays('rgba(255,255,255,0.08)', 'rgba(255,255,255,0)') }} />
                   {[topG[1] ?? rarest, rarest].map((r, i) => (
                     <div key={r.id + i} style={{ position: 'relative', width: '31%', textAlign: 'center', color: '#fff' }}>
-                      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: px(4) }}><RodArt color={RARITY[r.rarity].color} size={px(i === 1 ? 84 : 72)} /></div>
+                      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: px(4) }}><PixelRod id={r.id} size={px(i === 1 ? 92 : 80)} animate /></div>
                       <div style={{ fontWeight: 800, fontSize: px(14), lineHeight: 1.1, textShadow: '0 2px 3px rgba(0,0,0,.7)' }}>{r.name}</div>
                       <div style={{ fontWeight: 800, fontSize: px(13), color: RARITY[r.rarity].color }}>{RARITY[r.rarity].label}</div>
                     </div>
@@ -272,7 +273,7 @@ export default function ShopScreen(p: Props) {
                         const o = GACHA_ODDS[r.id] ?? 0;
                         return (
                           <div key={r.id} style={{ position: 'relative', borderRadius: px(18), border: `${px(3)}px solid ${rc}`, background: owned ? '#fffaf0' : '#f0e5cf', boxShadow: `0 ${px(3)}px 0 ${rc}66`, textAlign: 'center', padding: `${px(10)}px ${px(6)}px ${px(8)}px` }}>
-                            <div style={{ opacity: owned ? 1 : 0.5, filter: owned ? 'none' : 'grayscale(.5)', display: 'flex', justifyContent: 'center' }}><RodArt color={rc} size={px(62)} /></div>
+                            <div style={{ opacity: owned ? 1 : 0.5, filter: owned ? 'none' : 'grayscale(.5)', display: 'flex', justifyContent: 'center' }}><PixelRod id={r.id} size={px(70)} animate={owned} /></div>
                             <div style={{ fontSize: px(14), fontWeight: 800, lineHeight: 1.1, marginTop: px(2) }}>{r.name}</div>
                             <div style={{ fontSize: px(12), fontWeight: 800, color: '#8a6d4a' }}>{pct(o)} · 1 dari {formatNum(Math.round(100 / Math.max(o, 0.01)))}</div>
                             <div style={{ marginTop: px(5) }}><Stats r={r} /></div>
@@ -297,7 +298,7 @@ export default function ShopScreen(p: Props) {
             <div style={{ fontSize: px(13), fontWeight: 700, color: '#8a6d4a', textAlign: 'center', margin: `${px(2)}px 0 ${px(10)}px` }}>Satu pembukaan = {formatNum(GACHA_PRICE)} Crystal. Legendary total {pct(legPct)}.</div>
             {[...gachaRods].sort((a, b) => (GACHA_ODDS[b.id] ?? 0) - (GACHA_ODDS[a.id] ?? 0)).map((r) => (
               <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: px(10), padding: `${px(7)}px 0`, borderTop: '1px solid #e6d4b0' }}>
-                <RodArt color={RARITY[r.rarity].color} size={px(38)} />
+                <PixelRod id={r.id} size={px(42)} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 800, fontSize: px(16) }}>{r.name}</div>
                   <Pill r={r} />

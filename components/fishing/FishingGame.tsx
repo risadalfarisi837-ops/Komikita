@@ -6,7 +6,7 @@ import { FishingEngine } from './engine';
 import type { Catch, EngineStatus, Phase } from './engine';
 import { FISH_H, FISH_W, drawFish } from './art';
 import {
-  BAG_MAX, DEFAULT_ROD, GACHA_DUPLICATE_REFUND, GACHA_PRICE, RARITY, RODS, RODS_BY_ID, SPECIES, SPECIES_BY_ID,
+  BAG_MAX, DEFAULT_ROD, GACHA_PRICE, RARITY, RODS, RODS_BY_ID, SPECIES, SPECIES_BY_ID,
   fishPrice, formatNum, formatWeight, isShowoff, isXL, levelFromXp, newId, rodAt, rodEase, sizeRatio, sizeTier, titleFor, xpFor,
 } from '@/lib/fishing';
 import { SPECIES as KSPECIES, sizeRatio as kSizeRatio } from '@/lib/fishing';
@@ -14,7 +14,8 @@ import type { BagItem, Rarity, Rod, SizeTier } from '@/lib/fishing';
 import DevTools, { DevFab, EMPTY_STATS } from './DevTools';
 import { startFishingNet } from '@/lib/fishingNet';
 import { getFirebase } from '@/lib/firebase-client';
-import ShopScreen, { RodArt } from './Shop';
+import ShopScreen from './Shop';
+import GachaSpin from './GachaSpin';
 import RodScreen from './RodScreen';
 import type { ShopTab } from './Shop';
 import type { DevStats, SellMode } from './DevTools';
@@ -1136,43 +1137,14 @@ export default function FishingGame(props: Props) {
         />
       )}
 
-      {/* hasil gacha */}
-      {gachaResult && (() => {
-        const rar = RARITY[gachaResult.rod.rarity];
-        return (
-          <div style={{ ...ov, zIndex: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: px(10) }}>
-            <div style={{ width: px(280), borderRadius: px(22), border: `${px(3)}px solid ${rar.color}`, background: '#10243a', boxShadow: `0 0 ${px(50)}px ${rar.color}77`, padding: px(16), textAlign: 'center' }}>
-              <div style={{ fontSize: px(12), fontWeight: 700, letterSpacing: 2, color: rar.color }}>{gachaResult.duplicate ? 'SUDAH PUNYA' : 'JORAN BARU!'}</div>
-              <div style={{ margin: `${px(8)}px 0` }}><RodIcon size={px(64)} color={rar.color} /></div>
-              <div style={{ fontSize: px(21), fontWeight: 700 }}>{gachaResult.rod.name}</div>
-              <span style={{ display: 'inline-block', marginTop: px(3), background: rar.color, color: '#000', fontWeight: 700, fontSize: px(12), borderRadius: 99, padding: `${px(1)}px ${px(12)}px` }}>{rar.label}</span>
-              <p style={{ margin: `${px(10)}px 0 0`, fontSize: px(13), fontWeight: 600, color: 'rgba(255,255,255,0.75)' }}>{gachaResult.duplicate ? `Ditukar jadi +${formatNum(GACHA_DUPLICATE_REFUND)} Crystal` : `🍀+${Math.round(gachaResult.rod.luck * 100)}% 💰+${Math.round(gachaResult.rod.money * 100)}% ✨+${Math.round(gachaResult.rod.xp * 100)}%`}</p>
-              <button onClick={() => setGachaResult(null)} style={{ marginTop: px(12), width: '100%', borderRadius: px(14), border: 0, background: '#34d27a', color: '#04210f', fontFamily: HUD, fontWeight: 700, fontSize: px(15), padding: `${px(9)}px 0`, cursor: 'pointer' }}>Lanjut</button>
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* hasil buka beruntun */}
-      {gachaMulti && (
-        <div style={{ ...ov, zIndex: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: px(10) }}>
-          <div style={{ width: px(560), maxWidth: '100%', maxHeight: '100%', overflowY: 'auto', borderRadius: px(22), border: `${px(4)}px solid #e6d4b0`, background: '#fff5e1', padding: px(16), textAlign: 'center', fontFamily: HUD, color: '#5a3b1e' }}>
-            <div style={{ fontSize: px(24), fontWeight: 800 }}>Hasil Buka {gachaMulti.length}×</div>
-            <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(${px(96)}px, 1fr))`, gap: px(10), margin: `${px(12)}px 0` }}>
-              {gachaMulti.map((g, i) => {
-                const rar = RARITY[g.rod.rarity];
-                return (
-                  <div key={i} style={{ borderRadius: px(14), border: `${px(3)}px solid ${rar.color}`, background: '#fffaf0', padding: `${px(8)}px ${px(4)}px` }}>
-                    <div style={{ display: 'flex', justifyContent: 'center' }}><RodArt color={rar.color} size={px(52)} /></div>
-                    <div style={{ fontSize: px(12), fontWeight: 800, lineHeight: 1.1 }}>{g.rod.name.replace('Joran ', '')}</div>
-                    <div style={{ fontSize: px(11), fontWeight: 800, color: g.duplicate ? '#8a6d4a' : '#1f7a3c' }}>{g.duplicate ? `+${formatNum(GACHA_DUPLICATE_REFUND)} Crystal` : 'BARU!'}</div>
-                  </div>
-                );
-              })}
-            </div>
-            <button onClick={() => setGachaMulti(null)} style={{ width: '100%', borderRadius: px(14), border: 0, background: 'linear-gradient(180deg,#3b8cf0,#1f64cc)', boxShadow: '0 4px 0 #164b9c', color: '#fff', fontFamily: HUD, fontWeight: 800, fontSize: px(17), padding: `${px(9)}px 0`, cursor: 'pointer' }}>Lanjut</button>
-          </div>
-        </div>
+      {/* animasi buka gacha + hasil */}
+      {(gachaResult || gachaMulti) && (
+        <GachaSpin
+          key={gachaResult ? 'one-' + gachaResult.rod.id : 'multi-' + (gachaMulti?.map((g) => g.rod.id).join('') ?? '')}
+          items={gachaResult ? [gachaResult] : gachaMulti!}
+          px={px} font={HUD}
+          onClose={() => { setGachaResult(null); setGachaMulti(null); }}
+        />
       )}
     </div>
   );
