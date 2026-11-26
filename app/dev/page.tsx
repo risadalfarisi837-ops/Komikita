@@ -13,8 +13,8 @@ const MUTED = '#8F8D9B';
 const ACCENT = '#FF6B6B';
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
 
-type Tab = 'info' | 'api' | 'storage' | 'firebase';
-const TABS: [Tab, string][] = [['info', 'Info'], ['api', 'API'], ['storage', 'Storage'], ['firebase', 'Firebase']];
+type Tab = 'info' | 'api' | 'storage' | 'firebase' | 'banner';
+const TABS: [Tab, string][] = [['info', 'Info'], ['api', 'API'], ['storage', 'Storage'], ['firebase', 'Firebase'], ['banner', 'Banner']];
 
 const API_PRESETS = [
   '/api/manga/home',
@@ -84,6 +84,7 @@ export default function DevPage() {
       {tab === 'api' && <ApiTab say={say} />}
       {tab === 'storage' && <StorageTab say={say} />}
       {tab === 'firebase' && <FirebaseTab uid={uid} />}
+      {tab === 'banner' && <BannerTab say={say} />}
     </>,
   );
 }
@@ -256,5 +257,120 @@ function FirebaseTab({ uid }: { uid: string }) {
       <button style={{ ...btn(true), marginTop: 10 }} onClick={read}>{busy ? 'Membaca...' : 'Baca'}</button>
       {out && <pre style={pre}>{out.length > 30000 ? out.slice(0, 30000) + '\n… (dipotong)' : out}</pre>}
     </div>
+  );
+}
+
+
+// ── Banner papan peringkat (Giveaway / Charisma / Clan) ─────────────────────
+// Menulis ke Firebase `banners/<papan>[/<periode>]`, yang dibaca slide banner di Beranda (live).
+type BKey = 'giveaway' | 'charisma' | 'clan';
+type BRow = { uid: string; name: string; photo: string; value: string; sub: string };
+const BOARD_INFO: Record<BKey, { label: string; tabs: boolean; valueLabel: string }> = {
+  giveaway: { label: 'Top Giveaway', tabs: true, valueLabel: 'Hari premium' },
+  charisma: { label: 'Top Charisma', tabs: true, valueLabel: 'Jumlah hati' },
+  clan: { label: 'Top Clan', tabs: false, valueLabel: 'Level clan' },
+};
+const emptyRows = (): BRow[] => Array.from({ length: 5 }, () => ({ uid: '', name: '', photo: '', value: '', sub: '' }));
+
+function BannerTab({ say }: { say: (m: string) => void }) {
+  const [board, setBoard] = useState<BKey>('giveaway');
+  const [period, setPeriod] = useState<'all' | 'd30' | 'd7'>('all');
+  const [rows, setRows] = useState<BRow[]>(emptyRows());
+  const [busy, setBusy] = useState(false);
+  const info = BOARD_INFO[board];
+  const path = info.tabs ? `banners/${board}/${period}` : `banners/${board}`;
+
+  const load = useCallback(async () => {
+    setBusy(true);
+    try {
+      const { db } = await getFirebase();
+      const v = (await db.ref(path).get()).val();
+      const arr: any[] = !v ? [] : Array.isArray(v) ? v : Object.values(v);
+      const next = emptyRows();
+      arr.filter(Boolean).slice(0, 5).forEach((r, i) => {
+        next[i] = { uid: '', name: String(r.name || ''), photo: String(r.photo || ''), value: r.value != null ? String(r.value) : '', sub: String(r.sub || '') };
+      });
+      setRows(next);
+    } catch { say('Gagal memuat (cek koneksi/izin)'); }
+    setBusy(false);
+  }, [path, say]);
+  useEffect(() => { load(); }, [load]);
+
+  const set = (i: number, patch: Partial<BRow>) => setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+
+  // Isi nama & foto otomatis dari akun (tempel UID, lalu keluar dari kolom).
+  const fillFromUid = async (i: number) => {
+    const id = rows[i].uid.trim();
+    if (!id) return;
+    try {
+      const { db } = await getFirebase();
+      const [n, ph] = await Promise.all([db.ref(`users/${id}/displayName`).get(), db.ref(`users/${id}/photoURL`).get()]);
+      if (!n.val() && !ph.val()) { say('UID tidak ditemukan'); return; }
+      set(i, { name: String(n.val() || rows[i].name), photo: String(ph.val() || '') });
+      say('Nama & foto terisi');
+    } catch { say('Gagal ambil akun'); }
+  };
+
+  const save = async () => {
+    const out = rows.filter((r) => r.name.trim()).map((r) => {
+      const o: any = { name: r.name.trim(), value: Number(r.value.replace(/[^\d.-]/g, '')) || 0 };
+      if (r.photo.trim()) o.photo = r.photo.trim();
+      if (board === 'clan' && r.sub.trim()) o.sub = r.sub.trim();
+      return o;
+    });
+    if (!out.length) { say('Isi minimal 1 baris (nama wajib)'); return; }
+    setBusy(true);
+    try {
+      const { db } = await getFirebase();
+      await db.ref(path).set(out);
+      say('Tersimpan. Beranda ikut berubah');
+    } catch { say('Gagal simpan (cek aturan: banners harus bisa ditulis Developer)'); }
+    setBusy(false);
+  };
+
+  const clear = async () => {
+    if (!window.confirm(`Kosongkan ${info.label}${info.tabs ? ' (' + period.toUpperCase() + ')' : ''}? Slide disembunyikan kalau semua periodenya kosong.`)) return;
+    setBusy(true);
+    try {
+      const { db } = await getFirebase();
+      await db.ref(path).remove();
+      setRows(emptyRows());
+      say('Dikosongkan');
+    } catch { say('Gagal menghapus'); }
+    setBusy(false);
+  };
+
+  return (
+    <>
+      <div style={box}>
+        <div style={{ fontSize: 12, color: MUTED, marginBottom: 8 }}>Pilih papan, isi maks 5 baris urut dari peringkat 1, lalu simpan. Slide di Beranda muncul/berubah otomatis.</div>
+        <div style={{ display: 'flex', gap: 8, overflowX: 'auto' }}>
+          {(Object.keys(BOARD_INFO) as BKey[]).map((k) => <button key={k} style={btn(board === k)} onClick={() => setBoard(k)}>{BOARD_INFO[k].label}</button>)}
+        </div>
+        {info.tabs && (
+          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+            {(['all', 'd30', 'd7'] as const).map((k) => <button key={k} style={btn(period === k)} onClick={() => setPeriod(k)}>{k === 'all' ? 'ALL' : k === 'd30' ? '30D' : '7D'}</button>)}
+          </div>
+        )}
+      </div>
+
+      {rows.map((r, i) => (
+        <div key={i} style={box}>
+          <div style={{ fontWeight: 800, fontSize: 13, color: i === 0 ? '#F5C451' : MUTED, marginBottom: 8 }}>Peringkat {i + 1}</div>
+          <input style={{ ...input, marginBottom: 6 }} placeholder="UID akun (opsional, untuk isi otomatis)" value={r.uid} onChange={(e) => set(i, { uid: e.target.value })} onBlur={() => fillFromUid(i)} />
+          <input style={{ ...input, marginBottom: 6 }} placeholder="Nama" value={r.name} onChange={(e) => set(i, { name: e.target.value })} />
+          <input style={{ ...input, marginBottom: 6 }} placeholder="URL foto (opsional)" value={r.photo} onChange={(e) => set(i, { photo: e.target.value })} />
+          <div style={{ display: 'flex', gap: 6 }}>
+            <input style={input} inputMode="numeric" placeholder={info.valueLabel} value={r.value} onChange={(e) => set(i, { value: e.target.value })} />
+            {board === 'clan' && <input style={input} placeholder="Mis. 2.143 anggota" value={r.sub} onChange={(e) => set(i, { sub: e.target.value })} />}
+          </div>
+        </div>
+      ))}
+
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button style={{ ...btn(true), flex: 1, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={save}>Simpan</button>
+        <button style={{ ...btn(), opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={clear}>Kosongkan</button>
+      </div>
+    </>
   );
 }
