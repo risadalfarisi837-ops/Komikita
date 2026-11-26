@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { getFirebase } from '@/lib/firebase-client';
 import FishingGame from '@/components/fishing/FishingGame';
 import {
-  DEFAULT_ROD, GACHA_DUPLICATE_REFUND, GACHA_PRICE, RODS_BY_ID, SPECIES_BY_ID, fishPrice, rollGacha, nextPity, sanitizeBag, sanitizeRods,
+  DEFAULT_ROD, GACHA_DUPLICATE_REFUND, GACHA_PRICE, ROD_MAX_LV, RODS_BY_ID, SPECIES_BY_ID, clampRodLv, fishPrice, rodAt, rodUpgradeCost, rollGacha, nextPity, sanitizeBag, sanitizeRodLv, sanitizeRods,
 } from '@/lib/fishing';
 import type { BagItem, Rod } from '@/lib/fishing';
 
@@ -21,6 +21,7 @@ export default function MancingPage() {
   const [isDev, setIsDev] = useState(false); // role Developer -> Dev Tools mancing
   const [rods, setRodsState] = useState<string[]>([DEFAULT_ROD]);
   const [equippedRod, setEquippedState] = useState<string>(DEFAULT_ROD);
+  const [rodLv, setRodLvState] = useState<Record<string, number>>({});
   const [pity, setPity] = useState(0);
   const [starter, setStarter] = useState(false);
   const fb = useRef<any>(null);
@@ -29,11 +30,13 @@ export default function MancingPage() {
   const xpRef = useRef(0);
   const rodsRef = useRef<string[]>([DEFAULT_ROD]);
   const equipRef = useRef<string>(DEFAULT_ROD);
+  const rodLvRef = useRef<Record<string, number>>({});
   const pityRef = useRef(0);
   const starterRef = useRef(false);
 
   const setBag = (b: BagItem[]) => { bagRef.current = b; setBagState(b); };
   const setRods = (r: string[]) => { rodsRef.current = r; setRodsState(r); };
+  const setRodLv = (m: Record<string, number>) => { rodLvRef.current = m; setRodLvState(m); };
   const setEquipped = (id: string) => { equipRef.current = id; setEquippedState(id); };
   const warn = useCallback((m: string) => { setErr(m); setTimeout(() => setErr(''), 3000); }, []);
 
@@ -62,6 +65,7 @@ export default function MancingPage() {
           setBag(sanitizeBag(v.fishing?.bag));
           const owned = sanitizeRods(v.fishing?.rods);
           setRods(owned);
+          setRodLv(sanitizeRodLv(v.fishing?.rodLv));
           const eq = v.fishing?.equippedRod;
           setEquipped(typeof eq === 'string' && owned.includes(eq) ? eq : DEFAULT_ROD);
           const py = v.fishing?.pity;
@@ -94,7 +98,8 @@ export default function MancingPage() {
     const set = new Set(ids);
     const items = bagRef.current.filter((b) => set.has(b.id));
     if (!items.length) return 0;
-    const bonus = RODS_BY_ID[equipRef.current]?.money ?? 0; // bonus harga jual dari joran yang dipakai
+    const eqRod = RODS_BY_ID[equipRef.current];
+    const bonus = eqRod ? rodAt(eqRod, rodLvRef.current[eqRod.id]).money : 0; // bonus harga jual dari joran yang dipakai (termasuk level)
     const total = items.reduce((s, b) => s + fishPrice(SPECIES_BY_ID[b.s], b.w, bonus), 0);
     const nb = bagRef.current.filter((b) => !set.has(b.id));
     setBag(nb);
@@ -137,6 +142,24 @@ export default function MancingPage() {
       await fb.current.db.ref('users/' + uid.current + '/fishing').update({ rods: nr });
     } catch {
       warn('Joran belum tersimpan, coba beli ulang');
+    }
+    return 'ok';
+  }, [spend, warn]);
+
+  // Upgrade level joran (maks ROD_MAX_LV): bayar Crystal, level disimpan di fishing/rodLv
+  const onUpgradeRod = useCallback(async (id: string): Promise<'ok' | 'kurang' | 'gagal' | 'maks'> => {
+    const r = RODS_BY_ID[id];
+    if (!r || !rodsRef.current.includes(id)) return 'gagal';
+    const lv = clampRodLv(rodLvRef.current[id]);
+    if (lv >= ROD_MAX_LV) return 'maks';
+    const st = await spend(rodUpgradeCost(r, lv));
+    if (st !== 'ok') return st;
+    const nl = lv + 1;
+    setRodLv({ ...rodLvRef.current, [id]: nl });
+    try {
+      await fb.current.db.ref('users/' + uid.current + '/fishing/rodLv/' + id).set(nl);
+    } catch {
+      warn('Level joran belum tersimpan, coba upgrade ulang');
     }
     return 'ok';
   }, [spend, warn]);
@@ -204,7 +227,7 @@ export default function MancingPage() {
     <>
       <FishingGame
         name={name} photo={photo} crystal={crystal} xp={xp} bag={bag}
-        rods={rods} equippedRod={equippedRod} dev={isDev}
+        rods={rods} equippedRod={equippedRod} rodLv={rodLv} onUpgradeRod={onUpgradeRod} dev={isDev}
         onCatch={onCatch} onSell={onSell} onBuyRod={onBuyRod} onEquipRod={onEquipRod} onGacha={onGacha}
         pity={pity} starterClaimed={starter} onClaimStarter={onClaimStarter}
         onExit={() => router.push('/komikstore')}

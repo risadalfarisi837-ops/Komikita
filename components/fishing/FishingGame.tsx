@@ -7,7 +7,7 @@ import type { Catch, EngineStatus, Phase } from './engine';
 import { FISH_H, FISH_W, drawFish } from './art';
 import {
   BAG_MAX, DEFAULT_ROD, GACHA_DUPLICATE_REFUND, GACHA_PRICE, RARITY, RODS, RODS_BY_ID, SPECIES, SPECIES_BY_ID,
-  fishPrice, formatNum, formatWeight, isShowoff, isXL, levelFromXp, newId, rodEase, sizeRatio, sizeTier, titleFor, xpFor,
+  fishPrice, formatNum, formatWeight, isShowoff, isXL, levelFromXp, newId, rodAt, rodEase, sizeRatio, sizeTier, titleFor, xpFor,
 } from '@/lib/fishing';
 import { SPECIES as KSPECIES, sizeRatio as kSizeRatio } from '@/lib/fishing';
 import type { BagItem, Rarity, Rod, SizeTier } from '@/lib/fishing';
@@ -15,6 +15,7 @@ import DevTools, { DevFab, EMPTY_STATS } from './DevTools';
 import { startFishingNet } from '@/lib/fishingNet';
 import { getFirebase } from '@/lib/firebase-client';
 import ShopScreen, { RodArt } from './Shop';
+import RodScreen from './RodScreen';
 import type { ShopTab } from './Shop';
 import type { DevStats, SellMode } from './DevTools';
 import { GAME_BACK_EVENT, cancelLeavingGame, markLeavingGame } from '@/components/GameMode';
@@ -27,6 +28,8 @@ interface Props {
   bag: BagItem[];
   rods: string[];
   equippedRod: string;
+  rodLv?: Record<string, number>;
+  onUpgradeRod?: (id: string) => Promise<'ok' | 'kurang' | 'gagal' | 'maks'>;
   onCatch: (item: BagItem, xpGain: number) => void;
   onSell: (ids: string[]) => Promise<number>;
   onBuyRod: (id: string) => Promise<'ok' | 'kurang' | 'gagal'>;
@@ -252,7 +255,7 @@ async function leaveLandscape() {
 
 export default function FishingGame(props: Props) {
   const { name, photo, crystal, xp, bag, rods, equippedRod } = props;
-  const rod = RODS_BY_ID[equippedRod] || RODS_BY_ID[DEFAULT_ROD];
+  const rod = rodAt(RODS_BY_ID[equippedRod] || RODS_BY_ID[DEFAULT_ROD], props.rodLv?.[equippedRod]);
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<FishingEngine | null>(null);
@@ -268,6 +271,8 @@ export default function FishingGame(props: Props) {
   const [held, setHeld] = useState<BagItem | null>(null);
   const [sel, setSel] = useState('');
   const [shopOpen, setShopOpen] = useState(false);
+  const [rodOpen, setRodOpen] = useState(false);
+  const [upgrading, setUpgrading] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmExit, setConfirmExit] = useState(false);
   const exitOkRef = useRef(false);
@@ -375,7 +380,7 @@ export default function FishingGame(props: Props) {
       onAuto: (on) => { autoRef.current = on; setAuto(on); if (on) { setPopup(null); setDstats((d) => (d.since ? d : { ...d, since: Date.now() })); } },
       onCatch: (c: Catch) => {
         const item: BagItem = { id: newId(), s: c.species.id, w: c.weight };
-        const curRod = RODS_BY_ID[propsRef.current.equippedRod] || RODS_BY_ID[DEFAULT_ROD];
+        const curRod = rodAt(RODS_BY_ID[propsRef.current.equippedRod] || RODS_BY_ID[DEFAULT_ROD], propsRef.current.rodLv?.[propsRef.current.equippedRod]);
         const gain = xpFor(c.species, c.weight, curRod.xp);
         const before = levelFromXp(propsRef.current.xp).level;
         const after = levelFromXp(propsRef.current.xp + gain).level;
@@ -591,6 +596,16 @@ export default function FishingGame(props: Props) {
     else say('Gagal membeli, coba lagi');
     setBuying('');
   };
+  const upgradeRod = async (id: string) => {
+    if (upgrading || !props.onUpgradeRod) return;
+    setUpgrading(id);
+    const res = await props.onUpgradeRod(id);
+    if (res === 'ok') say('Joran naik level!');
+    else if (res === 'kurang') say('Crystal kurang buat upgrade');
+    else if (res === 'maks') say('Level joran sudah maksimal');
+    else say('Gagal upgrade, coba lagi');
+    setUpgrading('');
+  };
   const pullGachaN = async (n: 1 | 5) => {
     if (pulling) return;
     setPulling(true);
@@ -743,7 +758,7 @@ export default function FishingGame(props: Props) {
         const items: { k: string; icon: string; label: string; act: () => void }[] = [
           { k: 'misi', icon: '📜', label: 'Misi', act: go('/misi') },
           { k: 'koleksi', icon: '📘', label: 'Koleksi', act: soon },
-          { k: 'joran', icon: '🎣', label: 'Joran', act: () => { setShopTab('toko'); setShopOpen(true); } },
+          { k: 'joran', icon: '🎣', label: 'Joran', act: () => setRodOpen(true) },
           { k: 'lemari', icon: '👕', label: 'Lemari', act: soon },
           { k: 'akuarium', icon: '🐠', label: 'Akuarium', act: soon },
           { k: 'toko', icon: '🛍️', label: 'Toko', act: () => { setShopTab('toko'); setShopOpen(true); } },
@@ -855,7 +870,7 @@ export default function FishingGame(props: Props) {
               <button onClick={() => setBuffOpen((o) => !o)} aria-label="Buff" style={{ width: px(22), height: px(22), borderRadius: '50%', background: '#1f6fe0', border: `${px(2)}px solid #6aa8ff`, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}><Svg d={buffOpen ? 'M14 6l-6 6 6 6' : 'M10 6l6 6-6 6'} size={px(12)} w={3.6} /></button>
             </div>
             <div style={{ display: 'flex', gap: px(3), alignItems: 'flex-end' }}>
-              <button style={slot(true, '#4a9bff')} onClick={() => setShopOpen(true)} aria-label="Joran"><RodIcon size={px(26)} color={RARITY[rod.rarity].color} /></button>
+              <button style={slot(true, '#4a9bff')} onClick={() => setRodOpen(true)} aria-label="Joran"><RodIcon size={px(26)} color={RARITY[rod.rarity].color} /></button>
               {recent.map((b) => {
                 const sp = SPECIES_BY_ID[b.s];
                 const xl = isXL(sp, b.w);
@@ -1100,6 +1115,15 @@ export default function FishingGame(props: Props) {
             <button onClick={() => setMenuOpen(false)} style={{ borderRadius: px(12), border: 0, background: 'transparent', color: 'rgba(255,255,255,0.6)', fontFamily: HUD, fontWeight: 600, fontSize: px(14), padding: `${px(6)}px 0`, cursor: 'pointer' }}>Tutup</button>
           </div>
         </div>
+      )}
+
+      {/* Joran (semua joran, level, pakai) */}
+      {rodOpen && (
+        <RodScreen
+          px={(n: number) => px(n * 0.64)} font={HUD} crystal={crystal} rods={rods} rodLv={props.rodLv ?? {}} equippedRod={equippedRod}
+          buying={buying} upgrading={upgrading}
+          onClose={() => setRodOpen(false)} onBuy={buyRod} onEquip={props.onEquipRod} onUpgrade={upgradeRod}
+        />
       )}
 
       {/* Toko & Gacha */}

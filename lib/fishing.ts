@@ -241,6 +241,25 @@ export const RODS_BY_ID: Record<string, Rod> = Object.fromEntries(RODS.map((r) =
 // Kemudahan menarik ikan dari kekuatan joran (power 1..8 -> 0..1). Joran Kayu = 0, Naga Laut = 1.
 export const rodEase = (power: number): number => Math.min(1, Math.max(0, (power - 1) / 7));
 
+// ---- Level joran (upgrade pakai Crystal) ----
+export const ROD_MAX_LV = 5;
+export const ROD_LV_STEP = 0.04; // tiap level di atas 1 menambah +4% hoki, harga jual, dan XP
+export const rodUpgradeCost = (rod: Rod, lv: number): number => (300 + 200 * rod.power) * Math.max(1, lv);
+export const clampRodLv = (lv: unknown): number => (typeof lv === 'number' && Number.isFinite(lv) ? Math.min(ROD_MAX_LV, Math.max(1, Math.floor(lv))) : 1);
+// Joran dengan bonus level dihitung. Kekuatan tarik (power) tidak berubah.
+export function rodAt(rod: Rod, lv?: number): Rod {
+  const add = ROD_LV_STEP * (clampRodLv(lv) - 1);
+  if (!add) return rod;
+  return { ...rod, luck: rod.luck + add, money: rod.money + add, xp: rod.xp + add };
+}
+export function sanitizeRodLv(raw: unknown): Record<string, number> {
+  const out: Record<string, number> = {};
+  if (raw && typeof raw === 'object') {
+    for (const [k, v] of Object.entries(raw as Record<string, unknown>)) if (RODS_BY_ID[k] && clampRodLv(v) > 1) out[k] = clampRodLv(v);
+  }
+  return out;
+}
+
 // Bersihkan daftar joran milik user dari Firebase; "default" selalu dianggap dimiliki.
 export function sanitizeRods(raw: unknown): string[] {
   const arr: unknown[] = Array.isArray(raw) ? raw : raw && typeof raw === 'object' ? Object.values(raw as object) : [];

@@ -213,37 +213,6 @@ export default function ShopScreen(p: Props) {
                   )}
                 </div>
               </div>
-              <div style={{ fontSize: px(18), fontWeight: 800, margin: `${px(12)}px 0 ${px(8)}px` }}>Semua joran</div>
-              <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(${px(150)}px, 1fr))`, gap: px(12) }}>
-                {RODS.filter((r) => !r.gachaOnly).map((r) => {
-                  const rar = RARITY[r.rarity];
-                  const owned = rods.includes(r.id);
-                  const equipped = equippedRod === r.id;
-                  return (
-                    <div key={r.id} style={{ position: 'relative', borderRadius: px(18), border: `${px(3)}px solid ${r.rarity === 'common' ? '#e6d4b0' : rar.color}`, background: '#fffaf0', textAlign: 'center', padding: `${px(14)}px ${px(8)}px ${px(10)}px`, boxShadow: `0 ${px(3)}px 0 #e6d4b0`, display: 'flex', flexDirection: 'column', gap: px(6) }}>
-                      <span style={{ position: 'absolute', top: px(-9), left: '50%', transform: 'translateX(-50%)', background: rar.color, color: '#2a1d06', fontWeight: 800, fontSize: px(11), borderRadius: 99, padding: `${px(1)}px ${px(12)}px`, whiteSpace: 'nowrap' }}>{rar.label}</span>
-                      <div style={{ borderRadius: px(12), background: `${rays(rar.color + '33', rar.color + '14')}, #f5ecd9`, height: px(70), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <RodArt color={rar.color} size={px(56)} />
-                      </div>
-                      <div style={{ fontSize: px(16), fontWeight: 800, lineHeight: 1.1 }}>{r.name}</div>
-                      <Stats r={r} />
-                      <div style={{ marginTop: 'auto' }}>
-                        {equipped ? (
-                          <div style={{ background: '#e1f5e6', border: `${px(2.5)}px solid #9ad8ae`, color: '#1f7a3c', fontWeight: 800, fontSize: px(14), borderRadius: px(12), padding: `${px(6)}px 0` }}>✓ Dipakai</div>
-                        ) : owned ? (
-                          <button onClick={() => p.onEquip(r.id)} style={{ ...BLUE, width: '100%', fontSize: px(15) }}>Pakai</button>
-                        ) : r.price === 0 ? (
-                          <div style={{ color: '#9a8a6a', fontWeight: 800, fontSize: px(14), padding: `${px(6)}px 0` }}>Gratis</div>
-                        ) : (
-                          <button onClick={() => p.onBuy(r.id)} disabled={buying === r.id} style={{ ...GREEN, width: '100%', fontSize: px(16), opacity: buying === r.id ? 0.6 : 1 }}>
-                            <GemIcon size={px(18)} />{formatNum(r.price)}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
             </div>
           ) : (
             <div>
