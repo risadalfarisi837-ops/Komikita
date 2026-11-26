@@ -53,6 +53,80 @@ function R(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: nu
   ctx.fillRect(Math.round(x), Math.round(y), w, h);
 }
 
+
+// ---------- cache gambar (bake) + garis tepi ----------
+// Properti statis (semak, meja, bangku, tong, papan, kios, dll) dulu digambar ulang piksel demi piksel tiap frame
+// (ell = 1 fillRect per piksel, ribuan per frame). Sekarang digambar SEKALI ke kanvas kecil, diberi garis tepi gelap
+// seperti game aslinya, lalu tiap frame cuma ditempel pakai drawImage.
+export const ART_FX = { bake: true, outline: true };
+interface Baked { c: HTMLCanvasElement; ox: number; oy: number }
+const BAKE_CACHE = new Map<string, Baked>();
+const OUTLINE_K: [number, number, number] = [0.4, 0.37, 0.46];
+
+// Gambar garis tepi 1 piksel di sekeliling piksel padat (alpha >= 200); warnanya versi gelap dari piksel tetangganya.
+function outlineMask(c: HTMLCanvasElement): HTMLCanvasElement {
+  const o = mk(c.width, c.height);
+  const src = c.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D;
+  const w = c.width, h = c.height;
+  const d = src.getImageData(0, 0, w, h).data;
+  const oc = o.getContext('2d') as CanvasRenderingContext2D;
+  const out = oc.createImageData(w, h);
+  const od = out.data;
+  const nb = [-1, 0, 1, 0, 0, -1, 0, 1];
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      if (d[i + 3] >= 200) continue;
+      for (let k = 0; k < 8; k += 2) {
+        const nx = x + nb[k], ny = y + nb[k + 1];
+        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+        const j = (ny * w + nx) * 4;
+        if (d[j + 3] >= 200) {
+          od[i] = d[j] * OUTLINE_K[0]; od[i + 1] = d[j + 1] * OUTLINE_K[1]; od[i + 2] = d[j + 2] * OUTLINE_K[2]; od[i + 3] = 255;
+          break;
+        }
+      }
+    }
+  }
+  oc.putImageData(out, 0, 0);
+  return o;
+}
+
+// geo = [lebar, tinggi, ox, oy]: titik asal properti (p.x*TILE, p.y*TILE) ada di (ox, oy) dalam kanvas; ox & oy kelipatan TILE.
+type Geo = [number, number, number, number];
+function bakeLayers(key: string, geo: Geo, p: Prop, fns: ((cx: CanvasRenderingContext2D, q: Prop) => void)[], outline: boolean): Baked[] {
+  const hit = BAKE_CACHE.get(key);
+  if (hit) return [hit, BAKE_CACHE.get(key + '#1') as Baked].filter(Boolean) as Baked[];
+  const [w, h, ox, oy] = geo;
+  const q: Prop = { ...p, x: ox / TILE, y: oy / TILE };
+  const layers = fns.map((fn) => { const c = mk(w, h); const cx = c.getContext('2d') as CanvasRenderingContext2D; cx.imageSmoothingEnabled = false; fn(cx, q); return c; });
+  if (outline && ART_FX.outline) {
+    const comp = mk(w, h);
+    const cc = comp.getContext('2d') as CanvasRenderingContext2D;
+    for (const l of layers) cc.drawImage(l, 0, 0);
+    const mask = outlineMask(comp);
+    const first = layers[0].getContext('2d') as CanvasRenderingContext2D;
+    const keep = mk(w, h);
+    const kc = keep.getContext('2d') as CanvasRenderingContext2D;
+    kc.drawImage(layers[0], 0, 0);
+    first.clearRect(0, 0, w, h);
+    first.drawImage(mask, 0, 0); // garis tepi di bawah
+    first.drawImage(keep, 0, 0);
+  }
+  const res = layers.map((c) => ({ c, ox, oy }));
+  BAKE_CACHE.set(key, res[0]);
+  if (res[1]) BAKE_CACHE.set(key + '#1', res[1]);
+  return res;
+}
+function blit(ctx: CanvasRenderingContext2D, p: Prop, b: Baked) {
+  ctx.drawImage(b.c, Math.round(p.x * TILE) - b.ox, Math.round(p.y * TILE) - b.oy);
+}
+// properti satu lapis (statis penuh)
+function drawBaked(ctx: CanvasRenderingContext2D, p: Prop, key: string, geo: Geo, raw: (cx: CanvasRenderingContext2D, q: Prop) => void, outline = true) {
+  if (!ART_FX.bake) { raw(ctx, p); return; }
+  blit(ctx, p, bakeLayers(key, geo, p, [raw], outline)[0]);
+}
+
 // ---------- dunia ----------
 export const MAP_W = 36;
 export const MAP_H = 40; // lebih tinggi: ada dek pamer dan ikan raksasa di selatan pulau
@@ -350,11 +424,41 @@ export function generateWorld(seed = 11): World {
   return world;
 }
 
+// noise halus (value noise) untuk bercak warna alami di pasir & rumput
+function hash2(x: number, y: number, s: number): number {
+  let h = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(s | 0, 982451653);
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+function vnoise(x: number, y: number, s: number): number {
+  const xi = Math.floor(x), yi = Math.floor(y);
+  const xf = x - xi, yf = y - yi;
+  const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+  const a = hash2(xi, yi, s), b = hash2(xi + 1, yi, s), c = hash2(xi, yi + 1, s), d = hash2(xi + 1, yi + 1, s);
+  return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+}
+
 function renderTerrain(world: World, dl: number[][], pond: boolean[][], pier: [number, number][], seed: number) {
   const ctx = world.terrain.getContext('2d') as CanvasRenderingContext2D;
   ctx.imageSmoothingEnabled = false;
   const { w, h, tiles } = world;
   const isLand = (x: number, y: number) => x >= 0 && y >= 0 && x < w && y < h && (tiles[y][x] === 'sand' || tiles[y][x] === 'grass');
+  const isWaterT = (x: number, y: number) => x >= 0 && y >= 0 && x < w && y < h && (tiles[y][x] === 'deep' || tiles[y][x] === 'shallow');
+  const isDirtT = (x: number, y: number) => x >= 0 && y >= 0 && x < w && y < h && tiles[y][x] === 'dirt';
+  // ujung jalan tanah menyebar ke tile sebelah (pasir/rumput) supaya tepinya tidak kaku
+  const spillDirt = (tx: number, ty: number, X: number, Y: number, rnd: () => number) => {
+    const sides: [number, number, number][] = [[0, -1, 0], [0, 1, 1], [-1, 0, 2], [1, 0, 3]];
+    for (const [dx, dy, sd] of sides) {
+      if (!isDirtT(tx + dx, ty + dy)) continue;
+      for (let k = 0; k < 20; k++) {
+        const along = Math.floor(rnd() * TILE);
+        const depth = Math.floor(rnd() * rnd() * 3.6);
+        const px = sd === 2 ? X + depth : sd === 3 ? X + TILE - 1 - depth : X + along;
+        const py = sd === 0 ? Y + depth : sd === 1 ? Y + TILE - 1 - depth : Y + along;
+        R(ctx, px, py, 1, 1, rnd() < 0.55 ? '#b48a5c' : '#9b7248');
+      }
+    }
+  };
   for (let ty = 0; ty < h; ty++) {
     for (let tx = 0; tx < w; tx++) {
       const rnd = mulberry32(seed * 7919 + ty * 131 + tx * 17);
@@ -376,17 +480,49 @@ function renderTerrain(world: World, dl: number[][], pond: boolean[][], pier: [n
           R(ctx, fx, fy - 1, 1, 3, c);
           R(ctx, fx, fy, 1, 1, '#f5c542');
         }
+        // bercak terang/gelap yang halus + rumpun rumput
+        for (let j = 0; j < TILE; j++) {
+          for (let i = 0; i < TILE; i++) {
+            const n = vnoise((X + i) / 18, (Y + j) / 18, seed + 5);
+            const hs = hash2(X + i, Y + j, seed + 9);
+            if (n > 0.6 && ((i + j) & 1) === 0 && hs < 0.6) R(ctx, X + i, Y + j, 1, 1, '#76c46c');
+            else if (n < 0.36 && ((i * 3 + j) & 3) === 0 && hs < 0.65) R(ctx, X + i, Y + j, 1, 1, '#4a9549');
+          }
+        }
+        if (rnd() < 0.3) { const gx = X + 2 + Math.floor(rnd() * 11); const gy = Y + 3 + Math.floor(rnd() * 10); R(ctx, gx, gy + 1, 1, 1, '#3a7d40'); R(ctx, gx - 1, gy, 1, 1, '#3a7d40'); R(ctx, gx + 1, gy, 1, 1, '#3a7d40'); R(ctx, gx, gy - 1, 1, 1, '#8fd47f'); }
+        spillDirt(tx, ty, X, Y, rnd);
       } else if (t === 'sand') {
         R(ctx, X, Y, TILE, TILE, '#e8d194');
         for (let i = 0; i < 7; i++) R(ctx, X + rnd() * 15, Y + rnd() * 15, 1, 1, '#d8bd7c');
         for (let i = 0; i < 4; i++) R(ctx, X + rnd() * 15, Y + rnd() * 15, 1, 1, '#f4e3ae');
         if (rnd() < 0.05) { R(ctx, X + 5, Y + 7, 2, 1, '#fff'); R(ctx, X + 6, Y + 8, 1, 1, '#f1b6c8'); }
+        // bercak pasir lebih terang/gelap
+        for (let j = 0; j < TILE; j++) {
+          for (let i = 0; i < TILE; i++) {
+            const n = vnoise((X + i) / 20, (Y + j) / 20, seed + 3);
+            const hs = hash2(X + i, Y + j, seed + 1);
+            if (n > 0.62 && ((i + j) & 1) === 0 && hs < 0.55) R(ctx, X + i, Y + j, 1, 1, '#f4e4ae');
+            else if (n < 0.34 && ((i * 3 + j) & 3) === 0 && hs < 0.6) R(ctx, X + i, Y + j, 1, 1, '#d9c07c');
+          }
+        }
+        // pasir basah di dekat air
+        const wet = ['rgba(168,126,64,0.30)', 'rgba(168,126,64,0.20)', 'rgba(168,126,64,0.10)'];
+        for (let k = 0; k < 3; k++) {
+          if (isWaterT(tx, ty - 1)) R(ctx, X, Y + k, TILE, 1, wet[k]);
+          if (isWaterT(tx, ty + 1)) R(ctx, X, Y + TILE - 1 - k, TILE, 1, wet[k]);
+          if (isWaterT(tx - 1, ty)) R(ctx, X + k, Y, 1, TILE, wet[k]);
+          if (isWaterT(tx + 1, ty)) R(ctx, X + TILE - 1 - k, Y, 1, TILE, wet[k]);
+        }
+        // kerikil & cangkang
+        if (rnd() < 0.08) { const kx = X + 2 + Math.floor(rnd() * 11); const ky = Y + 3 + Math.floor(rnd() * 10); R(ctx, kx, ky - 1, 2, 1, '#e6dfca'); R(ctx, kx, ky, 2, 1, '#b9ad92'); R(ctx, kx, ky + 1, 2, 1, '#8f846c'); }
+        spillDirt(tx, ty, X, Y, rnd);
       } else if (t === 'dirt') {
         R(ctx, X, Y, TILE, TILE, '#b48a5c');
         for (let i = 0; i < 9; i++) R(ctx, X + rnd() * 15, Y + rnd() * 15, 1, 1, '#9b7248');
         for (let i = 0; i < 6; i++) R(ctx, X + rnd() * 15, Y + rnd() * 15, 1, 1, '#c9a274');
         if (rnd() < 0.35) { const qx = X + 2 + Math.floor(rnd() * 11); const qy = Y + 2 + Math.floor(rnd() * 11); R(ctx, qx, qy, 2, 1, '#d8c7a6'); R(ctx, qx, qy + 1, 2, 1, '#8c6a43'); }
-        const isDirt = (ax: number, ay: number) => ax >= 0 && ay >= 0 && ax < w && ay < h && tiles[ay][ax] === 'dirt';
+        const isDirt = isDirtT;
+        if (rnd() < 0.2) { const kx = X + 2 + Math.floor(rnd() * 11); const ky = Y + 3 + Math.floor(rnd() * 10); R(ctx, kx, ky, 2, 1, '#c9b48e'); R(ctx, kx, ky + 1, 2, 1, '#7a5a38'); }
         if (!isDirt(tx, ty - 1)) { R(ctx, X, Y, TILE, 1, '#cfa876'); R(ctx, X, Y + 1, TILE, 1, '#a07a4d'); }
         if (!isDirt(tx, ty + 1)) { R(ctx, X, Y + TILE - 2, TILE, 1, '#8f6c44'); R(ctx, X, Y + TILE - 1, TILE, 1, '#7c5b36'); }
         if (!isDirt(tx - 1, ty)) R(ctx, X, Y, 1, TILE, '#a07a4d');
@@ -403,12 +539,21 @@ function renderTerrain(world: World, dl: number[][], pond: boolean[][], pier: [n
             if (rnd() < 0.5) R(ctx, lx + 1, ly, 1, 1, '#ffb7d5');
           }
         }
+        // kilau air & riak gelap di perairan dalam
+        if (!pond[ty][tx] && d >= 2 && rnd() < 0.22) { const lx = X + 2 + Math.floor(rnd() * 10); const ly = Y + 3 + Math.floor(rnd() * 10); R(ctx, lx, ly, 3, 1, 'rgba(255,255,255,0.26)'); R(ctx, lx + 1, ly + 1, 2, 1, 'rgba(255,255,255,0.13)'); }
+        if (!pond[ty][tx] && d >= 3 && rnd() < 0.12) { const lx = X + 1 + Math.floor(rnd() * 11); const ly = Y + 2 + Math.floor(rnd() * 12); R(ctx, lx, ly, 4, 1, 'rgba(8,48,110,0.22)'); }
         // buih di tepi pantai
         const f = 'rgba(240,252,255,0.85)';
         if (isLand(tx, ty - 1)) for (let i = 0; i < TILE; i += 1) if ((i + tx) % 5 !== 0) R(ctx, X + i, Y, 1, i % 3 === 0 ? 2 : 1, f);
         if (isLand(tx, ty + 1)) for (let i = 0; i < TILE; i += 1) if ((i + tx) % 4 !== 0) R(ctx, X + i, Y + TILE - 1, 1, 1, f);
         if (isLand(tx - 1, ty)) for (let i = 0; i < TILE; i += 1) if ((i + ty) % 5 !== 0) R(ctx, X, Y + i, i % 3 === 0 ? 2 : 1, 1, f);
         if (isLand(tx + 1, ty)) for (let i = 0; i < TILE; i += 1) if ((i + ty) % 4 !== 0) R(ctx, X + TILE - 1, Y + i, 1, 1, f);
+        // gelombang kedua yang lebih tipis, sedikit menjorok ke air
+        const f2 = 'rgba(240,252,255,0.36)';
+        if (isLand(tx, ty - 1)) for (let i = 0; i < TILE; i++) if ((i * 5 + tx * 3) % 7 < 3) R(ctx, X + i, Y + 2 + (i % 2), 1, 1, f2);
+        if (isLand(tx, ty + 1)) for (let i = 0; i < TILE; i++) if ((i * 5 + tx * 3) % 7 < 3) R(ctx, X + i, Y + TILE - 3 - (i % 2), 1, 1, f2);
+        if (isLand(tx - 1, ty)) for (let i = 0; i < TILE; i++) if ((i * 5 + ty * 3) % 7 < 3) R(ctx, X + 2 + (i % 2), Y + i, 1, 1, f2);
+        if (isLand(tx + 1, ty)) for (let i = 0; i < TILE; i++) if ((i * 5 + ty * 3) % 7 < 3) R(ctx, X + TILE - 3 - (i % 2), Y + i, 1, 1, f2);
       }
     }
   }
@@ -472,7 +617,7 @@ export function drawPalm(ctx: CanvasRenderingContext2D, p: Prop, t: number) {
   R(ctx, cx + 1, cy + 2, 2, 2, '#7a4a1d');
 }
 
-export function drawRock(ctx: CanvasRenderingContext2D, p: Prop) {
+function rockRaw(ctx: CanvasRenderingContext2D, p: Prop) {
   const x = p.x * TILE + 8;
   const y = p.y * TILE + 13;
   drawShadow(ctx, x, y + 1, 7, 2.4, 0.25);
@@ -599,7 +744,7 @@ export interface Pal { skin: string; skinD: string; hair: string; shirt: string;
 export const PAL_PLAYER: Pal = { skin: '#f6d4b8', skinD: '#dcae8c', hair: '#9a68d8', shirt: '#2f4b7e', shirtD: '#1f3459', pants: '#223559', boot: '#2a2233', hat: '#2b4375', hatD: '#1b2c52', band: '#f0c75a', cap: true };
 export const PAL_BAYU: Pal = { skin: '#e2b48a', skinD: '#c4936a', hair: '#d9d6cf', shirt: '#6b9a4e', shirtD: '#527a3a', pants: '#c8a96a', boot: '#6b4a2a', hat: '#ead69a', hatD: '#c9b06a', band: '#8a5a2b' };
 
-export function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number, dir: Dir, moving: boolean, step: number, rod: boolean, rodShake = 0, pal: Pal = PAL_PLAYER, rodId = 'default', hold = false, armsUp = false) {
+export function drawPlayerRaw(ctx: CanvasRenderingContext2D, x: number, y: number, dir: Dir, moving: boolean, step: number, rod: boolean, rodShake = 0, pal: Pal = PAL_PLAYER, rodId = 'default', hold = false, armsUp = false) {
   const fr = moving ? Math.floor(step * 8) % 4 : 0;
   const bob = moving && (fr === 1 || fr === 3) ? -1 : 0;
   drawShadow(ctx, x, y - 1, 6, 2, 0.28);
@@ -975,7 +1120,7 @@ export function drawFountain(ctx: CanvasRenderingContext2D, p: Prop, t: number) 
   ctx.fillRect(X + 31, Y + 7, 2, 1);
 }
 
-export function drawBench(ctx: CanvasRenderingContext2D, p: Prop) {
+function benchRaw(ctx: CanvasRenderingContext2D, p: Prop) {
   const X = p.x * TILE;
   const Y = p.y * TILE;
   ell(ctx, X + 24, Y + 15, 23, 3, 'rgba(0,20,10,0.22)');
@@ -992,7 +1137,7 @@ export function drawBench(ctx: CanvasRenderingContext2D, p: Prop) {
   R(ctx, X + 41, Y + 8, 3, 6, '#6b4a2a');
 }
 
-export function drawTable(ctx: CanvasRenderingContext2D, p: Prop, t: number) {
+function tableRaw(ctx: CanvasRenderingContext2D, p: Prop) {
   const X = p.x * TILE;
   const Y = p.y * TILE;
   ell(ctx, X + 16, Y + 15, 15, 3, 'rgba(0,20,10,0.25)');
@@ -1009,6 +1154,11 @@ export function drawTable(ctx: CanvasRenderingContext2D, p: Prop, t: number) {
   R(ctx, X + 13, Y - 3, 6, 1, '#3a2a18');
   R(ctx, X + 15, Y - 5, 2, 2, '#3a2a18');
   R(ctx, X + 14, Y - 2, 4, 1, '#3a2a18');
+}
+
+function tableGlow(ctx: CanvasRenderingContext2D, p: Prop, t: number) {
+  const X = p.x * TILE;
+  const Y = p.y * TILE;
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
   const g = ctx.createRadialGradient(X + 16, Y + 1, 1, X + 16, Y + 1, 22);
@@ -1020,7 +1170,7 @@ export function drawTable(ctx: CanvasRenderingContext2D, p: Prop, t: number) {
   ctx.restore();
 }
 
-export function drawStool(ctx: CanvasRenderingContext2D, p: Prop) {
+function stoolRaw(ctx: CanvasRenderingContext2D, p: Prop) {
   const X = p.x * TILE;
   const Y = p.y * TILE;
   ell(ctx, X + 8, Y + 15, 7, 2, 'rgba(0,20,10,0.25)');
@@ -1031,7 +1181,7 @@ export function drawStool(ctx: CanvasRenderingContext2D, p: Prop) {
   R(ctx, X + 5, Y + 7, 3, 1, '#f06a6a');
 }
 
-export function drawSign(ctx: CanvasRenderingContext2D, p: Prop) {
+function signRaw(ctx: CanvasRenderingContext2D, p: Prop) {
   const X = p.x * TILE;
   const Y = p.y * TILE;
   ell(ctx, X + 8, Y + 15, 6, 2, 'rgba(0,20,10,0.25)');
@@ -1049,7 +1199,7 @@ export function drawSign(ctx: CanvasRenderingContext2D, p: Prop) {
   R(ctx, X + 12, Y + 3, 8, 1, '#7a5230');
 }
 
-export function drawBush(ctx: CanvasRenderingContext2D, p: Prop) {
+function bushRaw(ctx: CanvasRenderingContext2D, p: Prop) {
   const X = p.x * TILE;
   const Y = p.y * TILE;
   ell(ctx, X + 8, Y + 14, 9, 2.5, 'rgba(0,20,10,0.25)');
@@ -1062,11 +1212,11 @@ export function drawBush(ctx: CanvasRenderingContext2D, p: Prop) {
   if (berries) { R(ctx, X + 4, Y + 9, 1, 1, '#ff6b6b'); R(ctx, X + 11, Y + 6, 1, 1, '#ff6b6b'); R(ctx, X + 9, Y + 11, 1, 1, '#ff6b6b'); }
 }
 
-export function drawNpc(ctx: CanvasRenderingContext2D, p: Prop, t: number) {
+function npcRaw(ctx: CanvasRenderingContext2D, p: Prop, t: number) {
   const x = p.x * TILE + 8;
   const y = p.y * TILE + 15;
   const bob = Math.sin(t * 2 + p.v * 6) > 0.92 ? 1 : 0;
-  drawPlayer(ctx, x, y - bob * 0, 'down', false, 0, false, 0, PAL_BAYU);
+  drawPlayerRaw(ctx, x, y - bob * 0, 'down', false, 0, false, 0, PAL_BAYU);
 }
 
 
@@ -1085,7 +1235,7 @@ function pixText(ctx: CanvasRenderingContext2D, text: string, x: number, y: numb
   }
 }
 
-export function drawShop(ctx: CanvasRenderingContext2D, p: Prop, t: number) {
+function shopRaw(ctx: CanvasRenderingContext2D, p: Prop, t: number) {
   const X = p.x * TILE;
   const Y = p.y * TILE; // area 64x48
   ell(ctx, X + 32, Y + 46, 31, 3, 'rgba(0,20,10,0.28)');
@@ -1102,7 +1252,7 @@ export function drawShop(ctx: CanvasRenderingContext2D, p: Prop, t: number) {
   R(ctx, X + 44, Y + 18, 3, 4, '#f5c451');
   R(ctx, X + 49, Y + 19, 3, 3, '#7dd87a');
   // penjual di balik meja
-  drawPlayer(ctx, X + 32, Y + 34, 'down', false, 0, false, 0, PAL_BAYU);
+  drawPlayerRaw(ctx, X + 32, Y + 34, 'down', false, 0, false, 0, PAL_BAYU);
   // meja
   R(ctx, X + 4, Y + 33, 56, 9, '#8b5a2b');
   R(ctx, X + 4, Y + 33, 56, 2, '#d9a066');
@@ -1148,11 +1298,10 @@ const STALL_COL = [
   { a: '#4fb85a', b: '#f3ffe9', c: '#2f8a3b' },   // kedai kelapa
 ];
 
-export function drawStall(ctx: CanvasRenderingContext2D, p: Prop, t: number) {
+function stallBack(ctx: CanvasRenderingContext2D, p: Prop) {
   const X = p.x * TILE;
   const Y = p.y * TILE; // area 48x32
   const v = Math.floor(p.v) % 4;
-  const col = STALL_COL[v];
   ell(ctx, X + 24, Y + 30, 23, 3, 'rgba(0,20,10,0.28)');
   // tiang dan dinding belakang
   R(ctx, X + 3, Y + 10, 42, 16, '#b98450');
@@ -1160,16 +1309,29 @@ export function drawStall(ctx: CanvasRenderingContext2D, p: Prop, t: number) {
   R(ctx, X + 2, Y + 8, 2, 20, '#6f4624');
   R(ctx, X + 44, Y + 8, 2, 20, '#6f4624');
   // penjual
-  drawPlayer(ctx, X + 24, Y + 23, 'down', false, 0, false, 0, PAL_BAYU);
-  // barang khas tiap warung (di belakang meja)
+  drawPlayerRaw(ctx, X + 24, Y + 23, 'down', false, 0, false, 0, PAL_BAYU);
+  // barang khas tiap warung (bagian yang diam)
   if (v === 0) {
     R(ctx, X + 8, Y + 19, 12, 5, '#2b2b2b'); R(ctx, X + 9, Y + 19, 10, 1, '#ff8a3a');
     for (let i = 0; i < 3; i++) R(ctx, X + 9 + i * 4, Y + 17, 2, 2, '#e9a36b');
-    for (let i = 0; i < 3; i++) { const k = (t * 1.3 + i * 0.7) % 1; R(ctx, X + 11 + i * 3 + Math.round(Math.sin(k * 6) * 1), Y + 15 - Math.round(k * 9), 2, 2, `rgba(220,220,220,${(0.7 - k * 0.6).toFixed(2)})`); }
   } else if (v === 1) {
     R(ctx, X + 7, Y + 17, 5, 6, '#8fd3f0'); R(ctx, X + 7, Y + 16, 5, 1, '#d6f0fb'); R(ctx, X + 8, Y + 20, 3, 2, '#e9856b');
     R(ctx, X + 14, Y + 18, 5, 5, '#f4b3c8'); R(ctx, X + 15, Y + 21, 3, 1, '#c95d86');
     R(ctx, X + 36, Y + 18, 6, 5, '#c9a26a'); R(ctx, X + 36, Y + 17, 6, 1, '#6b4a2a');
+  } else if (v === 3) {
+    for (let i = 0; i < 4; i++) { R(ctx, X + 8 + i * 4, Y + 19, 4, 4, '#6b4423'); R(ctx, X + 9 + i * 4, Y + 19, 2, 1, '#b6865a'); }
+    R(ctx, X + 11, Y + 15, 4, 4, '#6b4423'); R(ctx, X + 12, Y + 15, 2, 1, '#b6865a');
+    R(ctx, X + 36, Y + 17, 1, 6, '#e9d27a'); R(ctx, X + 38, Y + 17, 1, 6, '#e9d27a'); R(ctx, X + 40, Y + 17, 1, 6, '#e9d27a');
+  }
+}
+
+// bagian yang bergerak: uap warung ikan bakar & lampion goyang (digambar langsung, cuma beberapa kotak kecil)
+function stallAnim(ctx: CanvasRenderingContext2D, p: Prop, t: number) {
+  const X = p.x * TILE;
+  const Y = p.y * TILE;
+  const v = Math.floor(p.v) % 4;
+  if (v === 0) {
+    for (let i = 0; i < 3; i++) { const k = (t * 1.3 + i * 0.7) % 1; R(ctx, X + 11 + i * 3 + Math.round(Math.sin(k * 6) * 1), Y + 15 - Math.round(k * 9), 2, 2, `rgba(220,220,220,${(0.7 - k * 0.6).toFixed(2)})`); }
   } else if (v === 2) {
     for (let i = 0; i < 4; i++) {
       const sw = Math.round(Math.sin(t * 2 + i) * 1);
@@ -1177,11 +1339,14 @@ export function drawStall(ctx: CanvasRenderingContext2D, p: Prop, t: number) {
       R(ctx, X + 6 + i * 9 + sw, Y + 14, 5, 5, i % 2 ? '#ffd24a' : '#ff6a4a');
       R(ctx, X + 7 + i * 9 + sw, Y + 15, 3, 3, '#fff0a0');
     }
-  } else {
-    for (let i = 0; i < 4; i++) { R(ctx, X + 8 + i * 4, Y + 19, 4, 4, '#6b4423'); R(ctx, X + 9 + i * 4, Y + 19, 2, 1, '#b6865a'); }
-    R(ctx, X + 11, Y + 15, 4, 4, '#6b4423'); R(ctx, X + 12, Y + 15, 2, 1, '#b6865a');
-    R(ctx, X + 36, Y + 17, 1, 6, '#e9d27a'); R(ctx, X + 38, Y + 17, 1, 6, '#e9d27a'); R(ctx, X + 40, Y + 17, 1, 6, '#e9d27a');
   }
+}
+
+function stallFront(ctx: CanvasRenderingContext2D, p: Prop) {
+  const X = p.x * TILE;
+  const Y = p.y * TILE;
+  const v = Math.floor(p.v) % 4;
+  const col = STALL_COL[v];
   // meja
   R(ctx, X + 2, Y + 22, 44, 7, '#8b5a2b');
   R(ctx, X + 2, Y + 22, 44, 2, '#d9a066');
@@ -1200,11 +1365,25 @@ export function drawStall(ctx: CanvasRenderingContext2D, p: Prop, t: number) {
   }
   R(ctx, X + 1, Y, 46, 2, col.c);
   R(ctx, X, Y + 2, 48, 1, col.a);
-  // lentera kecil
+}
+
+export function drawStall(ctx: CanvasRenderingContext2D, p: Prop, t: number) {
+  const X = p.x * TILE;
+  const Y = p.y * TILE;
+  const v = Math.floor(p.v) % 4;
+  if (ART_FX.bake) {
+    const [back, front] = bakeLayers('stall' + v, [96, 80, 16, 16], p, [(c, q) => stallBack(c, q), (c, q) => stallFront(c, q)], true);
+    blit(ctx, p, back);
+    stallAnim(ctx, p, t);
+    blit(ctx, p, front);
+  } else {
+    stallBack(ctx, p); stallAnim(ctx, p, t); stallFront(ctx, p);
+  }
+  // lentera kecil (kedip)
   R(ctx, X + 1, Y + 13, 2, 3, Math.sin(t * 5 + p.v * 9) > 0 ? '#ffd86b' : '#ffc23d');
 }
 
-export function drawFlowers(ctx: CanvasRenderingContext2D, p: Prop) {
+function flowersRaw(ctx: CanvasRenderingContext2D, p: Prop) {
   const X = p.x * TILE;
   const Y = p.y * TILE;
   const pal = [['#ff7aa8', '#ffd1e0'], ['#ffd84a', '#fff3b0'], ['#ffffff', '#e5e5f5'], ['#b58bff', '#e0ccff']][Math.floor(p.v * 4) % 4];
@@ -1216,7 +1395,7 @@ export function drawFlowers(ctx: CanvasRenderingContext2D, p: Prop) {
   }
 }
 
-export function drawBarrel(ctx: CanvasRenderingContext2D, p: Prop) {
+function barrelRaw(ctx: CanvasRenderingContext2D, p: Prop) {
   const X = p.x * TILE;
   const Y = p.y * TILE;
   ell(ctx, X + 8, Y + 14, 6, 2, 'rgba(0,0,0,0.25)');
@@ -1226,7 +1405,7 @@ export function drawBarrel(ctx: CanvasRenderingContext2D, p: Prop) {
   R(ctx, X + 5, Y + 4, 1, 10, '#b98450'); R(ctx, X + 9, Y + 4, 1, 10, '#7a512a');
 }
 
-export function drawCrate(ctx: CanvasRenderingContext2D, p: Prop) {
+function crateRaw(ctx: CanvasRenderingContext2D, p: Prop) {
   const X = p.x * TILE;
   const Y = p.y * TILE;
   ell(ctx, X + 8, Y + 14, 7, 2, 'rgba(0,0,0,0.25)');
@@ -1250,7 +1429,7 @@ export function drawNet(ctx: CanvasRenderingContext2D, p: Prop, t: number) {
   R(ctx, X + 6, Y + 11, 2, 2, '#f08a4a'); R(ctx, X + 16, Y + 12, 2, 2, '#f08a4a'); R(ctx, X + 24, Y + 11, 2, 2, '#f08a4a');
 }
 
-export function drawUmbrella(ctx: CanvasRenderingContext2D, p: Prop) {
+function umbrellaRaw(ctx: CanvasRenderingContext2D, p: Prop) {
   const X = p.x * TILE;
   const Y = p.y * TILE;
   const cols = [['#ff5a5a', '#ffffff'], ['#3aa8ff', '#ffffff'], ['#ffc83a', '#ffffff']][Math.floor(p.v * 3) % 3];
@@ -1394,4 +1573,53 @@ export function palForId(id: string): Pal {
   const shirt = shirts[(h >>> 4) % shirts.length];
   const skin = skins[(h >>> 9) % skins.length];
   return { ...PAL_PLAYER, skin: skin[0], skinD: skin[1], hair, shirt, shirtD: shadeHex(shirt, -0.3), pants: shadeHex(shirt, -0.45), hat: shadeHex(shirt, -0.12), hatD: shadeHex(shirt, -0.38) };
+}
+
+// ---------- pembungkus: gambar dari cache ----------
+export function drawBench(ctx: CanvasRenderingContext2D, p: Prop) { drawBaked(ctx, p, 'bench', [80, 64, 16, 32], benchRaw); }
+export function drawStool(ctx: CanvasRenderingContext2D, p: Prop) { drawBaked(ctx, p, 'stool', [48, 64, 16, 32], stoolRaw); }
+export function drawSign(ctx: CanvasRenderingContext2D, p: Prop) { drawBaked(ctx, p, 'sign', [64, 64, 16, 32], signRaw); }
+export function drawBush(ctx: CanvasRenderingContext2D, p: Prop) { drawBaked(ctx, p, p.v > 0.55 ? 'bushB' : 'bush', [48, 64, 16, 32], bushRaw); }
+export function drawFlowers(ctx: CanvasRenderingContext2D, p: Prop) { drawBaked(ctx, p, 'flowers' + p.v.toFixed(3), [48, 48, 16, 16], flowersRaw, false); }
+export function drawBarrel(ctx: CanvasRenderingContext2D, p: Prop) { drawBaked(ctx, p, 'barrel', [48, 64, 16, 32], barrelRaw); }
+export function drawCrate(ctx: CanvasRenderingContext2D, p: Prop) { drawBaked(ctx, p, p.v > 0.5 ? 'crateF' : 'crate', [48, 64, 16, 32], crateRaw); }
+export function drawUmbrella(ctx: CanvasRenderingContext2D, p: Prop) { drawBaked(ctx, p, 'umb' + (Math.floor(p.v * 3) % 3), [48, 64, 16, 32], umbrellaRaw); }
+export function drawRock(ctx: CanvasRenderingContext2D, p: Prop) { drawBaked(ctx, p, p.v > 0.5 ? 'rockB' : 'rock', [48, 64, 16, 32], rockRaw); }
+export function drawNpc(ctx: CanvasRenderingContext2D, p: Prop, t: number) { drawBaked(ctx, p, 'npc', [64, 96, 16, 48], (c, q) => npcRaw(c, q, t)); }
+export function drawShop(ctx: CanvasRenderingContext2D, p: Prop, t: number) {
+  if (!ART_FX.bake) { shopRaw(ctx, p, t); return; }
+  blit(ctx, p, bakeLayers('shop', [96, 96, 16, 32], p, [(c, q) => shopRaw(c, q, 0)], true)[0]);
+  // lentera kedip (digambar langsung di atas hasil cache)
+  R(ctx, p.x * TILE + 1, p.y * TILE + 20, 3, 4, Math.sin(t * 6) > 0 ? '#ffd86b' : '#ffc23d');
+}
+export function drawTable(ctx: CanvasRenderingContext2D, p: Prop, t: number) {
+  drawBaked(ctx, p, 'table', [64, 64, 16, 32], tableRaw);
+  tableGlow(ctx, p, t);
+}
+
+// ---------- karakter dengan garis tepi ----------
+// Digambar dulu ke kanvas sementara, lalu ditempel 4x bergeser (bayangan gelap) dan sekali lagi normal = garis tepi 1 piksel.
+let pScratch: HTMLCanvasElement | null = null;
+let pOutline: HTMLCanvasElement | null = null;
+const PS_W = 80, PS_H = 80, PS_AX = 40, PS_AY = 60;
+export function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number, dir: Dir, moving: boolean, step: number, rod: boolean, rodShake = 0, pal: Pal = PAL_PLAYER, rodId = 'default', hold = false, armsUp = false) {
+  if (!ART_FX.outline) { drawPlayerRaw(ctx, x, y, dir, moving, step, rod, rodShake, pal, rodId, hold, armsUp); return; }
+  if (!pScratch) { pScratch = mk(PS_W, PS_H); pOutline = mk(PS_W, PS_H); }
+  const sc = pScratch.getContext('2d') as CanvasRenderingContext2D;
+  const oc = (pOutline as HTMLCanvasElement).getContext('2d') as CanvasRenderingContext2D;
+  sc.setTransform(1, 0, 0, 1, 0, 0);
+  sc.clearRect(0, 0, PS_W, PS_H);
+  sc.imageSmoothingEnabled = false;
+  const rx = Math.round(x), ry = Math.round(y);
+  drawPlayerRaw(sc, PS_AX + (x - rx), PS_AY + (y - ry), dir, moving, step, rod, rodShake, pal, rodId, hold, armsUp);
+  oc.globalCompositeOperation = 'source-over';
+  oc.clearRect(0, 0, PS_W, PS_H);
+  oc.drawImage(pScratch, -1, 0); oc.drawImage(pScratch, 1, 0); oc.drawImage(pScratch, 0, -1); oc.drawImage(pScratch, 0, 1);
+  oc.globalCompositeOperation = 'source-in';
+  oc.fillStyle = '#1b1530';
+  oc.fillRect(0, 0, PS_W, PS_H);
+  oc.globalCompositeOperation = 'source-over';
+  const dx = rx - PS_AX, dy = ry - PS_AY;
+  ctx.drawImage(pOutline as HTMLCanvasElement, dx, dy);
+  ctx.drawImage(pScratch, dx, dy);
 }
