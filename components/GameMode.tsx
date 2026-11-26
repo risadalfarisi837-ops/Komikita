@@ -71,15 +71,20 @@ async function enterGameMode(): Promise<boolean> {
   return lockLandscape();
 }
 
-// aplikasi terpasang (PWA) sudah layar penuh sendiri: jangan minta fullscreen lagi supaya tidak muncul notifikasi sistem
-function isApp() {
-  try { return window.matchMedia('(display-mode: fullscreen)').matches || window.matchMedia('(display-mode: standalone)').matches; } catch { return false; }
+// aplikasi yang memang terpasang dengan display "fullscreen" sudah tanpa bar sistem: tidak perlu minta layar penuh lagi.
+// (display "standalone" masih menampilkan bar status, jadi tetap diminta layar penuh.)
+function isImmersiveApp() {
+  try { return window.matchMedia('(display-mode: fullscreen)').matches; } catch { return false; }
 }
 
-// TIDAK lagi memanggil requestFullscreen: Chrome Android selalu memunculkan toast
-// "Tarik dari atas dan geser dari tepi ... untuk keluar dari layar penuh" dan toast itu tidak bisa dimatikan dari web.
-// Layar penuh tanpa notif = pasang sebagai aplikasi (PWA, manifest sudah display fullscreen).
+// Layar penuh sungguhan: bar status (jam, sinyal, baterai) dan bar navigasi bawah disembunyikan, lalu kunci landscape.
+// Android hanya menerima ini dari sentuhan pemain. Chrome menampilkan pesan sistem sebentar saat masuk layar penuh.
+// Hanya di layar sentuh: di komputer tidak perlu.
 async function enterFullscreenLandscape() {
+  if (!isTouchDevice()) return;
+  if (!document.fullscreenElement && !isImmersiveApp()) {
+    try { await document.documentElement.requestFullscreen({ navigationUI: 'hide' }); } catch { /* butuh sentuhan pemain */ }
+  }
   await lockLandscape();
 }
 
@@ -108,6 +113,10 @@ export default function GameMode() {
     // Kalau ditolak (mis. dibuka lewat refresh), tampilkan "Ketuk untuk mulai" supaya jelas apa yang harus dilakukan.
     if (!document.fullscreenElement) {
       enterFullscreenLandscape();
+      // Ditolak (mis. halaman dibuka lewat refresh)? Tampilkan "Ketuk untuk mulai"; ketukan berikutnya masuk layar penuh.
+      setTimeout(() => {
+        if (!document.fullscreenElement && !isImmersiveApp() && isTouchDevice() && !leaving) setNeedTap(true);
+      }, 900);
     }
     let armed = false;
     const onTap = () => {
@@ -152,7 +161,7 @@ export default function GameMode() {
       <div style={{ ...frame.style, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
         <div style={{ fontSize: 40 }}>🎣</div>
         <div style={{ fontSize: 22, fontWeight: 800 }}>Ketuk untuk mulai</div>
-        <div style={{ fontSize: 14, fontWeight: 600, opacity: 0.7 }}>Layar akan masuk mode game (landscape)</div>
+        <div style={{ fontSize: 14, fontWeight: 600, opacity: 0.7 }}>Layar penuh, mode game (landscape)</div>
       </div>
     </div>
   );
