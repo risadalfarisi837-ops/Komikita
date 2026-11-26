@@ -186,24 +186,18 @@ function Hero({ items }: { items: any[] }) {
     <div ref={ref} onScroll={(e) => { const el = e.currentTarget; const n = Math.round(el.scrollLeft / (el.scrollWidth / slides.length)); if (n !== active) setActive(n); }} className="no-scrollbar" style={{ display: 'flex', gap: 10, overflowX: 'auto', scrollSnapType: 'x mandatory', padding: '4px 14px' }}>
       {slides.map((m, i) => {
         const rating = m.score && m.score !== 'N/A' ? m.score : getRating(m.desc);
-        const desc = (m.desc || '').replace(/^Score:\s*[\d.]+\s*/i, '');
         return (
-          <div key={i} style={{ position: 'relative', flex: '0 0 94%', height: 215, borderRadius: 28, overflow: 'hidden', scrollSnapAlign: 'center', background: '#16151A' }}>
-            <img src={m.thumb} alt="" referrerPolicy="no-referrer" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(18px) brightness(.35)', transform: 'scale(1.3)' }} />
-            <img src={m.thumb} alt={m.title} referrerPolicy="no-referrer" style={{ position: 'absolute', right: 14, top: 14, bottom: -20, width: '36%', objectFit: 'cover', borderRadius: 18, transform: 'rotate(6deg)', boxShadow: '0 6px 24px rgba(0,0,0,.6)' }} />
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(20,19,24,.92) 45%, transparent 75%)' }} />
-            <div style={{ position: 'absolute', left: 18, top: 16, bottom: 16, width: '60%', display: 'flex', flexDirection: 'column' }}>
+          <Link key={i} href={`/manga?url=${encodeURIComponent(m.link)}`} style={{ position: 'relative', display: 'block', flex: '0 0 94%', height: 215, borderRadius: 28, overflow: 'hidden', scrollSnapAlign: 'center', background: '#16151A' }}>
+            <img src={m.thumb} alt={m.title} referrerPolicy="no-referrer" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 25%' }} />
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(0deg, rgba(20,19,24,.88) 0%, rgba(20,19,24,0) 55%)' }} />
+            <div style={{ position: 'absolute', left: 18, right: 18, bottom: 16 }}>
               <div style={{ fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ letterSpacing: 0.3 }}>{typeLabel(m).toUpperCase()}</span>
                 {rating && <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><span style={{ color: '#FBBF24' }}>★</span>{rating}</span>}
               </div>
-              <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.2, letterSpacing: -1, marginTop: 4, ...clamp(2) }}>{m.title}</div>
-              <div style={{ fontSize: 12.5, fontWeight: 700, lineHeight: 1.35, marginTop: 6, color: '#E8E6EF', ...clamp(2) }}>{desc}</div>
-              <Link href={`/manga?url=${encodeURIComponent(m.link)}`} style={{ marginTop: 'auto', alignSelf: 'flex-start', background: ACCENT, color: '#fff', fontWeight: 800, fontSize: 14, padding: '10px 22px', borderRadius: 99 }}>
-                Baca sekarang
-              </Link>
+              <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.2, letterSpacing: -1, marginTop: 4, ...clamp(1) }}>{m.title}</div>
             </div>
-          </div>
+          </Link>
         );
       })}
     </div>
