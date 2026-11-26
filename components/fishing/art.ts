@@ -481,20 +481,29 @@ function renderTerrain(world: World, dl: number[][], pond: boolean[][], pier: [n
       const Y = ty * TILE;
       const t = tiles[ty][tx];
       if (plaza.has(tx + ',' + ty)) {
-        // paving batu krem: 4 baris batu, tiap baris bergeser, nat gelap di antaranya
-        R(ctx, X, Y, TILE, TILE, '#b99a72');
-        const stones = ['#e6cfa8', '#dec49b', '#ecd7b3', '#d6bb92'];
-        for (let r = 0; r < 4; r++) {
-          const off = (r % 2) * 4;
-          for (let c = 0; c < 3; c++) {
-            const x0 = c * 8 + off - 8;
-            const sx = Math.max(0, x0);
-            const ex = Math.min(TILE, x0 + 7);
-            if (ex <= sx) continue;
-            const col = stones[Math.floor(rnd() * stones.length)];
-            R(ctx, X + sx, Y + r * 4, ex - sx, 3, col);
-            R(ctx, X + sx, Y + r * 4, ex - sx, 1, 'rgba(255,255,255,0.28)');
-            if (rnd() < 0.3) R(ctx, X + sx + 2, Y + r * 4 + 2, 2, 1, 'rgba(120,90,50,0.22)');
+        // paving batu bulat tak beraturan (sel acak, nat gelap tipis), nyambung antar petak
+        const CELL = 6;
+        const stones = ['#e8c98d', '#dcbc86', '#d2b07c', '#e6d09e', '#d8c294'];
+        for (let j = 0; j < TILE; j++) {
+          for (let i = 0; i < TILE; i++) {
+            const wx = X + i;
+            const wy = Y + j;
+            const gx = Math.floor(wx / CELL);
+            const gy = Math.floor(wy / CELL);
+            let d1 = 1e9, d2 = 1e9, bid = 0;
+            for (let oy2 = -1; oy2 <= 1; oy2++) {
+              for (let ox2 = -1; ox2 <= 1; ox2++) {
+                const cgx = gx + ox2;
+                const cgy = gy + oy2;
+                const fx = (cgx + 0.2 + 0.6 * hash2(cgx, cgy, seed + 31)) * CELL;
+                const fy = (cgy + 0.2 + 0.6 * hash2(cgx, cgy, seed + 57)) * CELL;
+                const dd = Math.hypot(wx + 0.5 - fx, wy + 0.5 - fy);
+                if (dd < d1) { d2 = d1; d1 = dd; bid = cgx * 73856093 ^ cgy * 19349663; } else if (dd < d2) d2 = dd;
+              }
+            }
+            const hv = hash2(bid & 1023, (bid >> 10) & 1023, seed + 3);
+            if (d2 - d1 < 1.1) R(ctx, wx, wy, 1, 1, '#a98a5e');
+            else R(ctx, wx, wy, 1, 1, stones[Math.floor(hv * stones.length) % stones.length]);
           }
         }
         const isPl = (ax: number, ay: number) => plaza.has(ax + ',' + ay);
@@ -505,9 +514,9 @@ function renderTerrain(world: World, dl: number[][], pond: boolean[][], pier: [n
         continue;
       }
       if (t === 'grass') {
-        R(ctx, X, Y, TILE, TILE, '#67b650');
-        for (let i = 0; i < 7; i++) R(ctx, X + rnd() * 15, Y + rnd() * 15, 1, 1, '#52a047');
-        for (let i = 0; i < 5; i++) R(ctx, X + rnd() * 15, Y + rnd() * 15, 1, 1, '#88d062');
+        R(ctx, X, Y, TILE, TILE, '#62a844');
+        for (let i = 0; i < 7; i++) R(ctx, X + rnd() * 15, Y + rnd() * 15, 1, 1, '#4a8d3a');
+        for (let i = 0; i < 5; i++) R(ctx, X + rnd() * 15, Y + rnd() * 15, 1, 1, '#82bf55');
         for (let i = 0; i < 2; i++) { const bx = X + 1 + rnd() * 13; const by = Y + 2 + rnd() * 12; R(ctx, bx, by, 1, 2, '#3f8a45'); R(ctx, bx + 1, by - 1, 1, 1, '#3f8a45'); }
         if (rnd() < 0.13) {
           const cols = ['#fff6a0', '#ff9ec8', '#ffffff', '#ffb36b'];
@@ -556,9 +565,9 @@ function renderTerrain(world: World, dl: number[][], pond: boolean[][], pier: [n
         if (rnd() < 0.08) { const kx = X + 2 + Math.floor(rnd() * 11); const ky = Y + 3 + Math.floor(rnd() * 10); R(ctx, kx, ky - 1, 2, 1, '#e6dfca'); R(ctx, kx, ky, 2, 1, '#b9ad92'); R(ctx, kx, ky + 1, 2, 1, '#8f846c'); }
         spillDirt(tx, ty, X, Y, rnd);
       } else if (t === 'dirt') {
-        R(ctx, X, Y, TILE, TILE, '#b48a5c');
-        for (let i = 0; i < 9; i++) R(ctx, X + rnd() * 15, Y + rnd() * 15, 1, 1, '#9b7248');
-        for (let i = 0; i < 6; i++) R(ctx, X + rnd() * 15, Y + rnd() * 15, 1, 1, '#c9a274');
+        R(ctx, X, Y, TILE, TILE, '#b9825a');
+        for (let i = 0; i < 9; i++) R(ctx, X + rnd() * 15, Y + rnd() * 15, 1, 1, '#9a6644');
+        for (let i = 0; i < 6; i++) R(ctx, X + rnd() * 15, Y + rnd() * 15, 1, 1, '#cf9a70');
         if (rnd() < 0.35) { const qx = X + 2 + Math.floor(rnd() * 11); const qy = Y + 2 + Math.floor(rnd() * 11); R(ctx, qx, qy, 2, 1, '#d8c7a6'); R(ctx, qx, qy + 1, 2, 1, '#8c6a43'); }
         const isDirt = isDirtT;
         if (rnd() < 0.2) { const kx = X + 2 + Math.floor(rnd() * 11); const ky = Y + 3 + Math.floor(rnd() * 10); R(ctx, kx, ky, 2, 1, '#c9b48e'); R(ctx, kx, ky + 1, 2, 1, '#7a5a38'); }
@@ -932,8 +941,8 @@ export function drawRodPreview(ctx: CanvasRenderingContext2D, rodId: string) {
   R(ctx, g.tx + 2, by + 2, 3, 1, '#ffffff');
 }
 
-export interface Pal { skin: string; skinD: string; hair: string; shirt: string; shirtD: string; pants: string; boot: string; hat: string; hatD: string; band: string; cap?: boolean }
-export const PAL_PLAYER: Pal = { skin: '#f6d4b8', skinD: '#dcae8c', hair: '#9a68d8', shirt: '#2f4b7e', shirtD: '#1f3459', pants: '#223559', boot: '#2a2233', hat: '#2b4375', hatD: '#1b2c52', band: '#f0c75a', cap: true };
+export interface Pal { skin: string; skinD: string; hair: string; shirt: string; shirtD: string; pants: string; boot: string; hat: string; hatD: string; band: string; cap?: boolean; nohat?: boolean; top?: string }
+export const PAL_PLAYER: Pal = { skin: '#f6d4b8', skinD: '#dcae8c', hair: '#3a2a3e', shirt: '#2f4b7e', shirtD: '#1f3459', pants: '#2b2b3d', boot: '#6b4a2a', hat: '#2b4375', hatD: '#1b2c52', band: '#f0c75a', nohat: true, top: '#f3e8d0' };
 export const PAL_BAYU: Pal = { skin: '#e2b48a', skinD: '#c4936a', hair: '#d9d6cf', shirt: '#6b9a4e', shirtD: '#527a3a', pants: '#c8a96a', boot: '#6b4a2a', hat: '#ead69a', hatD: '#c9b06a', band: '#8a5a2b' };
 
 export function drawPlayerRaw(ctx: CanvasRenderingContext2D, x: number, y: number, dir: Dir, moving: boolean, step: number, rod: boolean, rodShake = 0, pal: Pal = PAL_PLAYER, rodId = 'default', hold = false, armsUp = false) {
@@ -950,64 +959,94 @@ export function drawPlayerRaw(ctx: CanvasRenderingContext2D, x: number, y: numbe
     ctx.translate(-Math.round(x), 0);
   }
   const legA = moving ? (fr === 1 ? -1 : fr === 3 ? 1 : 0) : 0;
+  const top = pal.top || '#f3e8d0';
+  const topD = darken(top, 0.14);
+  const hairL = lighten(pal.hair, 0.28);
+  const hairD = darken(pal.hair, 0.22);
   if (dir === 'down' || dir === 'up') {
-    R(ctx, ox + 5, oy + 16 + (legA < 0 ? -1 : 0), 2, 4, pal.pants);
-    R(ctx, ox + 9, oy + 16 + (legA > 0 ? -1 : 0), 2, 4, pal.pants);
+    // kaki + sepatu cokelat
+    R(ctx, ox + 5, oy + 16 + (legA < 0 ? -1 : 0), 2, 3, pal.pants);
+    R(ctx, ox + 9, oy + 16 + (legA > 0 ? -1 : 0), 2, 3, pal.pants);
     R(ctx, ox + 4, oy + 19 + (legA < 0 ? -1 : 0), 3, 2, pal.boot);
     R(ctx, ox + 9, oy + 19 + (legA > 0 ? -1 : 0), 3, 2, pal.boot);
-    R(ctx, ox + 4, oy + 10, 8, 7, pal.shirt);
-    R(ctx, ox + 4, oy + 15, 8, 2, pal.shirtD);
-    if (dir === 'up') R(ctx, ox + 5, oy + 11, 6, 5, '#8a5a2b');
+    // badan: kemeja krem + rompi berwarna di kedua sisi
+    R(ctx, ox + 4, oy + 10, 8, 7, top);
+    R(ctx, ox + 4, oy + 15, 8, 2, topD);
+    if (dir === 'down') {
+      R(ctx, ox + 4, oy + 10, 2, 6, pal.shirt);
+      R(ctx, ox + 10, oy + 10, 2, 6, pal.shirt);
+      R(ctx, ox + 4, oy + 15, 8, 1, pal.shirtD);
+      R(ctx, ox + 7, oy + 10, 2, 2, pal.skinD);
+    } else {
+      R(ctx, ox + 4, oy + 10, 8, 6, pal.shirt);
+      R(ctx, ox + 4, oy + 15, 8, 1, pal.shirtD);
+      R(ctx, ox + 5, oy + 11, 6, 4, '#8a5a2b');
+    }
     if (armsUp) {
-      R(ctx, ox + 2, oy - 6, 2, 17, pal.shirt);
-      R(ctx, ox + 12, oy - 6, 2, 17, pal.shirt);
+      R(ctx, ox + 2, oy - 6, 2, 17, top);
+      R(ctx, ox + 12, oy - 6, 2, 17, top);
       R(ctx, ox + 2, oy - 8, 2, 2, pal.skin);
       R(ctx, ox + 12, oy - 8, 2, 2, pal.skin);
     } else {
-      R(ctx, ox + 2, oy + 11, 2, 5, pal.shirt);
-      R(ctx, ox + 12, oy + 11, 2, 5, pal.shirt);
-      R(ctx, ox + 2, oy + 16, 2, 1, pal.skin);
-      R(ctx, ox + 12, oy + 16, 2, 1, pal.skin);
+      // lengan sedikit terbuka ke samping, tangan kulit
+      R(ctx, ox + 2, oy + 11, 2, 4, top);
+      R(ctx, ox + 12, oy + 11, 2, 4, top);
+      R(ctx, ox + 1, oy + 14, 2, 2, pal.skin);
+      R(ctx, ox + 13, oy + 14, 2, 2, pal.skin);
     }
-    R(ctx, ox + 4, oy + 3, 8, 8, dir === 'up' ? pal.hair : pal.skin);
+    // kepala besar + rambut tebal
+    R(ctx, ox + 4, oy + 4, 8, 7, dir === 'up' ? pal.hair : pal.skin);
     if (dir === 'down') {
-      R(ctx, ox + 4, oy + 3, 8, 2, pal.hair);
-      R(ctx, ox + 3, oy + 4, 1, 4, pal.hair);
-      R(ctx, ox + 12, oy + 4, 1, 4, pal.hair);
-      R(ctx, ox + 6, oy + 7, 1, 2, '#1d1d2b');
-      R(ctx, ox + 9, oy + 7, 1, 2, '#1d1d2b');
-      R(ctx, ox + 5, oy + 9, 2, 1, 'rgba(240,110,120,0.55)');
-      R(ctx, ox + 9, oy + 9, 2, 1, 'rgba(240,110,120,0.55)');
+      R(ctx, ox + 4, oy + 1, 8, 1, pal.hair);
+      R(ctx, ox + 3, oy + 2, 10, 3, pal.hair);
+      R(ctx, ox + 5, oy + 5, 6, 1, pal.hair);
+      R(ctx, ox + 3, oy + 5, 2, 5, pal.hair);
+      R(ctx, ox + 11, oy + 5, 2, 5, pal.hair);
+      R(ctx, ox + 5, oy + 2, 3, 1, hairL);
+      R(ctx, ox + 5, oy + 7, 2, 2, '#1d1d2b');
+      R(ctx, ox + 9, oy + 7, 2, 2, '#1d1d2b');
+      R(ctx, ox + 5, oy + 7, 1, 1, '#ffffff');
+      R(ctx, ox + 9, oy + 7, 1, 1, '#ffffff');
+      R(ctx, ox + 5, oy + 10, 1, 1, 'rgba(240,110,120,0.55)');
+      R(ctx, ox + 10, oy + 10, 1, 1, 'rgba(240,110,120,0.55)');
       R(ctx, ox + 7, oy + 10, 2, 1, '#b5543f');
     } else {
-      R(ctx, ox + 3, oy + 4, 1, 5, pal.hair);
-      R(ctx, ox + 12, oy + 4, 1, 5, pal.hair);
+      R(ctx, ox + 3, oy + 1, 10, 10, pal.hair);
+      R(ctx, ox + 4, oy + 0, 8, 1, pal.hair);
+      R(ctx, ox + 5, oy + 2, 4, 1, hairL);
+      R(ctx, ox + 4, oy + 9, 8, 2, hairD);
     }
   } else {
     // samping (menghadap kiri; kanan = cermin)
-    R(ctx, ox + 6 + (legA < 0 ? -1 : 0), oy + 16, 2, 4, pal.pants);
-    R(ctx, ox + 8 + (legA > 0 ? 1 : 0), oy + 16, 2, 4, darken(pal.pants, 0.15));
+    R(ctx, ox + 6 + (legA < 0 ? -1 : 0), oy + 16, 2, 3, pal.pants);
+    R(ctx, ox + 8 + (legA > 0 ? 1 : 0), oy + 16, 2, 3, darken(pal.pants, 0.15));
     R(ctx, ox + 4 + (legA < 0 ? -1 : 0), oy + 19, 4, 2, pal.boot);
     R(ctx, ox + 8 + (legA > 0 ? 1 : 0), oy + 19, 4, 2, darken(pal.boot, 0.15));
-    R(ctx, ox + 5, oy + 10, 6, 7, pal.shirt);
-    R(ctx, ox + 5, oy + 15, 6, 2, pal.shirtD);
+    R(ctx, ox + 5, oy + 10, 6, 7, top);
+    R(ctx, ox + 5, oy + 15, 6, 2, topD);
+    R(ctx, ox + 5, oy + 10, 3, 6, pal.shirt);
     R(ctx, ox + 9, oy + 11, 3, 5, '#8a5a2b');
-    R(ctx, ox + 4, oy + 3, 8, 8, pal.skin);
-    R(ctx, ox + 8, oy + 3, 4, 8, pal.hair);
-    R(ctx, ox + 4, oy + 3, 5, 2, pal.hair);
-    R(ctx, ox + 5, oy + 7, 1, 2, '#1d1d2b');
+    R(ctx, ox + 4, oy + 4, 8, 7, pal.skin);
+    R(ctx, ox + 8, oy + 1, 5, 10, pal.hair);
+    R(ctx, ox + 3, oy + 2, 9, 3, pal.hair);
+    R(ctx, ox + 4, oy + 1, 7, 1, pal.hair);
+    R(ctx, ox + 5, oy + 2, 3, 1, hairL);
+    R(ctx, ox + 4, oy + 5, 2, 1, pal.hair);
+    R(ctx, ox + 5, oy + 7, 2, 2, '#1d1d2b');
+    R(ctx, ox + 5, oy + 7, 1, 1, '#ffffff');
     R(ctx, ox + 3, oy + 8, 1, 1, pal.skinD);
-    R(ctx, ox + 4, oy + 9, 2, 1, 'rgba(240,110,120,0.55)');
     R(ctx, ox + 4, oy + 10, 2, 1, '#b5543f');
     if (armsUp) {
-      R(ctx, ox + 5, oy - 6, 3, 17, lighten(pal.shirt, 0.1));
+      R(ctx, ox + 5, oy - 6, 3, 17, lighten(top, 0.05));
       R(ctx, ox + 5, oy - 8, 3, 2, pal.skin);
     } else {
-      R(ctx, ox + 5, oy + 11, 3, 5, lighten(pal.shirt, 0.1));
-      R(ctx, ox + 5, oy + 16, 2, 1, pal.skin);
+      R(ctx, ox + 5, oy + 11, 3, 4, lighten(top, 0.05));
+      R(ctx, ox + 5, oy + 15, 3, 2, pal.skin);
     }
   }
-  if (pal.cap) {
+  if (pal.nohat) {
+    // tanpa topi: rambut sudah digambar di atas
+  } else if (pal.cap) {
     // topi pelaut
     R(ctx, ox + 4, oy, 8, 4, pal.hat);
     R(ctx, ox + 3, oy + 2, 1, 2, pal.hat);
@@ -1764,7 +1803,7 @@ export function palForId(id: string): Pal {
   const hair = hairs[h % hairs.length];
   const shirt = shirts[(h >>> 4) % shirts.length];
   const skin = skins[(h >>> 9) % skins.length];
-  return { ...PAL_PLAYER, skin: skin[0], skinD: skin[1], hair, shirt, shirtD: shadeHex(shirt, -0.3), pants: shadeHex(shirt, -0.45), hat: shadeHex(shirt, -0.12), hatD: shadeHex(shirt, -0.38) };
+  return { ...PAL_PLAYER, nohat: true, top: ['#f3e8d0', '#ffffff', '#f6e3a8', '#e8f0e0'][(h >>> 14) % 4], boot: '#6b4a2a', skin: skin[0], skinD: skin[1], hair, shirt, shirtD: shadeHex(shirt, -0.3), pants: shadeHex(shirt, -0.45), hat: shadeHex(shirt, -0.12), hatD: shadeHex(shirt, -0.38) };
 }
 
 // ---------- pembungkus: gambar dari cache ----------
