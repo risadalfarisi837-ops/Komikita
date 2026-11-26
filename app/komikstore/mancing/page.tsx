@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { getFirebase } from '@/lib/firebase-client';
 import FishingGame from '@/components/fishing/FishingGame';
 import FishingLobby from '@/components/fishing/FishingLobby';
-import { GameLoading } from '@/components/GameMode';
+import FishLoading from '@/components/fishing/FishLoading';
+import { MAIN_ROOM, islandName } from '@/lib/fishingIslands';
 import {
   DEFAULT_ROD, GACHA_DUPLICATE_REFUND, GACHA_PRICE, ROD_MAX_LV, RODS_BY_ID, SPECIES_BY_ID, clampRodLv, fishPrice, rodAt, rodUpgradeCost, rollGacha, nextPity, sanitizeBag, sanitizeRodLv, sanitizeRods,
 } from '@/lib/fishing';
@@ -27,6 +28,13 @@ export default function MancingPage() {
   const [rodLv, setRodLvState] = useState<Record<string, number>>({});
   const [pity, setPity] = useState(0);
   const [starter, setStarter] = useState(false);
+  // layar muat: 0 bangunin pulau, 1 nyambung, 2 baca peta, 3 nyiapin, 4 masuk (urutan sama seperti tampilan acuan)
+  const [stage, setStage] = useState(0);
+  const [pct, setPct] = useState(0);
+  const [boot, setBoot] = useState(false);
+  const [shown, setShown] = useState(false);
+  const [entering, setEntering] = useState(false);
+  const [enterPct, setEnterPct] = useState(55);
   const fb = useRef<any>(null);
   const uid = useRef('');
   const bagRef = useRef<BagItem[]>([]);
@@ -49,10 +57,13 @@ export default function MancingPage() {
     getFirebase().then((f: any) => {
       if (stop) return;
       fb.current = f;
+      setStage((x) => Math.max(x, 1)); setPct((x) => Math.max(x, 5));
       off = f.auth.onAuthStateChanged(async (u: any) => {
         if (stop) return;
+        setStage((x) => Math.max(x, 2)); setPct((x) => Math.max(x, 10));
         if (!u) { uid.current = ''; setName(''); setPhoto(''); setIsDev(false); setReady(true); return; }
         uid.current = u.uid;
+        setStage((x) => Math.max(x, 3)); setPct((x) => Math.max(x, 13));
         setName(u.displayName || '');
         setPhoto(u.photoURL || '');
         try {
@@ -82,6 +93,26 @@ export default function MancingPage() {
     }).catch(() => setReady(true));
     return () => { stop = true; if (off) off(); };
   }, []);
+
+  // layar muat tampil minimal sebentar, bar naik pelan saat "Lagi nyiapin pulau...", lalu penuh saat siap
+  useEffect(() => { const t = setTimeout(() => setBoot(true), 650); return () => clearTimeout(t); }, []);
+  useEffect(() => {
+    if (stage !== 3 || ready) return;
+    const t = setInterval(() => setPct((x) => (x < 96 ? Math.min(96, x + 9) : x)), 70);
+    return () => clearInterval(t);
+  }, [stage, ready]);
+  useEffect(() => {
+    if (!ready || !boot) return;
+    const t = setTimeout(() => setShown(true), 450);
+    return () => clearTimeout(t);
+  }, [ready, boot]);
+  // setelah pilih pulau di lobi: layar muat "Masuk ke pulau..." menutupi game yang sedang disiapkan
+  useEffect(() => {
+    if (!entering) return;
+    const t = setInterval(() => setEnterPct((x) => Math.min(100, x + 7)), 70);
+    const done = setTimeout(() => setEntering(false), 1100);
+    return () => { clearInterval(t); clearTimeout(done); };
+  }, [entering]);
 
   const onCatch = useCallback((item: BagItem, gain: number) => {
     const nb = [...bagRef.current, item];
@@ -220,8 +251,12 @@ export default function MancingPage() {
     }
   }, []);
 
-  if (!ready) return <GameLoading text="Memuat pulau..." />;
-  if (room === null) return <FishingLobby name={name} onPlay={setRoom} />;
+  const LABELS = ['Lagi bangunin pulaunya...', 'Nyambung ke pulau...', 'Baca peta pulau...', 'Lagi nyiapin pulau...', 'Masuk ke pulau...'];
+  if (!ready || !shown) {
+    const st = !boot ? 0 : ready ? 4 : stage;
+    return <FishLoading pct={!boot ? 0 : ready ? 100 : pct} label={LABELS[st]} tips={st >= 1} />;
+  }
+  if (room === null) return <FishingLobby name={name} onPlay={(r) => { setRoom(r); setEnterPct(55); setEntering(true); }} />;
 
   return (
     <>
@@ -232,6 +267,7 @@ export default function MancingPage() {
         room={room} pity={pity} starterClaimed={starter} onClaimStarter={onClaimStarter}
         onExit={() => router.push('/komikstore')}
       />
+      {entering && <FishLoading pct={enterPct} label={LABELS[4]} tips sub={room === MAIN_ROOM ? 'Pulau Pemula' : islandName(room || MAIN_ROOM)} />}
       {err && <div className="fixed left-1/2 top-24 z-[80] -translate-x-1/2 rounded-full bg-rose-600 px-4 py-2 text-sm font-bold text-white">{err}</div>}
     </>
   );
