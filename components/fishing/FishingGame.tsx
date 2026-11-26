@@ -1092,14 +1092,16 @@ export default function FishingGame(props: Props) {
             ? <>{parts.slice(0, -1).join(' ')}<br /><span style={{ color: '#ffd96a' }}>Emas</span></>
             : sp.name;
           return (
-            <button key={b.id} onClick={onClick} style={{ position: 'relative', aspectRatio: '1 / 1', width: '100%', borderRadius: px(14), background: SLOT_BG, border: `${px(3)}px solid ${bc(sp.rarity)}`, boxSizing: 'border-box', padding: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', overflow: 'hidden', boxShadow: sp.rarity === 'legendary' ? '0 0 0 2px rgba(245,196,81,0.35)' : 'none' }}>
+            <div key={b.id} style={{ position: 'relative', width: '100%', paddingTop: '100%' }}>
+            <button onClick={onClick} style={{ position: 'absolute', inset: 0, borderRadius: px(14), background: SLOT_BG, border: `${px(3)}px solid ${bc(sp.rarity)}`, boxSizing: 'border-box', padding: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', overflow: 'hidden', boxShadow: sp.rarity === 'legendary' ? '0 0 0 2px rgba(245,196,81,0.35)' : 'none' }}>
               <span style={{ fontSize: px(9.5), fontWeight: 700, color: nc(sp.rarity), marginTop: px(2), textShadow: stroke, lineHeight: 1.02, maxWidth: '96%', textAlign: 'center', fontFamily: HUD, zIndex: 1 }}>{nameEl}</span>
               <span style={{ position: 'absolute', left: 0, right: 0, top: '50%', transform: 'translateY(-38%)', display: 'flex', justifyContent: 'center' }}><FishIcon id={sp.id} scale={0.95 * u} /></span>
               <span style={{ fontSize: px(13), fontWeight: 700, color: '#fff', marginBottom: px(1), textShadow: stroke, fontFamily: HUD, lineHeight: 1.1, zIndex: 1 }}>{wl(b.w)}</span>
             </button>
+            </div>
           );
         };
-        const emptySlot = (key: string, next: boolean) => <div key={key} style={{ aspectRatio: '1 / 1', width: '100%', borderRadius: px(14), background: SLOT_BG, border: `${px(3)}px solid ${SLOT_EDGE}`, boxSizing: 'border-box', ...(next ? { outline: `${px(2.5)}px dashed #1478e8`, outlineOffset: px(1.5) } : {}) }} />;
+        const emptySlot = (key: string, next: boolean) => <div key={key} style={{ position: 'relative', width: '100%', paddingTop: '100%' }}><div style={{ position: 'absolute', inset: 0, borderRadius: px(14), background: SLOT_BG, border: `${px(3)}px solid ${SLOT_EDGE}`, boxSizing: 'border-box', ...(next ? { outline: `${px(2.5)}px dashed #1478e8`, outlineOffset: px(1.5) } : {}) }} /></div>;
         const cells: (BagItem | null)[] = Array.from({ length: BAG_MAX }, (_, i) => shownBag[i] || null);
         const dsel = bag.find((x) => x.id === sel);
         const small = bag.filter((x) => !isShowoff(SPECIES_BY_ID[x.s], x.w));
@@ -1136,9 +1138,9 @@ export default function FishingGame(props: Props) {
               <div style={{ padding: `${px(4)}px ${px(14)}px ${px(10)}px`, flex: '0 0 auto' }}>
                 <div style={{ fontSize: px(14), fontWeight: 700, color: '#8a6a4a', paddingBottom: px(3), borderBottom: `${px(2)}px dashed #e3d3ad`, marginBottom: px(7) }}>Hotbar</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(9, 1fr)', gap: px(6) }}>
-                  <button onClick={() => { setBagOpen(false); setShopOpen(true); }} aria-label="Joran" style={{ position: 'relative', aspectRatio: '1 / 1', width: '100%', borderRadius: px(14), background: SLOT_BG, border: `${px(3.5)}px solid #ffc531`, boxShadow: '0 0 0 2px rgba(255,197,49,0.28)', boxSizing: 'border-box', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ position: 'relative', width: '100%', paddingTop: '100%' }}><button onClick={() => { setBagOpen(false); setShopOpen(true); }} aria-label="Joran" style={{ position: 'absolute', inset: 0, borderRadius: px(14), background: SLOT_BG, border: `${px(3.5)}px solid #ffc531`, boxShadow: '0 0 0 2px rgba(255,197,49,0.28)', boxSizing: 'border-box', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <PixelRod id={rod.id} size={px(46)} />
-                  </button>
+                  </button></div>
                   {hotCells.map((b, i) => b ? cell(b, () => setSel(b.id)) : emptySlot('h' + i, false))}
                 </div>
               </div>
