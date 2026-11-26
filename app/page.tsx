@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, memo, useCallback, useRef } from 'react';
+import { useEffect, useState, memo, useCallback, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useHistory } from '@/lib/store';
@@ -126,7 +126,7 @@ function Header({ onSearch }: { onSearch: () => void }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
         <Link href="/profile" style={{ flex: '0 0 auto' }}>
           {me?.photo ? (
-            <img src={me.photo} alt="" referrerPolicy="no-referrer" style={{ width: 62, height: 62, borderRadius: '50%', objectFit: 'cover', border: '2px solid #3A3942', display: 'block' }} />
+            <img decoding="async" src={me.photo} alt="" referrerPolicy="no-referrer" style={{ width: 62, height: 62, borderRadius: '50%', objectFit: 'cover', border: '2px solid #3A3942', display: 'block' }} />
           ) : (
             <div style={{ width: 62, height: 62, borderRadius: '50%', background: '#3A3942', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, fontWeight: 800 }}>{(me?.name || 'K').slice(0, 1).toUpperCase()}</div>
           )}
@@ -278,7 +278,7 @@ function Sparkles({ color }: { color: string }) {
   const dots: [number, number, number][] = [[12, 8, 10], [38, 4, 6], [66, 10, 8], [92, 22, 5], [84, 86, 6], [8, 70, 5], [52, 92, 7], [26, 46, 5], [74, 58, 6], [96, 62, 5]];
   return (
     <>
-      {dots.map(([l, t, z], i) => (
+      {dots.slice(0, 6).map(([l, t, z], i) => (
         <svg key={i} aria-hidden className="bs-twk" width={z} height={z} viewBox="0 0 24 24" style={{ position: 'absolute', left: l + '%', top: t + '%', opacity: 0.55, pointerEvents: 'none', animation: `bsTwk ${2.4 + (i % 4) * 0.45}s ease-in-out ${(i * 0.37) % 2.2}s infinite` }}><path d="M12 0l2.6 9.4L24 12l-9.4 2.6L12 24l-2.6-9.4L0 12l9.4-2.6z" fill={color} /></svg>
       ))}
     </>
@@ -292,7 +292,7 @@ function BoardAvatar({ row, size, ring, rank, crown }: { row: BoardRow; size: nu
       <div style={{ width: '100%', height: '100%', borderRadius: '50%', border: `${Math.max(2, size * 0.05)}px solid ${ring}`, overflow: 'hidden', background: '#2A2931', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: size * 0.36 }}>
         {row.photo
           // eslint-disable-next-line @next/next/no-img-element
-          ? <img src={row.photo} alt="" referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ? <img decoding="async" src={row.photo} alt="" referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           : row.name.slice(0, 2).toUpperCase()}
       </div>
       <span style={{ position: 'absolute', right: -2, bottom: -2, width: size * 0.34, height: size * 0.34, minWidth: 18, minHeight: 18, borderRadius: '50%', background: '#FBBF24', color: '#2A2208', border: '2px solid #14131A', fontSize: Math.max(10, size * 0.2), fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{rank}</span>
@@ -381,7 +381,7 @@ function BoardSlide({ theme, rowsByTab, onOpen }: { theme: BoardTheme; rowsByTab
               <div style={{ width: 22, height: 22, flex: '0 0 22px', borderRadius: '50%', overflow: 'hidden', background: '#2A2931', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800 }}>
                 {r.photo
                   // eslint-disable-next-line @next/next/no-img-element
-                  ? <img src={r.photo} alt="" referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ? <img decoding="async" src={r.photo} alt="" referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   : r.name.slice(0, 2).toUpperCase()}
               </div>
               <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</span>
@@ -437,12 +437,24 @@ function Hero({ onGlow }: { onGlow?: (id: string) => void }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [total]);
 
+  const raf = useRef(0);
   const onScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const el = e.currentTarget;
-    let best = 0, bd = Infinity;
-    Array.from(el.children).forEach((c, i) => { const d = Math.abs((c as HTMLElement).offsetLeft - el.scrollLeft); if (d < bd) { bd = d; best = i; } });
-    if (best !== idx.current) { idx.current = best; setActive(best); }
+    if (raf.current) return;
+    raf.current = requestAnimationFrame(() => {
+      raf.current = 0;
+      let best = 0, bd = Infinity;
+      Array.from(el.children).forEach((c, i) => { const d = Math.abs((c as HTMLElement).offsetLeft - el.scrollLeft); if (d < bd) { bd = d; best = i; } });
+      if (best !== idx.current) { idx.current = best; setActive(best); }
+    });
   };
+
+  // video banner hanya diputar saat slide-nya tampil (hemat CPU/baterai, scroll lebih halus)
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.querySelectorAll('video').forEach((v, i) => { if (i === active) v.play().catch(() => {}); else v.pause(); });
+  }, [active, total]);
 
   const play = (href: string) => { primeGameFullscreen(); router.push(href); };
 
@@ -512,7 +524,7 @@ function ContinueReading() {
           const ch = (h.chapterNumber || h.chapterTitle || '').toString().replace(/^ch(apter)?\.?\s*/i, '');
           return (
             <Link key={i} href={`/chapter?url=${encodeURIComponent(h.chapterLink)}&thumb=${encodeURIComponent(h.mangaThumb||'')}&mangaTitle=${encodeURIComponent(h.mangaTitle||'')}`} style={{ flex: '0 0 82%', maxWidth: 330, display: 'flex', gap: 14, background: CARD, borderRadius: 22, padding: 12 }}>
-              <img src={h.mangaThumb} alt="" referrerPolicy="no-referrer" style={{ width: 62, height: 84, borderRadius: 10, objectFit: 'cover', background: '#222' }} />
+              <img decoding="async" src={h.mangaThumb} alt="" referrerPolicy="no-referrer" style={{ width: 62, height: 84, borderRadius: 10, objectFit: 'cover', background: '#222' }} />
               <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                 <div style={{ fontSize: 15, fontWeight: 800, lineHeight: 1.2, letterSpacing: -0.7, ...clamp(2) }}>{h.mangaTitle}</div>
                 <div>
@@ -536,7 +548,7 @@ const BigCard = memo(function BigCard({ item }: { item: any }) {
   return (
     <Link href={`/manga?url=${encodeURIComponent(item.link)}`} style={{ flex: '0 0 86%', maxWidth: 360, scrollSnapAlign: 'start' }}>
       <div style={{ position: 'relative', height: 215, borderRadius: 28, overflow: 'hidden', background: CARD }}>
-        <img src={item.thumb} alt={item.title} loading="lazy" referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} />
+        <img decoding="async" src={item.thumb} alt={item.title} loading="lazy" referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} />
         <span style={{ position: 'absolute', top: 12, left: 12, background: 'rgba(20,19,24,.8)', fontSize: 13, fontWeight: 800, padding: '4px 10px', borderRadius: 8 }}>{typeLabel(item)}</span>
       </div>
       <div style={{ fontSize: 14, fontWeight: 800, letterSpacing: -0.6, margin: '10px 4px 0', ...clamp(1) }}>{item.title}</div>
@@ -566,7 +578,7 @@ function vnum(m: any): number {
   return /jt|m/.test(s) ? n * 1e6 : /rb|k/.test(s) ? n * 1e3 : n;
 }
 const isFresh = (t?: string) => /detik|menit|jam|baru/i.test(t || '');
-const uniq = (arr: any[]) => arr.filter((v, i, a) => a.findIndex(t => t.link === v.link) === i);
+const uniq = (arr: any[]) => { const seen = new Set<any>(); return arr.filter((v) => (seen.has(v.link) ? false : (seen.add(v.link), true))); };
 const mangaHref = (m: any) => `/manga?url=${encodeURIComponent(m.link)}`;
 
 const Eye = () => (
@@ -579,7 +591,7 @@ const NewBadge = ({ size = 11 }: { size?: number }) => (
   <span style={{ background: ACCENT, color: '#fff', fontSize: size, fontWeight: 800, padding: '3px 8px', borderRadius: 7 }}>BARU</span>
 );
 const Cover = ({ src, alt = '' }: { src: string; alt?: string }) => (
-  <img src={src} alt={alt} loading="lazy" referrerPolicy="no-referrer" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+  <img decoding="async" src={src} alt={alt} loading="lazy" referrerPolicy="no-referrer" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
 );
 
 // ─── Pembaruan terbaru: grid 3 kolom (badge New + rating + chapter di poster) ─
@@ -749,6 +761,12 @@ function SkeletonHome() {
 }
 
 // ─── Halaman utama ───────────────────────────────────────────────────────────
+const HeroM = memo(Hero);
+const PremiumCardM = memo(PremiumCard);
+const ContinueReadingM = memo(ContinueReading);
+const GenreSectionM = memo(GenreSection);
+const OriginSectionM = memo(OriginSection);
+
 export default function Home() {
   const router = useRouter();
   const [categories, setCategories] = useState<{ category: string; items: any[] }[]>([]);
@@ -801,11 +819,15 @@ export default function Home() {
   const goSearch = useCallback(() => router.push('/search'), [router]);
   const seeAll = useCallback((c: string) => router.push(`/search?genre=${encodeURIComponent(c)}`), [router]);
 
-  const all = uniq(categories.flatMap(c => c.items));
-  const rate = (x: any) => parseFloat(ratingOf(x) ?? '0') || 0;
-  const withCh = all.filter(m => m.chapter);
-  const latest = (withCh.length >= 6 ? withCh : all).slice(0, 9);
-  const popular = [...all].sort((a, b) => (vnum(b) - vnum(a)) || (rate(b) - rate(a))).slice(0, 12);
+  const all = useMemo(() => uniq(categories.flatMap(c => c.items)), [categories]);
+  const latest = useMemo(() => {
+    const withCh = all.filter(m => m.chapter);
+    return (withCh.length >= 6 ? withCh : all).slice(0, 9);
+  }, [all]);
+  const popular = useMemo(() => {
+    const rate = (x: any) => parseFloat(ratingOf(x) ?? '0') || 0;
+    return [...all].sort((a, b) => (vnum(b) - vnum(a)) || (rate(b) - rate(a))).slice(0, 12);
+  }, [all]);
 
   return (
     <>
@@ -824,7 +846,7 @@ export default function Home() {
       <div style={{ position: 'relative', isolation: 'isolate', background: '#1B1A20', color: '#fff', minHeight: '100vh', paddingBottom: 24 }}>
         <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 600, zIndex: -1, pointerEvents: 'none' }}>
           {Object.entries(GLOW).map(([id, c]) => (
-            <div key={id} className="bs-glow" style={{ position: 'absolute', inset: 0, opacity: glow === id ? 1 : 0, transition: 'opacity .8s ease', background: `radial-gradient(130% 62% at 50% 40%, ${c} 0%, transparent 72%)` }} />
+            <div key={id} className="bs-glow" style={{ position: 'absolute', inset: 0, willChange: 'opacity', opacity: glow === id ? 1 : 0, transition: 'opacity .8s ease', background: `radial-gradient(130% 62% at 50% 40%, ${c} 0%, transparent 72%)` }} />
           ))}
         </div>
         <Header onSearch={goSearch} />
@@ -834,9 +856,9 @@ export default function Home() {
           <div style={{ padding: 20, textAlign: 'center', color: MUTED }}>{error}</div>
         ) : (
           <>
-            <Hero onGlow={setGlow} />
-            <PremiumCard />
-            <ContinueReading />
+            <HeroM onGlow={setGlow} />
+            <PremiumCardM />
+            <ContinueReadingM />
 
             <SectionTitle title="Pembaruan terbaru" action="Lihat semua" onAction={() => seeAll('Update')} pill />
             <LatestList items={latest} />
@@ -844,9 +866,9 @@ export default function Home() {
             <SectionTitle title="Terpopuler sepanjang masa" sub="Paling banyak dibaca di Komikita" action="Lihat semua" onAction={() => seeAll('Popular')} />
             <Ranked items={popular} />
 
-            <GenreSection categories={categories} />
+            <GenreSectionM categories={categories} />
 
-            <OriginSection all={all} />
+            <OriginSectionM all={all} />
           </>
         )}
       </div>

@@ -1,5 +1,6 @@
 import type {Metadata} from 'next';
 import './globals.css';
+import { Plus_Jakarta_Sans } from 'next/font/google';
 import Link from 'next/link';
 import { Home, Compass, Search, User } from 'lucide-react';
 
@@ -8,6 +9,8 @@ import RegisterSW from '@/components/RegisterSW';
 import PageScale from '@/components/PageScale';
 import GiftWatcher from '@/components/GiftWatcher';
 import NoPageZoom from '@/components/NoPageZoom';
+
+const jakarta = Plus_Jakarta_Sans({ subsets: ['latin'], weight: ['500', '700', '800'], display: 'swap', variable: '--font-jakarta' });
 
 export const metadata: Metadata = {
   title: 'Komikita',
@@ -26,7 +29,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
-    <html lang="id">
+    <html lang="id" className={jakarta.variable}>
       <body className="font-sans bg-[#1B1A20] text-white flex flex-col min-h-screen items-center" suppressHydrationWarning>
         <div className="w-full max-w-md bg-[#1B1A20] relative shadow-sm overflow-x-hidden flex flex-col">
           
