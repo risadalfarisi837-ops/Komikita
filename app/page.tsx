@@ -165,7 +165,7 @@ function Header({ onSearch }: { onSearch: () => void }) {
 // ─── Banner geser: teks kiri, cover kanan, tombol "Baca sekarang" ────────────
 function Hero({ items }: { items: any[] }) {
   const ref = useRef<HTMLDivElement>(null);
-  const slides = items.slice(0, 5);
+  const slides = items.slice(0, 15);
   const [active, setActive] = useState(0);
 
   useEffect(() => {
@@ -202,7 +202,7 @@ function Hero({ items }: { items: any[] }) {
       })}
     </div>
     <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 12 }}>
-      {slides.map((_, i) => <span key={i} style={{ width: 9, height: 9, borderRadius: '50%', background: i === active ? '#3B9BFF' : '#4A4953' }} />)}
+      {slides.map((_, i) => <span key={i} style={{ width: i === active ? 20 : 7, height: 7, borderRadius: 99, background: i === active ? '#3B9BFF' : '#4A4953', transition: 'width .25s' }} />)}
     </div>
     </>
   );
@@ -539,8 +539,7 @@ export default function Home() {
 
   const all = uniq(categories.flatMap(c => c.items));
   const rate = (x: any) => parseFloat(ratingOf(x) ?? '0') || 0;
-  const hero = all.slice(0, 5);
-  const recommended = all.slice(5, 15);
+  const hero = all.slice(0, 15);
   const withCh = all.filter(m => m.chapter);
   const latest = (withCh.length >= 4 ? withCh : all).slice(0, 4);
   const popular = [...all].sort((a, b) => (vnum(b) - vnum(a)) || (rate(b) - rate(a))).slice(0, 12);
@@ -564,11 +563,6 @@ export default function Home() {
           <>
             <Hero items={hero} />
             <ContinueReading />
-
-            <SectionTitle title="Rekomendasi" sub="Pilihan tim Komikita" action="Lihat semua" onAction={() => seeAll('Rekomendasi')} />
-            <div className="no-scrollbar" style={{ display: 'flex', gap: 12, overflowX: 'auto', scrollSnapType: 'x mandatory', scrollPaddingLeft: 14, padding: '0 14px' }}>
-              {recommended.map((m, i) => <BigCard key={i} item={m} />)}
-            </div>
 
             <SectionTitle title="Pembaruan terbaru" action="Lihat semua" onAction={() => seeAll('Update')} />
             <LatestList items={latest} />
