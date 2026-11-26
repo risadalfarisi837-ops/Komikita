@@ -442,11 +442,14 @@ function Hero() {
 }
 
 // ─── Judul section: judul besar + link koral ─────────────────────────────────
-function SectionTitle({ title, sub, action, onAction, href }: { title: string; sub?: string; action: string; onAction?: () => void; href?: string }) {
+function SectionTitle({ title, sub, action, onAction, href, pill }: { title: string; sub?: string; action: string; onAction?: () => void; href?: string; pill?: boolean }) {
+  const col = pill ? '#B9B7C4' : ACCENT;
   const inner = (
-    <span style={{ color: ACCENT, fontWeight: 800, fontSize: 14, display: 'flex', alignItems: 'center', gap: 2 }}>
+    <span style={pill
+      ? { color: col, fontWeight: 800, fontSize: 14, display: 'flex', alignItems: 'center', gap: 4, background: CARD, border: '1px solid rgba(255,255,255,.08)', borderRadius: 99, padding: '9px 16px', whiteSpace: 'nowrap' }
+      : { color: col, fontWeight: 800, fontSize: 14, display: 'flex', alignItems: 'center', gap: 2 }}>
       {action}
-      <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={ACCENT} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="9 6 15 12 9 18" /></svg>
+      <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={col} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="9 6 15 12 9 18" /></svg>
     </span>
   );
   return (
@@ -550,35 +553,35 @@ const Cover = ({ src, alt = '' }: { src: string; alt?: string }) => (
   <img src={src} alt={alt} loading="lazy" referrerPolicy="no-referrer" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
 );
 
-// ─── Pembaruan terbaru: daftar vertikal ──────────────────────────────────────
+// ─── Pembaruan terbaru: grid 3 kolom (badge New + rating + chapter di poster) ─
 const LatestList = memo(function LatestList({ items }: { items: any[] }) {
   return (
-    <div style={{ padding: '0 14px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+    <div style={{ padding: '0 14px', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '18px 10px' }}>
       {items.map((m, i) => {
         const views = fmtViews(m.views);
         const ch = chNum(m.chapter);
+        const fresh = isFresh(m.time);
         return (
-          <Link key={i} href={mangaHref(m)} style={{ display: 'flex', gap: 14 }}>
-            <div style={{ position: 'relative', flex: '0 0 76px', height: 112, borderRadius: 14, overflow: 'hidden', background: CARD }}>
+          <Link key={i} href={mangaHref(m)} style={{ minWidth: 0 }}>
+            <div style={{ position: 'relative', paddingTop: '138%', borderRadius: 20, overflow: 'hidden', background: CARD }}>
               <Cover src={m.thumb} alt={m.title} />
-              <span style={{ position: 'absolute', top: 6, left: 6 }}><TypeBadge item={m} size={10} /></span>
-            </div>
-            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ fontSize: 17, fontWeight: 800, letterSpacing: -0.8, lineHeight: 1.15, ...clamp(2) }}>{m.title}</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 5, fontSize: 13, fontWeight: 800 }}>
-                  <span><span style={{ color: '#FBBF24' }}>★</span> {ratingId(m, true)}</span>
-                  {views && <span style={{ color: MUTED, display: 'flex', alignItems: 'center', gap: 4 }}><Eye /> {views}</span>}
-                  {isFresh(m.time) && <NewBadge />}
-                </div>
-              </div>
+              <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '38%', background: 'linear-gradient(to top, rgba(0,0,0,.72), rgba(0,0,0,0))' }} />
+              {fresh && (
+                <span style={{ position: 'absolute', top: 0, left: 0, background: '#2196F3', color: '#fff', fontSize: 14, fontWeight: 800, padding: '7px 14px', borderRadius: '20px 0 14px 0' }}>New</span>
+              )}
+              <span style={{ position: 'absolute', top: 0, right: 0, display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(20,19,24,.78)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '6px 9px', borderRadius: '0 20px 0 14px' }}>
+                <span style={{ color: '#FBBF24' }}>★</span>{ratingId(m, true)}
+              </span>
               {ch && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: CARD, borderRadius: 14, padding: '10px 14px', marginTop: 8 }}>
-                  <span style={{ fontSize: 14, fontWeight: 800 }}>{ch}</span>
-                  {m.time && <span style={{ fontSize: 11.5, fontWeight: 700, color: MUTED }}>{m.time}</span>}
-                </div>
+                <span style={{ position: 'absolute', left: 9, bottom: 8, fontSize: 17, fontWeight: 800, letterSpacing: -0.5, color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,.6)' }}>{ch}</span>
               )}
             </div>
+            {views && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 8, fontSize: 12.5, fontWeight: 700, color: MUTED }}>
+                <Eye /> <span style={ell}>{views}</span>
+              </div>
+            )}
+            <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: -0.6, lineHeight: 1.2, marginTop: views ? 4 : 8, ...clamp(2) }}>{m.title}</div>
           </Link>
         );
       })}
@@ -771,7 +774,7 @@ export default function Home() {
   const all = uniq(categories.flatMap(c => c.items));
   const rate = (x: any) => parseFloat(ratingOf(x) ?? '0') || 0;
   const withCh = all.filter(m => m.chapter);
-  const latest = (withCh.length >= 4 ? withCh : all).slice(0, 4);
+  const latest = (withCh.length >= 6 ? withCh : all).slice(0, 9);
   const popular = [...all].sort((a, b) => (vnum(b) - vnum(a)) || (rate(b) - rate(a))).slice(0, 12);
 
   return (
@@ -795,7 +798,7 @@ export default function Home() {
             <PremiumCard />
             <ContinueReading />
 
-            <SectionTitle title="Pembaruan terbaru" action="Lihat semua" onAction={() => seeAll('Update')} />
+            <SectionTitle title="Pembaruan terbaru" action="Lihat semua" onAction={() => seeAll('Update')} pill />
             <LatestList items={latest} />
 
             <SectionTitle title="Terpopuler sepanjang masa" sub="Paling banyak dibaca di Komikita" action="Lihat semua" onAction={() => seeAll('Popular')} />
