@@ -591,9 +591,8 @@ export class FishingEngine {
     if (this.charging) {
       if (this.phase !== 'idle') this.charging = false;
       else {
-        this.charge += dt * 0.9 * this.chargeDir;
-        if (this.charge >= 1) { this.charge = 1; this.chargeDir = -1; }
-        else if (this.charge <= 0) { this.charge = 0; this.chargeDir = 1; }
+        this.charge += dt * 0.85; // penuh = mulai lagi dari bawah
+        if (this.charge >= 1) this.charge = 0;
       }
     }
 
@@ -942,23 +941,33 @@ export class FishingEngine {
     const syHead = (this.py - 21) * S - oy;
     const syFeet = this.py * S - oy;
     if (this.charging && this.phase === 'idle') {
-      const bw = 84 * u;
-      const bh = 9 * u;
-      const bx = sxp - bw / 2;
-      const by = syFeet + 12 * u;
-      const segs = ['#5fd66f', '#ffd45a', '#ff6a4d'];
-      ctx.fillStyle = 'rgba(18,16,14,0.82)';
-      this.rrect(bx - 3 * u, by - 3 * u, bw + 6 * u, bh + 6 * u, 5 * u);
+      // bar tenaga lempar: tegak di samping karakter, hijau (dekat) -> merah (jauh)
+      const N = 9;
+      const cols = ['#4ade80', '#4ade80', '#4ade80', '#a3e635', '#facc15', '#fb923c', '#f97316', '#ef4444', '#ef4444'];
+      const bw = Math.max(11 * u, 4.4 * S);
+      const bh = Math.max(74 * u, 31 * S);
+      const gap = Math.max(1.4 * u, 0.5 * S);
+      const off = Math.max(14 * u, 7 * S);
+      let bx = sxp + off;
+      if (bx + bw + 8 * u > this.canvas.width - 96 * u) bx = sxp - off - bw; // dekat tombol aksi -> pindah ke kiri karakter
+      const by = syFeet - bh + 3 * u;
+      const pad = Math.max(2.4 * u, 0.9 * S);
+      ctx.fillStyle = 'rgba(18,16,14,0.88)';
+      this.rrect(bx - pad, by - pad, bw + pad * 2, bh + pad * 2, 5 * u);
       ctx.fill();
-      for (let i = 0; i < 3; i++) { ctx.fillStyle = segs[i] + '44'; ctx.fillRect(bx + (i * bw) / 3 + u, by, bw / 3 - 2 * u, bh); }
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(bx, by, bw * this.charge, bh);
-      ctx.clip();
-      for (let i = 0; i < 3; i++) { ctx.fillStyle = segs[i]; ctx.fillRect(bx + (i * bw) / 3 + u, by, bw / 3 - 2 * u, bh); }
-      ctx.restore();
+      ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+      ctx.lineWidth = Math.max(1, u * 0.8);
+      ctx.stroke();
+      const sh = (bh - gap * (N - 1)) / N;
+      for (let i = 0; i < N; i++) {
+        const y = by + bh - (i + 1) * sh - i * gap;
+        const lit = this.charge * N > i + 0.12;
+        ctx.fillStyle = lit ? cols[i] : cols[i] + '30';
+        this.rrect(bx, y, bw, sh, Math.min(3 * u, sh / 2.4));
+        ctx.fill();
+      }
       const tr = this.charge < 0.34 ? 0 : this.charge < 0.67 ? 1 : 2;
-      this.pillText(['Normal', 'Sedang', 'Jauh'][tr], sxp, by + bh + 13 * u, sz * 0.9, 'rgba(18,16,14,0.85)', segs[tr], 8 * u);
+      this.pillText(['Normal', 'Sedang', 'Jauh'][tr], bx + bw / 2, by - pad - 12 * u, sz * 0.9, 'rgba(18,16,14,0.85)', ['#4ade80', '#facc15', '#ef4444'][tr], 8 * u);
     }
     // label warung dan ikan raksasa
     for (const p of this.world.props) {

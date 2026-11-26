@@ -666,7 +666,7 @@ export default function FishingGame(props: Props) {
   const luckPct = Math.round((rod.luck + (status.inShoal ? 2 : 0)) * 100);
   const mmss = (s: number) => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
 
-  const btnLabel = phase === 'idle' ? 'Joran' : phase === 'bite' ? 'Tarik!' : phase === 'reel' ? 'Tahan' : phase === 'result' || phase === 'catching' ? '...' : 'Tunggu...';
+  const btnLabel = phase === 'idle' ? 'Lempar' : phase === 'bite' ? 'Tarik!' : phase === 'reel' ? 'Tahan' : phase === 'result' || phase === 'catching' ? '...' : 'Tunggu...';
   const btnBg = phase === 'bite' ? 'radial-gradient(circle at 35% 30%,#ff8a9a,#e11d48)' : phase === 'reel' ? 'radial-gradient(circle at 35% 30%,#7df0a4,#16a34a)' : 'radial-gradient(circle at 38% 28%,#c4b29b,#8d7a65)';
 
   const circleBtn: CSSProperties = { width: px(40), height: px(40), borderRadius: '50%', background: PANEL, border: `${px(2)}px solid ${GOLD}88`, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 };
@@ -821,7 +821,7 @@ export default function FishingGame(props: Props) {
       {/* petunjuk */}
       {(HINT[phase] || (intro && phase === 'idle')) && !fishing && !popup && !bagOpen && (
         <div style={{ position: 'absolute', left: '50%', top: `calc(env(safe-area-inset-top, 0px) + ${px(70)}px)`, transform: 'translateX(-50%)', maxWidth: '60%', pointerEvents: 'none', background: 'rgba(32,22,10,0.85)', border: '1px solid rgba(255,214,140,0.35)', borderRadius: px(14), padding: `${px(6)}px ${px(14)}px`, fontSize: px(14), fontWeight: 600, color: '#ffe9bf', textAlign: 'center' }}>
-          {HINT[phase] || 'Hadapkan ke air, tahan Joran buat atur jarak lempar'}
+          {HINT[phase] || 'Hadapkan ke air, tahan Lempar. Lepas saat bar tinggi = lemparan jauh (penuh = mulai lagi)'}
         </div>
       )}
       {toast && <div style={{ position: 'absolute', left: '50%', top: px(112), transform: 'translateX(-50%)', zIndex: 20, background: 'rgba(15,23,42,0.92)', borderRadius: 99, padding: `${px(7)}px ${px(16)}px`, fontSize: px(14), fontWeight: 600, pointerEvents: 'none' }}>{toast}</div>}
@@ -906,6 +906,24 @@ export default function FishingGame(props: Props) {
         </button>
       </div>
       <style>{`@keyframes kpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}.komikita-pulse{animation:kpulse .5s infinite}`}</style>
+
+      {/* Dev Tools (auto fishing dll): hanya role Developer */}
+      {dev && (
+        <>
+          <DevFab px={px} rot={rot} getWrap={() => wrapRef.current} auto={auto} count={dstats.catches} open={devOpen} onTap={() => setDevOpen((o) => !o)} />
+          {devOpen && (
+            <DevTools
+              px={px} rot={rot} getWrap={() => wrapRef.current} engine={engineRef.current}
+              auto={auto} onAuto={(on) => engineRef.current?.setAuto(on)}
+              sellMode={sellMode} setSellMode={setSellMode}
+              speed={speed} setSpeed={setSpeed} instant={instant} setInstant={setInstant}
+              force={force} setForce={setForce} forceSize={forceSize} setForceSize={setForceSize}
+              stats={dstats} resetStats={() => setDstats({ ...EMPTY_STATS })}
+              onClose={() => setDevOpen(false)}
+            />
+          )}
+        </>
+      )}
 
       {/* hasil tangkapan: kartu lengkap (ketuk di mana saja untuk menutup) */}
       {popup && (() => {
