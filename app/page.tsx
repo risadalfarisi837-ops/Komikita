@@ -162,10 +162,37 @@ function Header({ onSearch }: { onSearch: () => void }) {
   );
 }
 
-// ─── Banner geser: teks kiri, cover kanan, tombol "Baca sekarang" ────────────
-function Hero({ items }: { items: any[] }) {
+// ─── Banner geser: promo minigame mancing ────────────────────────────────────
+// Sekarang baru 1 banner. Mau nambah? Cukup tambah objek baru di BANNERS.
+const FISH_ART = [
+  '....oooooo......',
+  '..ooOOOOOOoo.oo.',
+  '.oOOOOOOOOOooOOo',
+  'oOOOwKOOOOOOOOOo',
+  'oOOOKKOOOOOOOOOo',
+  'oOOOOOOOOOOOOOOo',
+  '.oOOOOOOOOOooOOo',
+  '..ooOOOOOOoo.oo.',
+  '....oooooo......',
+];
+const FISH_PAL: Record<string, string> = { o: '#3a1f12', O: '#f08a3c', w: '#ffffff', K: '#161616' };
+
+function PixelFish({ size = 7 }: { size?: number }) {
+  return (
+    <svg width={16 * size} height={FISH_ART.length * size} viewBox={`0 0 16 ${FISH_ART.length}`} shapeRendering="crispEdges" style={{ display: 'block' }}>
+      {FISH_ART.flatMap((row, y) => row.split('').map((c, x) => FISH_PAL[c] ? <rect key={`${x}-${y}`} x={x} y={y} width={1.02} height={1.02} fill={FISH_PAL[c]} /> : null))}
+    </svg>
+  );
+}
+
+const BANNERS = [
+  { id: 'mancing', line1: 'Jelajahi', line2: 'pulau baru!', caption: 'Pulau Tengah Laut', href: '/komikstore/mancing' },
+];
+
+function Hero() {
+  const router = useRouter();
   const ref = useRef<HTMLDivElement>(null);
-  const slides = items.slice(0, 15);
+  const slides = BANNERS;
   const [active, setActive] = useState(0);
 
   useEffect(() => {
@@ -181,20 +208,43 @@ function Hero({ items }: { items: any[] }) {
     return () => clearInterval(t);
   }, [slides.length]);
 
+  const play = (href: string) => { primeGameFullscreen(); router.push(href); };
+  const grid = 'linear-gradient(rgba(255,255,255,.07) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.07) 1px, transparent 1px)';
+  const outline = '-2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff, 2px 2px 0 #fff, 0 3px 0 rgba(0,0,0,.25)';
+
   return (
     <>
     <div ref={ref} onScroll={(e) => { const el = e.currentTarget; const n = Math.round(el.scrollLeft / (el.scrollWidth / slides.length)); if (n !== active) setActive(n); }} className="no-scrollbar" style={{ display: 'flex', gap: 10, overflowX: 'auto', scrollSnapType: 'x mandatory', padding: '4px 14px' }}>
-      {slides.map((m, i) => {
-        return (
-          <Link key={i} href={`/manga?url=${encodeURIComponent(m.link)}`} style={{ position: 'relative', display: 'block', flex: '0 0 94%', height: 215, borderRadius: 28, overflow: 'hidden', scrollSnapAlign: 'center', background: '#16151A' }}>
-            <img src={m.thumb} alt={m.title} referrerPolicy="no-referrer" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 25%' }} />
-          </Link>
-        );
-      })}
+      {slides.map((b) => (
+        <div key={b.id} role="button" onClick={() => play(b.href)} style={{ position: 'relative', flex: '0 0 94%', height: 215, borderRadius: 28, overflow: 'hidden', scrollSnapAlign: 'center', cursor: 'pointer', background: '#1f6b80', backgroundImage: `${grid}, radial-gradient(circle at 70% 45%, #2f8aa3 0%, #1f6b80 55%, #17566a 100%)`, backgroundSize: '22px 22px, 22px 22px, 100% 100%' }}>
+          {/* logo + tombol */}
+          <div style={{ position: 'absolute', left: 18, top: 16 }}>
+            <div style={{ fontSize: 26, fontWeight: 900, letterSpacing: -1, lineHeight: 1, textShadow: outline }}>
+              <span style={{ color: '#1e5bb8' }}>Komikita </span><span style={{ color: '#ff8a6b' }}>Fish</span>
+            </div>
+            <div style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 6, background: 'linear-gradient(#5be07a,#2fb457)', border: '2px solid #fff', borderRadius: 99, padding: '3px 12px 3px 9px', fontSize: 13, fontWeight: 800, color: '#fff', boxShadow: '0 2px 0 rgba(0,0,0,.25)' }}>
+              <svg width={10} height={10} viewBox="0 0 10 10"><path d="M1 0l8 5-8 5z" fill="#fff" /></svg>
+              Main sekarang
+            </div>
+          </div>
+          {/* teks utama */}
+          <div style={{ position: 'absolute', left: 18, bottom: 22, fontSize: 24, fontWeight: 900, lineHeight: 1.1, letterSpacing: -0.8 }}>
+            <div style={{ color: '#fff', textShadow: '0 2px 0 rgba(0,0,0,.3)' }}>{b.line1}</div>
+            <div style={{ color: '#7ff0ff', textShadow: '0 2px 0 rgba(0,0,0,.3)' }}>{b.line2}</div>
+          </div>
+          {/* ikan pixel + keterangan */}
+          <div style={{ position: 'absolute', right: 20, top: 40, filter: 'drop-shadow(0 6px 0 rgba(0,0,0,.22))' }}>
+            <PixelFish size={11} />
+          </div>
+          <div style={{ position: 'absolute', right: 0, left: '42%', bottom: 14, textAlign: 'center', fontSize: 15, fontWeight: 800, color: '#cfe3ff', textShadow: '0 2px 0 rgba(0,0,0,.35)' }}>{b.caption}</div>
+        </div>
+      ))}
     </div>
-    <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 12 }}>
-      {slides.map((_, i) => <span key={i} style={{ width: i === active ? 20 : 7, height: 7, borderRadius: 99, background: i === active ? '#3B9BFF' : '#4A4953', transition: 'width .25s' }} />)}
-    </div>
+    {slides.length > 1 && (
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 12 }}>
+        {slides.map((_, i) => <span key={i} style={{ width: i === active ? 20 : 7, height: 7, borderRadius: 99, background: i === active ? '#3B9BFF' : '#4A4953', transition: 'width .25s' }} />)}
+      </div>
+    )}
     </>
   );
 }
@@ -530,7 +580,6 @@ export default function Home() {
 
   const all = uniq(categories.flatMap(c => c.items));
   const rate = (x: any) => parseFloat(ratingOf(x) ?? '0') || 0;
-  const hero = all.slice(0, 15);
   const withCh = all.filter(m => m.chapter);
   const latest = (withCh.length >= 4 ? withCh : all).slice(0, 4);
   const popular = [...all].sort((a, b) => (vnum(b) - vnum(a)) || (rate(b) - rate(a))).slice(0, 12);
@@ -552,7 +601,7 @@ export default function Home() {
           <div style={{ padding: 20, textAlign: 'center', color: MUTED }}>{error}</div>
         ) : (
           <>
-            <Hero items={hero} />
+            <Hero />
             <ContinueReading />
 
             <SectionTitle title="Pembaruan terbaru" action="Lihat semua" onAction={() => seeAll('Update')} />
