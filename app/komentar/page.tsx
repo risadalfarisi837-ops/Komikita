@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getFirebase } from '@/lib/leaderboard';
+import { addCharisma } from '@/lib/charisma';
 import { useMissions } from '@/lib/missions';
 import { findLencana } from '@/lib/lencana';
 import DevBadge from '@/components/DevBadge';
@@ -122,7 +123,11 @@ function KomentarContent() {
   const toggleLike = async (c: C) => {
     if (!me) { login(); return; }
     const ref = dbRef.current.ref(`chapterComments/${key}/${c.id}/likes/${me.uid}`);
-    try { if (c.likes?.[me.uid]) await ref.remove(); else await ref.set(true); }
+    try {
+      const liked = !!c.likes?.[me.uid];
+      if (liked) await ref.remove(); else await ref.set(true);
+      if (c.uid && c.uid !== me.uid) addCharisma(c.uid, liked ? -1 : 1);
+    }
     catch (e: any) { say('Gagal menyukai: ' + (e?.message || 'izin database ditolak')); }
   };
 

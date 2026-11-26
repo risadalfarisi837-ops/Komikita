@@ -74,15 +74,17 @@ export async function pushSeasonScore(): Promise<void> {
     if (s.points <= 0 && bonus <= 0) return;
     let name: string = user.displayName || 'User';
     let photo: string = user.photoURL || '';
+    let prem = 0;
     try {
       const prof = (await db.ref(`users/${user.uid}`).get()).val();
       const pu = Number(prof?.premiumUntil) || 0;
       setPremiumCache(prof?.role === 'Komikita Premium' && (!pu || pu > Date.now()), pu);
+      prem = pu;
       if (prof?.displayName) name = prof.displayName;
       if (prof?.photoURL) photo = prof.photoURL;
     } catch {}
     await ref.update({
-      name, photo, points: s.points + bonus, chapters: s.chapters, streak: s.streak, night: s.night, t: Date.now(),
+      name, photo, points: s.points + bonus, chapters: s.chapters, streak: s.streak, night: s.night, prem, t: Date.now(),
     });
   } catch {}
 }

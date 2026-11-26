@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useHistory } from '@/lib/store';
 import { primeGameFullscreen } from '@/components/GameMode';
+import { currentSeason } from '@/lib/season';
+import { charismaBuckets } from '@/lib/charisma';
 
 // ─── Firebase ────────────────────────────────────────────────────────────────
 declare global { interface Window { firebase: any; _fbReady: boolean; } }
@@ -162,49 +164,104 @@ function Header({ onSearch }: { onSearch: () => void }) {
   );
 }
 
-// ─── Banner geser: video promo + 3 papan peringkat (Giveaway, Charisma, Clan) ─
-// Video = banner statis. Tiga papan peringkat membaca data dari Firebase `banners/<id>`
-// dan tampil otomatis kalau datanya ada (live, berubah sendiri saat data berubah).
-// Format data (maks 5 baris, urut dari peringkat 1):
-//   banners/giveaway/{all|d30|d7}/0..4 = { name, photo, value }      value = jumlah hari premium
-//   banners/charisma/{all|d30|d7}/0..4 = { name, photo, value }      value = jumlah hati
-//   banners/clan/0..4                  = { name, photo, value, sub } value = level, sub = jumlah anggota
+// ─── Banner geser: video promo + 3 papan peringkat otomatis ───────────────────
+// Semua datanya dihitung sendiri dari aktivitas user (tidak perlu diisi manual):
+//   Top Premium  = pengguna dengan sisa hari premium terbanyak
+//   Top Charisma = pengguna yang komentarnya paling banyak dapat hati (ALL / bulan ini / minggu ini)
+//   Top Pembaca  = poin baca terbanyak musim ini
+// Papan yang belum punya data otomatis disembunyikan.
 const BANNERS = [
   { id: 'mancing', video: '/banner/mancing.mp4', poster: '/banner/mancing.jpg', href: '/komikstore/mancing' },
 ];
 
 type BoardRow = { name: string; photo?: string; value: number; sub?: string };
 type BoardTheme = {
-  id: 'giveaway' | 'charisma' | 'clan'; title: string; href: string; tabs: boolean;
+  id: 'giveaway' | 'charisma' | 'reader'; title: string; href: string; tabs: boolean; tabLabels?: [string, string, string];
   border: string; bg: string; accent: string; accentText: string; glow: string; unit: string; fmt: (n: number) => string;
 };
 const nf = (n: number) => Math.round(n).toLocaleString('id-ID');
 const BOARDS: BoardTheme[] = [
-  { id: 'giveaway', title: 'TOP GIVEAWAY', href: '/premium', tabs: true, border: '#1F6F86', bg: 'linear-gradient(160deg, #0E3446 0%, #115063 55%, #0B2C3C 100%)', accent: '#2DD4E8', accentText: '#06303A', glow: 'rgba(45,212,232,.25)', unit: 'hari premium', fmt: nf },
-  { id: 'charisma', title: 'TOP CHARISMA', href: '/ranking', tabs: true, border: '#8E2F66', bg: 'linear-gradient(160deg, #4A1636 0%, #6B1F4C 55%, #3F1230 100%)', accent: '#FF5C9A', accentText: '#3A0B22', glow: 'rgba(255,92,154,.25)', unit: '', fmt: nf },
-  { id: 'clan', title: 'TOP CLAN', href: '/ranking', tabs: false, border: '#55545C', bg: 'linear-gradient(160deg, #2E2E34 0%, #4A4A52 55%, #28282D 100%)', accent: '#F5C451', accentText: '#2A2208', glow: 'rgba(255,255,255,.14)', unit: '', fmt: (n) => 'Lv ' + nf(n) },
+  { id: 'giveaway', title: 'TOP PREMIUM', href: '/premium', tabs: false, border: '#1F6F86', bg: 'linear-gradient(160deg, #0E3446 0%, #115063 55%, #0B2C3C 100%)', accent: '#2DD4E8', accentText: '#06303A', glow: 'rgba(45,212,232,.25)', unit: 'hari premium', fmt: nf },
+  { id: 'charisma', title: 'TOP CHARISMA', href: '/ranking', tabs: true, tabLabels: ['ALL', 'BULAN', 'MINGGU'], border: '#8E2F66', bg: 'linear-gradient(160deg, #4A1636 0%, #6B1F4C 55%, #3F1230 100%)', accent: '#FF5C9A', accentText: '#3A0B22', glow: 'rgba(255,92,154,.25)', unit: 'hati diterima', fmt: nf },
+  { id: 'reader', title: 'TOP PEMBACA', href: '/ranking', tabs: false, border: '#55545C', bg: 'linear-gradient(160deg, #2E2E34 0%, #4A4A52 55%, #28282D 100%)', accent: '#F5C451', accentText: '#2A2208', glow: 'rgba(255,255,255,.14)', unit: 'poin musim ini', fmt: nf },
 ];
 
-function toRows(v: any): BoardRow[] {
-  if (!v) return [];
-  const arr: any[] = Array.isArray(v) ? v : Object.values(v);
-  return arr.filter(Boolean).slice(0, 5).map((r: any) => ({ name: String(r.name || 'User'), photo: r.photo || '', value: Number(r.value) || 0, sub: r.sub ? String(r.sub) : '' }));
+const BOARD_CACHE = 'komikita_boards_v2';
+const BOARD_TTL = 10 * 60 * 1000;
+
+async function loadBoards(): Promise<Record<string, Record<string, BoardRow[]>>> {
+  const { db } = await getFirebase();
+  const now = Date.now();
+  const out: Record<string, Record<string, BoardRow[]>> = {};
+  const season = db.ref(`leaderboard/s${currentSeason().id}`);
+
+  // Top Premium: sisa hari premium terbanyak (kolom prem = premiumUntil, diisi tiap user buka aplikasi)
+  try {
+    const snap = await season.orderByChild('prem').limitToLast(5).get();
+    const rows: BoardRow[] = [];
+    snap.forEach((c: any) => {
+      const v = c.val() || {};
+      const left = Math.ceil(((Number(v.prem) || 0) - now) / 86400000);
+      if (left > 0) rows.push({ name: v.name || 'User', photo: v.photo || '', value: left });
+    });
+    out.giveaway = { all: rows.sort((a, b) => b.value - a.value) };
+  } catch {}
+
+  // Top Pembaca: poin musim ini (hanya akun aktif 14 hari terakhir)
+  try {
+    const snap = await season.orderByChild('points').limitToLast(12).get();
+    const rows: BoardRow[] = [];
+    snap.forEach((c: any) => {
+      const v = c.val() || {};
+      if ((Number(v.t) || 0) >= now - 14 * 86400000 && Number(v.points) > 0) rows.push({ name: v.name || 'User', photo: v.photo || '', value: Number(v.points) });
+    });
+    out.reader = { all: rows.sort((a, b) => b.value - a.value).slice(0, 5) };
+  } catch {}
+
+  // Top Charisma: hati yang diterima komentar (nama/foto diambil dari profil)
+  try {
+    const b = charismaBuckets();
+    const byTab: Record<string, BoardRow[]> = {};
+    const names: Record<string, { name: string; photo: string }> = {};
+    for (const [tab, key] of [['all', b.all], ['d30', b.d30], ['d7', b.d7]] as const) {
+      const snap = await db.ref(`charisma/${key}`).orderByValue().limitToLast(5).get();
+      const list: { uid: string; value: number }[] = [];
+      snap.forEach((c: any) => { const n = Number(c.val()) || 0; if (n > 0) list.push({ uid: String(c.key), value: n }); });
+      list.sort((a, b) => b.value - a.value);
+      for (const it of list) {
+        if (!names[it.uid]) {
+          const [n, p] = await Promise.all([db.ref(`users/${it.uid}/displayName`).get(), db.ref(`users/${it.uid}/photoURL`).get()]);
+          names[it.uid] = { name: String(n.val() || 'User'), photo: String(p.val() || '') };
+        }
+      }
+      byTab[tab] = list.map((it) => ({ name: names[it.uid].name, photo: names[it.uid].photo, value: it.value }));
+    }
+    out.charisma = byTab;
+  } catch {}
+  return out;
 }
 
-// Muat data semua papan, dan dengarkan perubahannya (live).
+// Muat papan sekali (di-cache 10 menit supaya hemat kuota & cepat).
 function useBoards() {
-  const [data, setData] = useState<Record<string, any>>({});
+  const [data, setData] = useState<Record<string, Record<string, BoardRow[]>>>({});
   useEffect(() => {
-    let off: (() => void) | null = null;
     let dead = false;
-    getFirebase().then(({ db }) => {
-      if (dead) return;
-      const ref = db.ref('banners');
-      const cb = (snap: any) => { if (!dead) setData(snap.val() || {}); };
-      ref.on('value', cb, () => {});
-      off = () => ref.off('value', cb);
-    }).catch(() => {});
-    return () => { dead = true; if (off) off(); };
+    try {
+      const raw = localStorage.getItem(BOARD_CACHE);
+      if (raw) {
+        const { d, ts } = JSON.parse(raw);
+        if (d) setData(d);
+        if (Date.now() - ts < BOARD_TTL) return;
+      }
+    } catch {}
+    const t = setTimeout(() => {
+      loadBoards().then((d) => {
+        if (dead) return;
+        setData(d);
+        try { localStorage.setItem(BOARD_CACHE, JSON.stringify({ d, ts: Date.now() })); } catch {}
+      }).catch(() => {});
+    }, 800);
+    return () => { dead = true; clearTimeout(t); };
   }, []);
   return data;
 }
@@ -244,14 +301,14 @@ function BoardSlide({ theme, rowsByTab, onOpen }: { theme: BoardTheme; rowsByTab
   const rows = (theme.tabs ? rowsByTab[tab] : rowsByTab.all) || [];
   const [r1, r2, r3, r4, r5] = rows;
   const val = (r: BoardRow) => (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: theme.id === 'clan' ? '#fff' : theme.accent, fontWeight: 800 }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: theme.accent, fontWeight: 800 }}>
       {theme.id === 'charisma' && <Heart />}{theme.fmt(r.value)}
     </span>
   );
   const TabBtn = ({ k, label }: { k: 'all' | 'd30' | 'd7'; label: string }) => (
     <button onClick={(e) => { e.stopPropagation(); setTab(k); }} style={{ border: 0, borderRadius: 99, padding: '5px 11px', fontSize: 11, fontWeight: 800, background: tab === k ? theme.accent : 'transparent', color: tab === k ? theme.accentText : '#9AA6B2' }}>{label}</button>
   );
-  const TitleIcon = theme.id === 'charisma' ? <Heart size={15} color={theme.accent} /> : theme.id === 'clan'
+  const TitleIcon = theme.id === 'charisma' ? <Heart size={15} color={theme.accent} /> : theme.id === 'reader'
     ? <svg width={15} height={15} viewBox="0 0 24 24" fill={theme.accent} aria-hidden><path d="M7 3h10v3h3v3a4 4 0 01-4 4 5 5 0 01-3 2.9V18h3v3H8v-3h3v-2.1A5 5 0 018 13a4 4 0 01-4-4V6h3z" /></svg>
     : <svg width={16} height={16} viewBox="0 0 24 24" fill={theme.accent} aria-hidden><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5L3 8z" /></svg>;
 
@@ -265,7 +322,7 @@ function BoardSlide({ theme, rowsByTab, onOpen }: { theme: BoardTheme; rowsByTab
         </div>
         {theme.tabs && (
           <div style={{ display: 'flex', background: 'rgba(0,0,0,.28)', borderRadius: 99, padding: 2 }}>
-            <TabBtn k="all" label="ALL" /><TabBtn k="d30" label="30D" /><TabBtn k="d7" label="7D" />
+            <TabBtn k="all" label={(theme.tabLabels || ['ALL', '30D', '7D'])[0]} /><TabBtn k="d30" label={(theme.tabLabels || ['ALL', '30D', '7D'])[1]} /><TabBtn k="d7" label={(theme.tabLabels || ['ALL', '30D', '7D'])[2]} />
           </div>
         )}
       </div>
@@ -276,7 +333,7 @@ function BoardSlide({ theme, rowsByTab, onOpen }: { theme: BoardTheme; rowsByTab
             <BoardAvatar row={r1} size={58} ring={theme.accent} rank={1} crown />
             <div style={{ fontSize: 14, fontWeight: 800, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 4 }}>{r1.name}</div>
             <div style={{ fontSize: 20, lineHeight: 1 }}>{val(r1)}</div>
-            <div style={{ fontSize: 11, color: '#9AA6B2', fontWeight: 600 }}>{theme.id === 'clan' ? (r1.sub || '') : theme.unit}</div>
+            <div style={{ fontSize: 11, color: '#9AA6B2', fontWeight: 600 }}>{theme.unit}</div>
           </div>
         ) : <div />}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4%', minWidth: 0 }}>
@@ -319,10 +376,10 @@ function Hero() {
 
   // Papan yang punya data saja yang jadi slide.
   const boardSlides = BOARDS.map((t) => {
-    const raw = boards[t.id];
+    const raw = boards[t.id] || {};
     const rowsByTab: Record<string, BoardRow[]> = t.tabs
-      ? { all: toRows(raw?.all), d30: toRows(raw?.d30), d7: toRows(raw?.d7) }
-      : { all: toRows(raw) };
+      ? { all: raw.all || [], d30: raw.d30 || [], d7: raw.d7 || [] }
+      : { all: raw.all || [] };
     const has = Object.values(rowsByTab).some((r) => r.length > 0);
     return has ? { t, rowsByTab } : null;
   }).filter(Boolean) as { t: BoardTheme; rowsByTab: Record<string, BoardRow[]> }[];

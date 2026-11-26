@@ -1,0 +1,167 @@
+{
+  "rules": {
+    "users": {
+      ".read": "auth != null",
+      ".write": "root.child('users').child(auth.uid).child('role').val() === 'Developer'",
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid && !data.exists()",
+        ".validate": "data.exists() || ((!newData.hasChild('role') || newData.child('role').val() === 'Member') && !newData.hasChild('premiumUntil') && !newData.hasChild('premiumPlan') && !newData.hasChild('gifts') && !newData.hasChild('inbox'))",
+        "role": {
+          ".read": true,
+          ".write": "root.child('users').child(auth.uid).child('role').val() === 'Developer'"
+        },
+        "premiumUntil": {
+          ".read": true,
+          ".write": "root.child('users').child(auth.uid).child('role').val() === 'Developer'"
+        },
+        "premiumPlan": {
+          ".write": "root.child('users').child(auth.uid).child('role').val() === 'Developer'"
+        },
+        "inbox": {
+          ".write": "root.child('users').child(auth.uid).child('role').val() === 'Developer'"
+        },
+        "gifts": {
+          ".write": "root.child('users').child(auth.uid).child('role').val() === 'Developer'",
+          "$gid": {
+            "claimed": {
+              ".write": "auth != null && auth.uid === $uid"
+            },
+            "claimedAt": {
+              ".write": "auth != null && auth.uid === $uid"
+            }
+          }
+        },
+        "$other": {
+          ".write": "auth != null && auth.uid === $uid"
+        },
+        "displayName": {
+          ".read": true,
+          ".write": "auth != null && auth.uid === $uid"
+        },
+        "photoURL": {
+          ".read": true,
+          ".write": "auth != null && auth.uid === $uid"
+        },
+        "level": {
+          ".read": true,
+          ".write": "auth != null && auth.uid === $uid"
+        },
+        "joinedAt": {
+          ".read": true,
+          ".write": "auth != null && auth.uid === $uid"
+        },
+        "menitMenonton": {
+          ".read": true,
+          ".write": "auth != null && auth.uid === $uid"
+        },
+        "activeBorder": {
+          ".read": true,
+          ".write": "auth != null && auth.uid === $uid"
+        },
+        "activeWallpaper": {
+          ".read": true,
+          ".write": "auth != null && auth.uid === $uid"
+        },
+        "lencana": {
+          ".read": true,
+          ".write": "auth != null && auth.uid === $uid"
+        }
+      }
+    },
+    "leaderboard": {
+      ".read": true,
+      ".write": "root.child('users').child(auth.uid).child('role').val() === 'Developer'",
+      "$season": {
+        ".indexOn": ["points", "prem"],
+        "$uid": {
+          ".write": "auth != null && auth.uid === $uid"
+        }
+      }
+    },
+    "charisma": {
+      ".read": true,
+      "$period": {
+        ".indexOn": ".value",
+        "$uid": {
+          ".write": "auth != null && auth.uid !== $uid",
+          ".validate": "newData.isNumber() && newData.val() >= 0 && (!data.exists() ? newData.val() == 1 : (newData.val() == data.val() + 1 || newData.val() == data.val() - 1))"
+        }
+      }
+    },
+    "chapterComments": {
+      ".read": true,
+      "$key": {
+        "$id": {
+          ".write": "auth != null && ((!data.exists() && newData.child('uid').val() === auth.uid) || (data.exists() && !newData.exists() && (data.child('uid').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'Developer' || (data.child('parentId').exists() && root.child('chapterComments').child($key).child(data.child('parentId').val()).child('uid').val() === auth.uid))))",
+          "teks": {
+            ".validate": "newData.isString() && newData.val().length <= 1000"
+          },
+          "likes": {
+            "$luid": {
+              ".write": "auth != null && auth.uid === $luid"
+            }
+          }
+        }
+      }
+    },
+    "mangaComments": {
+      ".read": true,
+      "$key": {
+        "$id": {
+          ".write": "auth != null && ((!data.exists() && newData.child('uid').val() === auth.uid) || (data.exists() && !newData.exists() && (data.child('uid').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'Developer' || (data.child('parentId').exists() && root.child('mangaComments').child($key).child(data.child('parentId').val()).child('uid').val() === auth.uid))))",
+          "teks": {
+            ".validate": "newData.isString() && newData.val().length <= 1000"
+          },
+          "likes": {
+            "$luid": {
+              ".write": "auth != null && auth.uid === $luid"
+            }
+          }
+        }
+      }
+    },
+    "chapterReactions": {
+      ".read": true,
+      "$key": {
+        "$uid": {
+          ".write": "auth != null && auth.uid === $uid"
+        }
+      }
+    },
+    "premiumOrders": {
+      ".read": "root.child('users').child(auth.uid).child('role').val() === 'Developer'",
+      ".write": "root.child('users').child(auth.uid).child('role').val() === 'Developer'",
+      ".indexOn": ["status"],
+      "$oid": {
+        ".read": "auth != null && data.child('uid').val() === auth.uid",
+        ".write": "auth != null && !data.exists() && newData.child('uid').val() === auth.uid && newData.child('status').val() === 'pending'",
+        "claimed": {
+          ".write": "auth != null && data.parent().child('uid').val() === auth.uid"
+        }
+      }
+    },
+    "notifikasi": {
+      ".read": true,
+      ".write": "root.child('users').child(auth.uid).child('role').val() === 'Developer'"
+    },
+    "fishingRoom": {
+      "$room": {
+        "players": {
+          ".read": "auth != null",
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid",
+            ".validate": "newData.hasChildren(['x', 'y', 't']) && newData.child('x').isNumber() && newData.child('y').isNumber()"
+          }
+        },
+        "chat": {
+          ".read": "auth != null",
+          ".write": "root.child('users').child(auth.uid).child('role').val() === 'Developer'",
+          "$cid": {
+            ".write": "auth != null && !data.exists() && newData.child('uid').val() === auth.uid",
+            ".validate": "newData.hasChildren(['uid', 'name', 'msg', 't']) && newData.child('msg').isString() && newData.child('msg').val().length <= 80"
+          }
+        }
+      }
+    }
+  }
+}
