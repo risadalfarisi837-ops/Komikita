@@ -194,7 +194,7 @@ function Hero() {
     <div ref={ref} onScroll={(e) => { const el = e.currentTarget; const n = Math.round(el.scrollLeft / (el.scrollWidth / slides.length)); if (n !== active) setActive(n); }} className="no-scrollbar" style={{ display: 'flex', gap: 10, overflowX: 'auto', scrollSnapType: 'x mandatory', scrollPaddingInline: 20, padding: '12px 20px 4px' }}>
       {slides.map((b) => (
         <div key={b.id} role="button" onClick={() => play(b.href)} style={{ position: 'relative', flex: '0 0 100%', aspectRatio: '984 / 446', borderRadius: 20, overflow: 'hidden', scrollSnapAlign: 'center', cursor: 'pointer', background: '#16151A' }}>
-          <video src={b.video} autoPlay muted loop playsInline preload="auto" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }} />
+          <video src={b.video} poster={b.poster} autoPlay muted loop playsInline preload="metadata" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }} />
         </div>
       ))}
     </div>
