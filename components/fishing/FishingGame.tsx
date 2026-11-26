@@ -12,6 +12,8 @@ import {
 import { SPECIES as KSPECIES, sizeRatio as kSizeRatio } from '@/lib/fishing';
 import type { BagItem, Rarity, Rod, SizeTier } from '@/lib/fishing';
 import DevTools, { DevFab, EMPTY_STATS } from './DevTools';
+import { startFishingNet } from '@/lib/fishingNet';
+import { getFirebase } from '@/lib/firebase-client';
 import ShopScreen, { RodArt } from './Shop';
 import type { ShopTab } from './Shop';
 import type { DevStats, SellMode } from './DevTools';
@@ -486,6 +488,32 @@ export default function FishingGame(props: Props) {
   }, [say]);
 
   const lv = levelFromXp(xp);
+  const [online, setOnline] = useState(1);
+  const [chatText, setChatText] = useState('');
+  const netRef = useRef<{ send: (m: string) => void } | null>(null);
+  // mabar: satu ruangan untuk semua pemain
+  useEffect(() => {
+    let net: { stop: () => void; send: (m: string) => void } | null = null;
+    let off: (() => void) | null = null;
+    let dead = false;
+    getFirebase().then(({ auth, db }: any) => {
+      if (dead) return;
+      off = auth.onAuthStateChanged((u: any) => {
+        if (net) { net.stop(); net = null; netRef.current = null; }
+        if (!u || dead) { setOnline(1); return; }
+        net = startFishingNet({
+          db, uid: u.uid,
+          getSelf: () => ({ name: propsRef.current.name || u.displayName || 'Tamu', level: levelFromXp(propsRef.current.xp).level, rodId: propsRef.current.equippedRod }),
+          getPose: () => (engineRef.current ? engineRef.current.netPose() : null),
+          onPlayers: (l) => { engineRef.current?.setRemotes(l); setOnline(l.length + 1); },
+          onChat: (m) => { setChat((c) => [...c.slice(-19), { who: m.who, msg: m.msg, t: Date.now() }]); engineRef.current?.setBubble(m.mine ? 'me' : m.uid, m.msg); },
+          onOffset: (ms) => engineRef.current?.setClockOffset(ms),
+        });
+        netRef.current = net;
+      });
+    }).catch(() => {});
+    return () => { dead = true; if (off) off(); if (net) net.stop(); netRef.current = null; };
+  }, []);
 
   // sinkron level, joran (luck), tas penuh, & profil
   useEffect(() => {
@@ -701,8 +729,8 @@ export default function FishingGame(props: Props) {
           </div>
         </div>
         <div style={{ position: 'relative' }}>
-          <button onClick={() => say('Pemain online: 1 (kamu)')} aria-label="Pulau" style={{ ...ringBtn('#3fd6c8'), marginTop: px(8) }}><IslandIcon size={px(22)} /></button>
-          <span style={{ position: 'absolute', top: px(-5), left: px(-3), display: 'flex', alignItems: 'center', gap: px(3), padding: `${px(1.5)}px ${px(7)}px`, borderRadius: 99, background: 'linear-gradient(180deg,#38d58b,#1fa56a)', border: `${px(1.5)}px solid #1b1818`, fontSize: px(12), fontWeight: 700, color: '#fff', lineHeight: 1.2 }}><PeopleIcon size={px(12)} />1</span>
+          <button onClick={() => say('Pemain online: ' + online)} aria-label="Pulau" style={{ ...ringBtn('#3fd6c8'), marginTop: px(8) }}><IslandIcon size={px(22)} /></button>
+          <span style={{ position: 'absolute', top: px(-5), left: px(-3), display: 'flex', alignItems: 'center', gap: px(3), padding: `${px(1.5)}px ${px(7)}px`, borderRadius: 99, background: 'linear-gradient(180deg,#38d58b,#1fa56a)', border: `${px(1.5)}px solid #1b1818`, fontSize: px(12), fontWeight: 700, color: '#fff', lineHeight: 1.2 }}><PeopleIcon size={px(12)} />{online}</span>
         </div>
         <button onClick={() => setChatOpen((o) => !o)} aria-label="Chat" style={ringBtn('#ffd36a')}><ChatIcon size={px(18)} /></button>
         <button onClick={() => setMenu2((o) => !o)} aria-label="Menu" style={ringBtn('#ffd36a')}><Svg d="M4 7h16M4 12h16M4 17h16" size={px(18)} /></button>
@@ -745,7 +773,15 @@ export default function FishingGame(props: Props) {
         const line = (m: { who: string; msg: string }, i: number) => (
           <div key={i} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}><span style={{ color: '#f6c445' }}>{m.who}:</span> {m.msg}</div>
         );
-        if (chatOpen) return <div style={{ ...box, minWidth: px(200) }}>{chat.length ? chat.slice(-6).map(line) : <span style={{ color: 'rgba(255,255,255,0.6)' }}>Belum ada pesan</span>}</div>;
+        if (chatOpen) return (
+          <div style={{ ...box, minWidth: px(220), maxWidth: px(300), pointerEvents: 'auto' }}>
+            {chat.length ? chat.slice(-6).map(line) : <span style={{ color: 'rgba(255,255,255,0.6)' }}>Belum ada pesan</span>}
+            <form onSubmit={(e) => { e.preventDefault(); if (!netRef.current) { say('Login dulu buat chat'); return; } netRef.current.send(chatText); setChatText(''); }} style={{ display: 'flex', gap: px(4), marginTop: px(4) }}>
+              <input value={chatText} onChange={(e) => setChatText(e.target.value)} maxLength={80} placeholder="Ketik pesan..." onKeyDown={(e) => { e.stopPropagation(); e.nativeEvent.stopPropagation(); }} onKeyUp={(e) => { e.stopPropagation(); e.nativeEvent.stopPropagation(); }} style={{ flex: 1, minWidth: 0, borderRadius: px(8), border: 0, padding: `${px(3)}px ${px(8)}px`, fontSize: px(13), fontFamily: 'inherit', background: 'rgba(255,255,255,0.92)', color: '#222', outline: 'none' }} />
+              <button type="submit" style={{ border: 0, borderRadius: px(8), background: '#f6c445', color: '#3b2a00', fontWeight: 700, fontSize: px(13), padding: `0 ${px(10)}px`, cursor: 'pointer' }}>Kirim</button>
+            </form>
+          </div>
+        );
         if (last && Date.now() - last.t < 9000) return <div style={box}>{line(last, 0)}</div>;
         return null;
       })()}
