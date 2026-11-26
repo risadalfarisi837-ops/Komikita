@@ -4,6 +4,7 @@ import { useEffect, useState, memo, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useHistory } from '@/lib/store';
+import { primeGameFullscreen } from '@/components/GameMode';
 
 // ─── Firebase ────────────────────────────────────────────────────────────────
 declare global { interface Window { firebase: any; _fbReady: boolean; } }
@@ -89,9 +90,11 @@ function typeLabel(item: any): string {
 const clamp = (n: number): React.CSSProperties => ({ display: '-webkit-box', WebkitLineClamp: n, WebkitBoxOrient: 'vertical', overflow: 'hidden' });
 const ell: React.CSSProperties = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
 
-// ─── Header: logo + search + lonceng ─────────────────────────────────────────
+// ─── Header: kartu profil (level + EXP) + search + Minigame ─────────────────
 function Header({ onSearch }: { onSearch: () => void }) {
+  const router = useRouter();
   const [hasGift, setHasGift] = useState(false);
+  const [me, setMe] = useState<{ name: string; photo: string; level: number; exp: number } | null>(null);
   useEffect(() => {
     let alive = true;
     const t = setTimeout(async () => {
@@ -99,25 +102,62 @@ function Header({ onSearch }: { onSearch: () => void }) {
         const { auth, db } = await getFirebase();
         const u: any = auth.currentUser || await new Promise((res) => { const un = auth.onAuthStateChanged((x: any) => { un(); res(x); }); });
         if (!u || !alive) return;
-        const v = (await db.ref(`users/${u.uid}/gifts`).get()).val() || {};
-        if (alive) setHasGift(Object.values(v).some((g: any) => g && !g.claimed));
+        const d = (await db.ref(`users/${u.uid}`).get()).val() || {};
+        if (!alive) return;
+        const exp = Math.max(0, Math.floor(Number(d.exp) || 0));
+        setMe({ name: d.displayName || u.displayName || 'User', photo: d.photoURL || u.photoURL || '', level: Number(d.level) || Math.floor(exp / 200) + 1, exp });
+        const v = d.gifts || {};
+        setHasGift(Object.values(v).some((g: any) => g && !g.claimed));
       } catch {}
     }, 1500);
     return () => { alive = false; clearTimeout(t); };
   }, []);
+
+  const EXP_PER_LEVEL = 200;
+  const cur = me ? me.exp % EXP_PER_LEVEL : 0;
+  const pct = Math.min(100, (cur / EXP_PER_LEVEL) * 100);
+  const BOX: React.CSSProperties = { background: '#26252C', border: '1px solid #3A3942', borderRadius: 20 };
+
   return (
-    <div style={{ display: 'flex', alignItems: 'center', padding: '14px 14px 12px' }}>
-      <div style={{ width: 38, height: 38, borderRadius: 10, background: '#26252C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 800 }}>K</div>
-      <div style={{ fontSize: 25, fontWeight: 800, letterSpacing: -1.5, marginLeft: 8, flex: 1 }}>
-        Komi<span style={{ color: ACCENT }}>kita</span>
+    <div style={{ padding: '14px 14px 8px' }}>
+      <div style={{ ...BOX, padding: '14px 16px', borderRadius: 24 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <Link href="/profile" style={{ flex: '0 0 auto' }}>
+          {me?.photo ? (
+            <img src={me.photo} alt="" referrerPolicy="no-referrer" style={{ width: 62, height: 62, borderRadius: '50%', objectFit: 'cover', border: '2px solid #3A3942', display: 'block' }} />
+          ) : (
+            <div style={{ width: 62, height: 62, borderRadius: '50%', background: '#3A3942', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, fontWeight: 800 }}>{(me?.name || 'K').slice(0, 1).toUpperCase()}</div>
+          )}
+        </Link>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ ...ell, fontSize: 19, fontWeight: 800, letterSpacing: -0.5 }}>{me?.name || 'Komikita'}</div>
+          <span style={{ display: 'inline-block', marginTop: 6, fontSize: 13, fontWeight: 800, color: '#F5C451', background: 'rgba(245,196,81,.16)', border: '1px solid rgba(245,196,81,.3)', padding: '3px 10px', borderRadius: 99 }}>
+            Lvl. {me?.level ?? 1}
+          </span>
+        </div>
+        <button onClick={() => { window.location.assign('/notifikasi'); }} aria-label="Notifikasi" style={{ position: 'relative', flex: '0 0 auto', width: 52, height: 52, borderRadius: '50%', background: '#3A3942', border: 0, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 01-3.4 0" /></svg>
+          {hasGift && <span style={{ position: 'absolute', top: 12, right: 13, width: 9, height: 9, borderRadius: '50%', background: ACCENT }} />}
+        </button>
       </div>
-      <button onClick={onSearch} aria-label="Cari" style={{ background: 'none', border: 0, color: '#fff', padding: 8 }}>
-        <svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round"><circle cx={11} cy={11} r={7.5} /><line x1={21} y1={21} x2={16.5} y2={16.5} /></svg>
-      </button>
-      <button onClick={() => { window.location.assign('/notifikasi'); }} aria-label="Notifikasi" style={{ position: 'relative', background: 'none', border: 0, color: '#fff', padding: 8, marginLeft: 6 }}>
-        <svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 01-3.4 0" /></svg>
-        {hasGift && <span style={{ position: 'absolute', top: 6, right: 7, width: 9, height: 9, borderRadius: '50%', background: ACCENT }} />}
-      </button>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14 }}>
+        <span style={{ fontSize: 13, fontWeight: 800, color: MUTED }}>EXP</span>
+        <div style={{ flex: 1, height: 7, borderRadius: 99, background: '#3A3942', overflow: 'hidden' }}>
+          <div style={{ width: `${pct}%`, height: '100%', borderRadius: 99, background: 'linear-gradient(90deg,#C99A2E,#F5C451)', transition: 'width .6s' }} />
+        </div>
+        <span style={{ fontSize: 13, fontWeight: 800, color: '#D6D4DE' }}>{cur.toLocaleString('id-ID')} / {EXP_PER_LEVEL.toLocaleString('id-ID')}</span>
+      </div>
+      </div>
+      <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
+        <button onClick={onSearch} style={{ ...BOX, flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 12, padding: '0 16px', height: 54, color: MUTED, fontSize: 16, textAlign: 'left' }}>
+          <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth={2} strokeLinecap="round"><circle cx={11} cy={11} r={7.5} /><line x1={21} y1={21} x2={16.5} y2={16.5} /></svg>
+          <span style={ell}>Cari komik di sini</span>
+        </button>
+        <button onClick={() => { primeGameFullscreen(); router.push('/komikstore/mancing'); }} style={{ ...BOX, flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 10, padding: '0 18px', height: 54, color: '#fff', fontSize: 16, fontWeight: 800 }}>
+          <svg width={26} height={26} viewBox="0 0 24 24" fill="#4ADE80"><path d="M7 7h10a5 5 0 014.9 6l-.9 4.3a2.6 2.6 0 01-4.4 1.3L15 17H9l-1.6 1.6A2.6 2.6 0 013 17.3L2.1 13A5 5 0 017 7zm1 3v1.5H6.5V13H8v1.5h1.5V13H11v-1.5H9.5V10H8zm7.5.5a1 1 0 100 2 1 1 0 000-2zm2 2a1 1 0 100 2 1 1 0 000-2z" /></svg>
+          Minigame
+        </button>
+      </div>
     </div>
   );
 }
@@ -126,6 +166,7 @@ function Header({ onSearch }: { onSearch: () => void }) {
 function Hero({ items }: { items: any[] }) {
   const ref = useRef<HTMLDivElement>(null);
   const slides = items.slice(0, 5);
+  const [active, setActive] = useState(0);
 
   useEffect(() => {
     if (slides.length < 2) return;
@@ -134,13 +175,15 @@ function Hero({ items }: { items: any[] }) {
       const el = ref.current;
       if (!el) return;
       i = (i + 1) % slides.length;
+      setActive(i);
       el.scrollTo({ left: i * (el.scrollWidth / slides.length), behavior: 'smooth' });
     }, 5000);
     return () => clearInterval(t);
   }, [slides.length]);
 
   return (
-    <div ref={ref} className="no-scrollbar" style={{ display: 'flex', gap: 10, overflowX: 'auto', scrollSnapType: 'x mandatory', padding: '4px 14px' }}>
+    <>
+    <div ref={ref} onScroll={(e) => { const el = e.currentTarget; const n = Math.round(el.scrollLeft / (el.scrollWidth / slides.length)); if (n !== active) setActive(n); }} className="no-scrollbar" style={{ display: 'flex', gap: 10, overflowX: 'auto', scrollSnapType: 'x mandatory', padding: '4px 14px' }}>
       {slides.map((m, i) => {
         const rating = m.score && m.score !== 'N/A' ? m.score : getRating(m.desc);
         const desc = (m.desc || '').replace(/^Score:\s*[\d.]+\s*/i, '');
@@ -164,6 +207,10 @@ function Hero({ items }: { items: any[] }) {
         );
       })}
     </div>
+    <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 12 }}>
+      {slides.map((_, i) => <span key={i} style={{ width: 9, height: 9, borderRadius: '50%', background: i === active ? '#3B9BFF' : '#4A4953' }} />)}
+    </div>
+    </>
   );
 }
 
