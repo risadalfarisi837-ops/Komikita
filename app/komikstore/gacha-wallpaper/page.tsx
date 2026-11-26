@@ -3,7 +3,14 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRight, ArrowUp, Check, Coins, ShoppingBag } from 'lucide-react';
 import { getFirebase } from '@/lib/firebase-client';
-import { WALLPAPER_CATALOG, RARITY_STYLE, RARITY_INFO, RARITIES, RATES, COST_1, COST_10, TOKEN_DUP, TOKEN_PRICE, rollMany, wpBg, type Rarity } from '@/lib/wallpapers';
+import { WALLPAPER_CATALOG, RARITY_STYLE, RARITY_INFO, RARITIES, RATES, COST_1, COST_10, TOKEN_DUP, TOKEN_PRICE, rollMany, type Rarity } from '@/lib/wallpapers';
+
+// Background gambar diam saja (webp -> gradien). SVG lama sengaja tidak dipakai karena animasinya ikut jalan.
+const wpBg = (key: string) => {
+  const w = WALLPAPER_CATALOG[key];
+  if (!w) return '';
+  return w.url ? 'url(' + w.url + ') center/cover, ' + w.grad : w.grad;
+};
 
 const rank = (k: string) => RARITIES.indexOf(WALLPAPER_CATALOG[k].rarity);
 // Urut dari rarity terbaik, untuk panel info
