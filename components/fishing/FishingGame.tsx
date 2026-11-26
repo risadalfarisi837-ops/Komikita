@@ -15,6 +15,7 @@ import DevTools, { DevFab, EMPTY_STATS } from './DevTools';
 import { startFishingNet } from '@/lib/fishingNet';
 import { getFirebase } from '@/lib/firebase-client';
 import ShopScreen from './Shop';
+import PixelRod from './RodArt';
 import GachaSpin from './GachaSpin';
 import RodScreen from './RodScreen';
 import type { ShopTab } from './Shop';
@@ -45,6 +46,10 @@ interface Props {
 
 const HUD = '"Fredoka", "Baloo 2", system-ui, sans-serif';
 const PANEL = 'rgba(24,22,22,0.9)';
+// tema HUD krem (kartu putih-krem membulat, teks cokelat)
+const CREAM_BG = 'linear-gradient(180deg,#fffdf4,#fbf0d6)';
+const CREAM_EDGE = '#e6d0a0';
+const CREAM_INK = '#5a3b1e';
 const GOLD = '#f5c451';
 
 // ---------- ikon kecil ----------
@@ -683,14 +688,14 @@ export default function FishingGame(props: Props) {
   const mmss = (s: number) => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
 
   const btnLabel = phase === 'idle' ? 'Lempar' : phase === 'bite' ? 'Tarik!' : phase === 'reel' ? 'Tahan' : phase === 'result' || phase === 'catching' ? '...' : 'Tunggu...';
-  const btnBg = phase === 'bite' ? 'radial-gradient(circle at 35% 30%,#ff8a9a,#e11d48)' : phase === 'reel' ? 'radial-gradient(circle at 35% 30%,#7df0a4,#16a34a)' : 'radial-gradient(circle at 38% 28%,#c4b29b,#8d7a65)';
+  const btnBg = phase === 'bite' ? 'radial-gradient(circle at 35% 30%,#ff8a9a,#e11d48)' : phase === 'reel' ? 'radial-gradient(circle at 35% 30%,#7df0a4,#16a34a)' : 'radial-gradient(circle at 38% 28%,#5db4ff,#1f66d6)';
 
   const circleBtn: CSSProperties = { width: px(40), height: px(40), borderRadius: '50%', background: PANEL, border: `${px(2)}px solid ${GOLD}88`, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 };
-  const pillBox: CSSProperties = { background: PANEL, borderRadius: px(18), border: `${px(1.5)}px solid rgba(255,255,255,0.14)`, color: '#fff', fontFamily: HUD };
+  const pillBox: CSSProperties = { background: CREAM_BG, borderRadius: px(18), border: `${px(2)}px solid ${CREAM_EDGE}`, boxShadow: `0 ${px(3)}px 0 #d9c08a`, color: CREAM_INK, fontFamily: HUD };
   const slot = (selected: boolean, color: string): CSSProperties => {
     const tint = !selected && color.startsWith('#') && color.length === 7 ? color + '30' : 'transparent';
     return {
-      position: 'relative', width: px(37), height: px(39), borderRadius: px(6), boxSizing: 'border-box',
+      position: 'relative', width: px(42), height: px(44), borderRadius: px(9), boxSizing: 'border-box',
       background: selected ? 'linear-gradient(180deg,#2b3b5e,#121626)' : `linear-gradient(${tint},${tint}), linear-gradient(180deg,rgba(62,68,88,0.88),rgba(20,22,34,0.94))`,
       border: `${px(1.6)}px solid ${selected ? '#4a9bff' : color}`, boxShadow: '0 2px 0 rgba(0,0,0,0.35)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto', cursor: 'pointer', padding: 0,
@@ -700,12 +705,12 @@ export default function FishingGame(props: Props) {
   const wLabel = (): CSSProperties => ({ position: 'absolute', bottom: px(1), left: 0, right: 0, textAlign: 'center', fontFamily: '"Pixelify Sans", ui-monospace, monospace', fontSize: px(9.5), fontWeight: 700, color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.45)' });
   const wl = (w: number) => formatWeight(w).replace(' ', '');
   const ringBtn = (ring: string): CSSProperties => ({
-    width: px(33), height: px(33), borderRadius: '50%', boxSizing: 'border-box', background: PANEL, border: `${px(2)}px solid #1b1818`,
-    boxShadow: `0 0 0 ${px(2)}px ${ring}, 0 ${px(3)}px 0 ${px(2)}px ${ring}`, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0, flex: '0 0 auto', margin: px(2),
+    width: px(33), height: px(33), borderRadius: '50%', boxSizing: 'border-box', background: CREAM_BG, border: `${px(2)}px solid ${CREAM_EDGE}`,
+    boxShadow: `0 ${px(3)}px 0 ${ring}`, color: CREAM_INK, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0, flex: '0 0 auto', margin: px(2),
   });
   const dockPill = (accent: string): CSSProperties => ({
-    ...pillBox, display: 'flex', alignItems: 'center', gap: px(6), height: px(32), boxSizing: 'border-box', borderRadius: px(16), border: `${px(2)}px solid #1b1818`,
-    boxShadow: `0 ${px(3)}px 0 ${accent}, 0 0 ${px(8)}px ${accent}77`, marginBottom: px(3),
+    ...pillBox, display: 'flex', alignItems: 'center', gap: px(6), height: px(32), boxSizing: 'border-box', borderRadius: px(16), border: `${px(2)}px solid ${CREAM_EDGE}`,
+    boxShadow: `0 ${px(3)}px 0 ${accent}`, marginBottom: px(3),
   });
   const chipSt = (white: boolean, hi = false): CSSProperties => ({
     display: 'inline-flex', alignItems: 'center', gap: px(4), height: px(20), boxSizing: 'border-box', padding: `0 ${px(9)}px`, borderRadius: 99,
@@ -723,7 +728,7 @@ export default function FishingGame(props: Props) {
 
       {/* kiri atas: kartu pemain + pulau / chat / menu */}
       <div style={{ position: 'absolute', left: `calc(env(safe-area-inset-left, 0px) + ${px(6)}px)`, top: `calc(env(safe-area-inset-top, 0px) + ${px(6)}px)`, display: fishing ? 'none' : 'flex', alignItems: 'center', gap: px(7) }}>
-        <div style={{ ...pillBox, display: 'flex', alignItems: 'center', gap: px(7), width: px(189), height: px(60), boxSizing: 'border-box', padding: `${px(5)}px ${px(8)}px ${px(5)}px ${px(7)}px`, borderRadius: px(17), border: `${px(2)}px solid #ffd36a`, boxShadow: `0 ${px(2.5)}px 0 #f0b33f`, marginRight: px(2) }}>
+        <div style={{ ...pillBox, display: 'flex', alignItems: 'center', gap: px(7), width: px(205), height: px(64), boxSizing: 'border-box', padding: `${px(5)}px ${px(8)}px ${px(5)}px ${px(7)}px`, borderRadius: px(17), marginRight: px(2) }}>
           <div style={{ width: px(42), height: px(42), borderRadius: px(10), overflow: 'hidden', border: `${px(3)}px solid #5ee0e0`, boxSizing: 'border-box', background: '#35405c', flex: '0 0 auto' }}>
             {photo ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -732,15 +737,15 @@ export default function FishingGame(props: Props) {
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: px(5) }}>
-              <span style={{ background: '#23a3b5', border: `${px(1.5)}px solid #7fe3ee`, boxSizing: 'border-box', borderRadius: '50%', minWidth: px(20), height: px(20), display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: px(12), fontWeight: 700, flex: '0 0 auto' }}>{lv.level}</span>
+              <span style={{ background: '#23a3b5', border: `${px(1.5)}px solid #7fe3ee`, boxSizing: 'border-box', borderRadius: '50%', minWidth: px(20), height: px(20), display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: px(12), fontWeight: 700, color: '#fff', flex: '0 0 auto' }}>{lv.level}</span>
               <span style={{ fontSize: px(14), fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.1 }}>{name || 'Tamu'}</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: px(3), fontSize: px(11.5), fontWeight: 700, color: '#a9afbd', marginTop: px(2), lineHeight: 1.1 }}><BoatIcon size={px(12)} />{titleFor(lv.level)}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: px(3), fontSize: px(11.5), fontWeight: 700, color: '#a07f52', marginTop: px(2), lineHeight: 1.1 }}><BoatIcon size={px(12)} />{titleFor(lv.level)}</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: px(6), marginTop: px(3) }}>
-              <div style={{ flex: 1, height: px(5), borderRadius: px(3), background: '#3b3e47', overflow: 'hidden' }}>
+              <div style={{ flex: 1, height: px(5), borderRadius: px(3), background: '#eadfc4', overflow: 'hidden' }}>
                 <div style={{ width: Math.min(100, (lv.into / lv.need) * 100) + '%', height: '100%', background: 'linear-gradient(90deg,#2fbf8a,#6fdc8c)' }} />
               </div>
-              <span style={{ fontSize: px(11), fontWeight: 700, color: '#b7bcc8', whiteSpace: 'nowrap' }}>{lv.into}/{lv.need}</span>
+              <span style={{ fontSize: px(11), fontWeight: 700, color: '#9a7a4e', whiteSpace: 'nowrap' }}>{lv.into}/{lv.need}</span>
             </div>
           </div>
         </div>
@@ -785,9 +790,9 @@ export default function FishingGame(props: Props) {
       {/* chat */}
       {!fishing && (() => {
         const last = chat[chat.length - 1];
-        const box: CSSProperties = { position: 'absolute', left: `calc(env(safe-area-inset-left, 0px) + ${px(6)}px)`, top: `calc(env(safe-area-inset-top, 0px) + ${px(74)}px)`, maxWidth: px(277), boxSizing: 'border-box', background: 'rgba(18,16,16,0.58)', borderRadius: px(12), padding: `${px(3)}px ${px(10)}px`, fontSize: px(13), fontWeight: 700, textShadow: '0 1px 2px rgba(0,0,0,0.7)' };
+        const box: CSSProperties = { position: 'absolute', left: `calc(env(safe-area-inset-left, 0px) + ${px(6)}px)`, top: `calc(env(safe-area-inset-top, 0px) + ${px(74)}px)`, maxWidth: px(277), boxSizing: 'border-box', background: 'transparent', padding: 0, fontSize: px(13), fontWeight: 700, textShadow: '0 1px 2px rgba(0,0,0,0.7)' };
         const line = (m: { who: string; msg: string }, i: number) => (
-          <div key={i} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}><span style={{ color: '#f6c445' }}>{m.who}:</span> {m.msg}</div>
+          <div key={i} style={{ display: 'block', width: 'fit-content', maxWidth: '100%', boxSizing: 'border-box', background: 'rgba(24,30,22,0.46)', borderRadius: px(13), padding: `${px(3)}px ${px(10)}px`, marginBottom: px(3), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#fff' }}><span style={{ color: '#ffe9a8' }}>{m.who}</span> : {m.msg}</div>
         );
         if (chatOpen) return (
           <div style={{ ...box, minWidth: px(220), maxWidth: px(300), pointerEvents: 'auto' }}>
@@ -796,6 +801,10 @@ export default function FishingGame(props: Props) {
               <input value={chatText} onChange={(e) => setChatText(e.target.value)} maxLength={80} placeholder="Ketik pesan..." onKeyDown={(e) => { e.stopPropagation(); e.nativeEvent.stopPropagation(); }} onKeyUp={(e) => { e.stopPropagation(); e.nativeEvent.stopPropagation(); }} style={{ flex: 1, minWidth: 0, borderRadius: px(8), border: 0, padding: `${px(3)}px ${px(8)}px`, fontSize: px(13), fontFamily: 'inherit', background: 'rgba(255,255,255,0.92)', color: '#222', outline: 'none' }} />
               <button type="submit" style={{ border: 0, borderRadius: px(8), background: '#f6c445', color: '#3b2a00', fontWeight: 700, fontSize: px(13), padding: `0 ${px(10)}px`, cursor: 'pointer' }}>Kirim</button>
             </form>
+            <div style={{ display: 'flex', gap: px(6), marginTop: px(5) }}>
+              <span style={{ background: CREAM_BG, color: CREAM_INK, borderRadius: 99, padding: `${px(4)}px ${px(18)}px`, fontWeight: 800, fontSize: px(13), boxShadow: '0 2px 0 #d9c08a' }}>Pulau</span>
+              <button onClick={() => say('Chat Global segera hadir')} style={{ background: 'rgba(24,30,22,0.5)', color: '#fff', border: 0, borderRadius: 99, padding: `${px(4)}px ${px(18)}px`, fontWeight: 800, fontSize: px(13), fontFamily: HUD, cursor: 'pointer' }}>Global</button>
+            </div>
           </div>
         );
         if (last && Date.now() - last.t < 9000) return <div style={box}>{line(last, 0)}</div>;
@@ -807,19 +816,19 @@ export default function FishingGame(props: Props) {
         <div style={{ display: 'flex', alignItems: 'center', gap: px(4) }}>
           <div style={{ ...dockPill('#b08cff'), padding: `0 ${px(14)}px 0 ${px(10)}px` }}>
             <SparkIcon size={px(18)} />
-            <span style={{ fontSize: px(15), fontWeight: 700, color: '#c7b2ff' }}>{formatNum(xp)}</span>
+            <span style={{ fontSize: px(15), fontWeight: 700, color: '#7a3fd0' }}>{formatNum(xp)}</span>
           </div>
           <div style={{ ...dockPill('#3fe08a'), padding: `0 ${px(5)}px 0 ${px(11)}px`, gap: px(7) }}>
             <GemIcon size={px(18)} />
-            <span style={{ fontSize: px(15), fontWeight: 700, color: '#8ff0a6' }}>{formatNum(crystal)}</span>
+            <span style={{ fontSize: px(15), fontWeight: 700, color: '#1f8a45' }}>{formatNum(crystal)}</span>
             <button onClick={() => setShopOpen(true)} aria-label="Tambah" style={{ width: px(22), height: px(22), borderRadius: '50%', background: 'radial-gradient(circle at 35% 30%,#58e89a,#1fa85a)', border: `${px(1.5)}px solid #1b1818`, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}><Svg d="M12 5v14M5 12h14" size={px(13)} w={3.4} /></button>
           </div>
           <button onClick={() => say('Belum ada hadiah hari ini 🎁')} aria-label="Hadiah" style={{ ...ringBtn('#ffb02e'), marginBottom: px(5) }}><GiftIcon size={px(20)} /></button>
           <button onClick={() => setMenuOpen(true)} aria-label="Pengaturan" style={{ ...ringBtn('#8fdcf0'), marginBottom: px(5) }}><GearIcon size={px(19)} /></button>
         </div>
-        <div style={{ ...pillBox, boxSizing: 'border-box', minWidth: px(154), padding: `${px(5)}px ${px(11)}px`, textAlign: 'right', borderRadius: px(14), border: `${px(2)}px solid #1b1818`, boxShadow: `0 0 0 ${px(1.5)}px #5fc3f2, 0 ${px(3)}px ${px(6)}px rgba(60,170,255,0.45)`, marginTop: px(2) }}>
-          <div style={{ fontSize: px(14), fontWeight: 700, color: '#7fd2ff', lineHeight: 1.15 }}>Pulau Tengah Laut</div>
-          <div style={{ fontSize: px(12.5), fontWeight: 600, color: '#b4bac6', marginTop: px(1), whiteSpace: 'nowrap' }}>{dateStr} · <b style={{ color: '#fff' }}>{timeStr}</b> {tz}</div>
+        <div style={{ ...pillBox, boxSizing: 'border-box', minWidth: px(154), padding: `${px(5)}px ${px(11)}px`, textAlign: 'right', borderRadius: px(14), marginTop: px(2) }}>
+          <div style={{ fontSize: px(14), fontWeight: 700, color: '#2b7fc2', lineHeight: 1.15 }}>Pulau Tengah Laut</div>
+          <div style={{ fontSize: px(12.5), fontWeight: 600, color: '#9a7a4e', marginTop: px(1), whiteSpace: 'nowrap' }}>{dateStr} · <b style={{ color: CREAM_INK }}>{timeStr}</b> {tz}</div>
         </div>
         {guide && (
           <div style={{ display: 'flex', alignItems: 'center', gap: px(8), background: 'rgba(255,252,242,0.96)', color: '#1a3a22', borderRadius: px(14), padding: `${px(6)}px ${px(14)}px ${px(6)}px ${px(6)}px`, boxShadow: '0 2px 10px rgba(0,0,0,0.25)', marginTop: px(2) }}>
@@ -849,9 +858,9 @@ export default function FishingGame(props: Props) {
         onPointerMove={(e) => joyActive.current && joyMove(e)}
         onPointerUp={joyUp}
         onPointerCancel={joyUp}
-        style={{ position: 'absolute', left: `calc(env(safe-area-inset-left, 0px) + ${px(9)}px)`, bottom: `calc(env(safe-area-inset-bottom, 0px) + ${px(27)}px)`, width: px(105), height: px(105), borderRadius: '50%', background: 'rgba(196,160,110,0.5)', border: `${px(2)}px solid rgba(255,235,200,0.4)`, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'none' }}
+        style={{ position: 'absolute', left: `calc(env(safe-area-inset-left, 0px) + ${px(9)}px)`, bottom: `calc(env(safe-area-inset-bottom, 0px) + ${px(27)}px)`, width: px(105), height: px(105), borderRadius: '50%', background: 'rgba(255,255,255,0.2)', border: `${px(2.5)}px solid rgba(255,255,255,0.6)`, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'none' }}
       >
-        <div style={{ width: px(45), height: px(45), borderRadius: '50%', background: 'rgba(240,220,185,0.6)', border: `${px(2)}px solid rgba(255,240,215,0.75)`, boxSizing: 'border-box', transform: `translate(${knob.x}px, ${knob.y}px)` }} />
+        <div style={{ width: px(45), height: px(45), borderRadius: '50%', background: 'rgba(255,255,255,0.9)', border: `${px(2)}px solid #fff`, boxShadow: '0 2px 6px rgba(0,0,0,0.25)', boxSizing: 'border-box', transform: `translate(${knob.x}px, ${knob.y}px)` }} />
       </div>}
 
       {/* buff + hotbar ransel */}
@@ -871,7 +880,7 @@ export default function FishingGame(props: Props) {
               <button onClick={() => setBuffOpen((o) => !o)} aria-label="Buff" style={{ width: px(22), height: px(22), borderRadius: '50%', background: '#1f6fe0', border: `${px(2)}px solid #6aa8ff`, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}><Svg d={buffOpen ? 'M14 6l-6 6 6 6' : 'M10 6l6 6-6 6'} size={px(12)} w={3.6} /></button>
             </div>
             <div style={{ display: 'flex', gap: px(3), alignItems: 'flex-end' }}>
-              <button style={slot(true, '#4a9bff')} onClick={() => setRodOpen(true)} aria-label="Joran"><RodIcon size={px(26)} color={RARITY[rod.rarity].color} /></button>
+              <button style={slot(true, '#4a9bff')} onClick={() => setRodOpen(true)} aria-label="Joran"><PixelRod id={rod.id} size={px(36)} /></button>
               {recent.map((b) => {
                 const sp = SPECIES_BY_ID[b.s];
                 const xl = isXL(sp, b.w);
@@ -908,17 +917,22 @@ export default function FishingGame(props: Props) {
       {/* tombol aksi */}
       <div style={{ position: 'absolute', right: `calc(env(safe-area-inset-right, 0px) + ${px(14)}px)`, bottom: `calc(env(safe-area-inset-bottom, 0px) + ${px(32)}px)`, display: 'flex', alignItems: 'flex-end', gap: px(10) }}>
         {(phase === 'cast' || phase === 'wait') && (
-          <button onClick={() => engineRef.current?.cancel()} aria-label="Batal" style={{ ...pillBox, width: px(46), height: px(46), borderRadius: '50%', marginBottom: px(8), display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0, background: 'rgba(225,29,72,0.9)' }}><Svg d="M6 6l12 12M18 6L6 18" size={px(22)} /></button>
+          <button onClick={() => engineRef.current?.cancel()} aria-label="Batal" style={{ ...pillBox, width: px(46), height: px(46), borderRadius: '50%', marginBottom: px(8), display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0, color: '#fff', background: '#e5484d', border: `${px(3)}px solid #fff` }}><Svg d="M6 6l12 12M18 6L6 18" size={px(22)} /></button>
         )}
         <button
           onPointerDown={(e) => { e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId); engineRef.current?.action(true); }}
           onPointerUp={() => engineRef.current?.action(false)}
           onPointerCancel={() => engineRef.current?.action(false)}
           className={phase === 'bite' ? 'komikita-pulse' : undefined}
-          style={{ width: px(80), height: px(80), borderRadius: '50%', border: `${px(4)}px solid #fff`, boxSizing: 'border-box', background: btnBg, color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: px(1), boxShadow: '0 3px 0 rgba(80,60,40,0.55), 0 5px 14px rgba(0,0,0,0.35)', touchAction: 'none', cursor: 'pointer', padding: 0, fontFamily: HUD }}
+          style={{ width: px(92), height: px(92), borderRadius: '50%', border: `${px(4.5)}px solid #fff`, boxSizing: 'border-box', background: btnBg, color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: px(1), boxShadow: '0 4px 0 rgba(20,60,140,0.6), 0 6px 16px rgba(0,0,0,0.35)', touchAction: 'none', cursor: 'pointer', padding: 0, fontFamily: HUD }}
         >
           {phase === 'idle' ? <FishRodIcon size={px(32)} /> : <RodIcon size={px(30)} color="#fff" />}
-          <span style={{ fontSize: px(15), fontWeight: 700, textShadow: '0 2px 3px rgba(60,40,20,0.7)' }}>{btnLabel}</span>
+          <span style={{ fontSize: px(17), fontWeight: 700, textShadow: '0 2px 3px rgba(20,40,100,0.6)' }}>{btnLabel}</span>
+        </button>
+        {/* joran terpasang: ketuk untuk ganti */}
+        <button onClick={() => setRodOpen(true)} aria-label="Joran" style={{ position: 'absolute', right: px(74), top: px(-34), width: px(56), height: px(56), borderRadius: '50%', padding: 0, cursor: 'pointer', background: CREAM_BG, border: `${px(3)}px solid ${CREAM_EDGE}`, boxShadow: '0 3px 0 #d9c08a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <PixelRod id={rod.id} size={px(44)} />
+          <span style={{ position: 'absolute', left: px(-8), top: px(-12), display: 'inline-flex', alignItems: 'center', gap: px(2), background: '#1f64cc', color: '#fff', border: `${px(2)}px solid #8fc0ff`, borderRadius: 99, padding: `0 ${px(8)}px`, fontSize: px(14), fontWeight: 800, fontFamily: HUD }}>⚡{rod.power}</span>
         </button>
       </div>
       <style>{`@keyframes kpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}.komikita-pulse{animation:kpulse .5s infinite}`}</style>

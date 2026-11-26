@@ -198,7 +198,7 @@ export function generateWorld(seed = 11): World {
         const n = (Math.sin(x * 12.9898 + y * 78.233) * 43758.5453) % 1;
         const frac = n < 0 ? n + 1 : n;
         const beach = dw[y][x] <= 1 || (dw[y][x] === 2 && frac < 0.45);
-        tiles[y][x] = beach ? 'sand' : (dw[y][x] >= 3 && vnoise(x / 4.2, y / 4.2) > 0.6 ? 'grass' : 'sand');
+        tiles[y][x] = beach ? 'sand' : (dw[y][x] >= 3 && vnoise(x / 4.2, y / 4.2) > 0.22 ? 'grass' : 'sand');
       } else {
         tiles[y][x] = dl[y][x] <= 2 ? 'shallow' : 'deep';
       }
@@ -274,7 +274,22 @@ export function generateWorld(seed = 11): World {
     return null;
   };
   const sx = start.x;
-  putBlock('fountain', [[sx - 1, sy - 9], [sx - 3, sy - 9], [sx + 1, sy - 8], [sx - 5, sy - 9], [sx - 2, sy - 10], [sx - 7, sy - 9]], 4, 3);
+  const fountainAt = putBlock('fountain', [[sx - 1, sy - 9], [sx - 3, sy - 9], [sx + 1, sy - 8], [sx - 5, sy - 9], [sx - 2, sy - 10], [sx - 7, sy - 9]], 4, 3);
+  // plaza batu bundar di sekeliling air mancur (tile 'dirt' yang digambar sebagai paving)
+  const plaza = new Set<string>();
+  if (fountainAt) {
+    const pcx = fountainAt[0] + 2;
+    const pcy = fountainAt[1] + 1.5;
+    for (let yy = 2; yy < H; yy++) {
+      for (let xx = 2; xx < W; xx++) {
+        const ex = (xx + 0.5 - pcx) / 5.4;
+        const ey = (yy + 0.5 - pcy) / 4.3;
+        if (ex * ex + ey * ey >= 1 || !land[yy][xx] || dw[yy][xx] < 2) continue;
+        const tt = tiles[yy][xx];
+        if (tt === 'sand' || tt === 'grass' || tt === 'dirt') { tiles[yy][xx] = 'dirt'; plaza.add(xx + ',' + yy); }
+      }
+    }
+  }
   // toko di tengah pulau (4x3 petak), dipasang dulu supaya dapat tempat terbaik
   putBlock('shop', [[13, 10], [12, 10], [14, 10], [13, 9], [12, 9], [14, 9], [13, 11], [11, 10], [15, 10], [12, 11], [14, 11], [10, 10], [16, 10]], 4, 3, { name: 'Toko Mancing', role: 'Umpan · Joran · Jual Ikan' });
   const tbl = putBlock('table', [[sx - 8, sy - 3], [sx - 7, sy - 4], [sx - 9, sy - 3], [sx - 8, sy - 5]], 2, 1);
@@ -395,8 +410,8 @@ export function generateWorld(seed = 11): World {
       const neighOcc = occ[y][x - 1] || occ[y - 1][x] || (x + 1 < W && occ[y - 1][x + 1]) || occ[y - 1][x - 1];
       if (x === 1 || y === 1) { if (rnd() < 0.85) place('palm', x, y); continue; }
       if (t === 'grass') {
-        const pp = dw[y][x] >= 3 ? 0.07 : 0.1;
-        if (!neighOcc && rnd() < pp) place('palm', x, y);
+        const pp = dw[y][x] >= 3 ? 0.085 : 0.1;
+        if (!neighOcc && rnd() < pp) { place('palm', x, y); if (rnd() < 0.8) props[props.length - 1].role = 'fruit'; }
       } else if (dw[y][x] >= 3 && rnd() < 0.035 && !neighOcc) {
         place('palm', x, y);
       } else if (rnd() < 0.03 && !neighOcc) {
@@ -420,7 +435,7 @@ export function generateWorld(seed = 11): World {
   }
 
   const world: World = { w: W, h: H, tiles, blocked, props, start, terrain: mk(W * TILE, H * TILE) };
-  renderTerrain(world, dl, pond, pierTiles, seed);
+  renderTerrain(world, dl, pond, pierTiles, seed, plaza);
   return world;
 }
 
@@ -438,7 +453,7 @@ function vnoise(x: number, y: number, s: number): number {
   return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
 }
 
-function renderTerrain(world: World, dl: number[][], pond: boolean[][], pier: [number, number][], seed: number) {
+function renderTerrain(world: World, dl: number[][], pond: boolean[][], pier: [number, number][], seed: number, plaza: Set<string>) {
   const ctx = world.terrain.getContext('2d') as CanvasRenderingContext2D;
   ctx.imageSmoothingEnabled = false;
   const { w, h, tiles } = world;
@@ -465,10 +480,34 @@ function renderTerrain(world: World, dl: number[][], pond: boolean[][], pier: [n
       const X = tx * TILE;
       const Y = ty * TILE;
       const t = tiles[ty][tx];
+      if (plaza.has(tx + ',' + ty)) {
+        // paving batu krem: 4 baris batu, tiap baris bergeser, nat gelap di antaranya
+        R(ctx, X, Y, TILE, TILE, '#b99a72');
+        const stones = ['#e6cfa8', '#dec49b', '#ecd7b3', '#d6bb92'];
+        for (let r = 0; r < 4; r++) {
+          const off = (r % 2) * 4;
+          for (let c = 0; c < 3; c++) {
+            const x0 = c * 8 + off - 8;
+            const sx = Math.max(0, x0);
+            const ex = Math.min(TILE, x0 + 7);
+            if (ex <= sx) continue;
+            const col = stones[Math.floor(rnd() * stones.length)];
+            R(ctx, X + sx, Y + r * 4, ex - sx, 3, col);
+            R(ctx, X + sx, Y + r * 4, ex - sx, 1, 'rgba(255,255,255,0.28)');
+            if (rnd() < 0.3) R(ctx, X + sx + 2, Y + r * 4 + 2, 2, 1, 'rgba(120,90,50,0.22)');
+          }
+        }
+        const isPl = (ax: number, ay: number) => plaza.has(ax + ',' + ay);
+        if (!isPl(tx, ty - 1)) R(ctx, X, Y, TILE, 1, '#8f6f48');
+        if (!isPl(tx, ty + 1)) R(ctx, X, Y + TILE - 1, TILE, 1, '#8f6f48');
+        if (!isPl(tx - 1, ty)) R(ctx, X, Y, 1, TILE, '#8f6f48');
+        if (!isPl(tx + 1, ty)) R(ctx, X + TILE - 1, Y, 1, TILE, '#8f6f48');
+        continue;
+      }
       if (t === 'grass') {
-        R(ctx, X, Y, TILE, TILE, '#5fae5b');
-        for (let i = 0; i < 7; i++) R(ctx, X + rnd() * 15, Y + rnd() * 15, 1, 1, '#4c9a4f');
-        for (let i = 0; i < 5; i++) R(ctx, X + rnd() * 15, Y + rnd() * 15, 1, 1, '#7bc66d');
+        R(ctx, X, Y, TILE, TILE, '#67b650');
+        for (let i = 0; i < 7; i++) R(ctx, X + rnd() * 15, Y + rnd() * 15, 1, 1, '#52a047');
+        for (let i = 0; i < 5; i++) R(ctx, X + rnd() * 15, Y + rnd() * 15, 1, 1, '#88d062');
         for (let i = 0; i < 2; i++) { const bx = X + 1 + rnd() * 13; const by = Y + 2 + rnd() * 12; R(ctx, bx, by, 1, 2, '#3f8a45'); R(ctx, bx + 1, by - 1, 1, 1, '#3f8a45'); }
         if (rnd() < 0.13) {
           const cols = ['#fff6a0', '#ff9ec8', '#ffffff', '#ffb36b'];
@@ -485,8 +524,8 @@ function renderTerrain(world: World, dl: number[][], pond: boolean[][], pier: [n
           for (let i = 0; i < TILE; i++) {
             const n = vnoise((X + i) / 18, (Y + j) / 18, seed + 5);
             const hs = hash2(X + i, Y + j, seed + 9);
-            if (n > 0.6 && ((i + j) & 1) === 0 && hs < 0.6) R(ctx, X + i, Y + j, 1, 1, '#76c46c');
-            else if (n < 0.36 && ((i * 3 + j) & 3) === 0 && hs < 0.65) R(ctx, X + i, Y + j, 1, 1, '#4a9549');
+            if (n > 0.6 && ((i + j) & 1) === 0 && hs < 0.6) R(ctx, X + i, Y + j, 1, 1, '#8ad266');
+            else if (n < 0.36 && ((i * 3 + j) & 3) === 0 && hs < 0.65) R(ctx, X + i, Y + j, 1, 1, '#4f9d45');
           }
         }
         if (rnd() < 0.3) { const gx = X + 2 + Math.floor(rnd() * 11); const gy = Y + 3 + Math.floor(rnd() * 10); R(ctx, gx, gy + 1, 1, 1, '#3a7d40'); R(ctx, gx - 1, gy, 1, 1, '#3a7d40'); R(ctx, gx + 1, gy, 1, 1, '#3a7d40'); R(ctx, gx, gy - 1, 1, 1, '#8fd47f'); }
@@ -583,7 +622,41 @@ export function drawShadow(ctx: CanvasRenderingContext2D, x: number, y: number, 
   ctx.fill();
 }
 
+function fruitTreeRaw(ctx: CanvasRenderingContext2D, p: Prop) {
+  const bx = p.x * TILE + 8;
+  const by = p.y * TILE + 15;
+  const disc = (cx: number, cy: number, r: number, col: string) => {
+    for (let yy = -r; yy <= r; yy++) {
+      const w = Math.floor(Math.sqrt(r * r - yy * yy + 0.5));
+      R(ctx, cx - w, cy + yy, w * 2 + 1, 1, col);
+    }
+  };
+  drawShadow(ctx, bx + 1, by, 9, 3);
+  // batang
+  R(ctx, bx - 2, by - 12, 5, 12, '#7a4a21');
+  R(ctx, bx - 2, by - 12, 2, 12, '#98602d');
+  R(ctx, bx + 2, by - 12, 1, 12, '#5d3a18');
+  R(ctx, bx - 3, by - 2, 7, 2, '#7a4a21');
+  // tajuk: beberapa lingkaran daun bertumpuk
+  const top = by - 21;
+  const blobs: [number, number, number][] = [[-8, 2, 7], [8, 2, 7], [0, -4, 9], [-5, -8, 6], [6, -8, 6], [0, 5, 7]];
+  for (const [dx, dy, r] of blobs) disc(bx + dx, top + dy, r, '#2c7a3a');
+  for (const [dx, dy, r] of blobs) disc(bx + dx, top + dy - 1, r - 1, '#3f9f4a');
+  for (const [dx, dy, r] of blobs) disc(bx + dx - 1, top + dy - 3, Math.max(2, r - 3), '#62c45a');
+  // bintik daun gelap
+  for (let i = 0; i < 9; i++) R(ctx, bx - 11 + ((i * 7 + Math.floor(p.v * 20)) % 23), top - 8 + ((i * 5) % 17), 2, 1, '#2c7a3a');
+  // buah (merah / oranye) tersebar tetap menurut p.v
+  const cols = p.v > 0.5 ? ['#e8483c', '#f59a2a'] : ['#f59a2a', '#e8483c'];
+  for (let i = 0; i < 7; i++) {
+    const fx = bx - 11 + ((i * 9 + Math.floor(p.v * 30)) % 23);
+    const fy = top - 8 + ((i * 6 + Math.floor(p.v * 13)) % 17);
+    R(ctx, fx, fy, 2, 2, cols[i % 2]);
+    R(ctx, fx, fy, 1, 1, '#ffd0c0');
+  }
+}
+
 export function drawPalm(ctx: CanvasRenderingContext2D, p: Prop, t: number) {
+  if (p.role === 'fruit') { drawBaked(ctx, p, 'fruit' + Math.floor(p.v * 4), [48, 64, 16, 48], fruitTreeRaw); return; }
   const bx = p.x * TILE + 8;
   const by = p.y * TILE + 15;
   drawShadow(ctx, bx + 1, by, 8, 2.6);
