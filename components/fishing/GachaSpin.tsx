@@ -2,7 +2,7 @@
 
 // Animasi tarik Gacha joran: putaran slot -> ledakan cahaya -> kartu hasil. Ketuk layar untuk melewati putaran.
 import { useEffect, useRef, useState } from 'react';
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { GACHA_DUPLICATE_REFUND, RARITY, RODS, formatNum, rodEase } from '@/lib/fishing';
 import type { Rod } from '@/lib/fishing';
 import RodArt from './RodArt';
@@ -67,7 +67,7 @@ export default function GachaSpin({ rod, duplicate, px, font, onClose }: {
     display: 'flex', alignItems: 'center', justifyContent: 'center', animation: shake ? 'gsShake .18s linear infinite' : 'gsBreath 2.2s ease-in-out infinite',
   });
 
-  const stat = (t: string): JSX.Element => (
+  const stat = (t: string): ReactNode => (
     <span style={{ background: 'rgba(255,255,255,0.09)', borderRadius: 99, padding: `${px(3)}px ${px(9)}px`, fontSize: px(12), fontWeight: 700 }}>{t}</span>
   );
 
