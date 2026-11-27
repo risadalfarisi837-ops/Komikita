@@ -43,7 +43,7 @@ interface Props {
   onSell: (ids: string[]) => Promise<number>;
   onBuyRod: (id: string) => Promise<'ok' | 'kurang' | 'gagal'>;
   onEquipRod: (id: string) => void;
-  onGacha: () => Promise<{ rod: Rod; duplicate: boolean } | 'kurang' | 'gagal'>;
+  onGacha: (dev?: { min?: Rarity | ''; free?: boolean }) => Promise<{ rod: Rod; duplicate: boolean } | 'kurang' | 'gagal'>;
   pity?: number;
   starterClaimed?: boolean;
   gems?: number;
@@ -401,6 +401,8 @@ export default function FishingGame(props: Props) {
   const [instant, setInstant] = useState(false);
   const [force, setForce] = useState<Rarity | ''>('');
   const [forceSize, setForceSize] = useState<SizeTier | ''>('');
+  const [gachaMin, setGachaMin] = useState<Rarity | ''>(''); // Dev: gacha wangi
+  const [gachaFree, setGachaFree] = useState(false);          // Dev: gacha gratis
   const [dstats, setDstats] = useState<DevStats>(EMPTY_STATS);
   const sellBusy = useRef(false);
   // HP masih portrait (kunci landscape tidak diizinkan browser) → game diputar 90° sendiri,
@@ -693,7 +695,7 @@ export default function FishingGame(props: Props) {
     setPulling(true);
     const got: { rod: Rod; duplicate: boolean }[] = [];
     for (let i = 0; i < n; i++) {
-      const res = await props.onGacha();
+      const res = await props.onGacha(props.dev ? { min: gachaMin, free: gachaFree } : undefined);
       if (res === 'kurang') { say(got.length ? `Crystal habis, baru ${got.length}× terbuka` : 'Crystal kurang buat Gacha'); break; }
       if (res === 'gagal') { say('Gacha gagal, coba lagi'); break; }
       got.push(res);
@@ -1040,6 +1042,7 @@ export default function FishingGame(props: Props) {
               sellMode={sellMode} setSellMode={setSellMode}
               speed={speed} setSpeed={setSpeed} instant={instant} setInstant={setInstant}
               force={force} setForce={setForce} forceSize={forceSize} setForceSize={setForceSize}
+              gachaMin={gachaMin} setGachaMin={setGachaMin} gachaFree={gachaFree} setGachaFree={setGachaFree}
               stats={dstats} resetStats={() => setDstats({ ...EMPTY_STATS })}
               xp={xp} onSetXp={(v) => { props.onSetXp?.(v); say('XP diset ke ' + formatNum(v)); }}
               onClose={() => setDevOpen(false)}

@@ -121,6 +121,10 @@ interface Props {
   setForce: (r: Rarity | '') => void;
   forceSize: SizeTier | '';
   setForceSize: (t: SizeTier | '') => void;
+  gachaMin: Rarity | '';
+  setGachaMin: (r: Rarity | '') => void;
+  gachaFree: boolean;
+  setGachaFree: (b: boolean) => void;
   stats: DevStats;
   resetStats: () => void;
   xp: number;
@@ -128,7 +132,7 @@ interface Props {
   onClose: () => void;
 }
 
-type Tab = 'auto' | 'uji' | 'level' | 'stat';
+type Tab = 'auto' | 'uji' | 'gacha' | 'level' | 'stat';
 
 export default function DevTools(p: Props) {
   const { px } = p;
@@ -202,7 +206,7 @@ export default function DevTools(p: Props) {
 
       {!min && (
         <div style={{ overflowY: 'auto', padding: `${px(8)}px ${px(10)}px ${px(12)}px`, WebkitOverflowScrolling: 'touch' }}>
-          {seg<Tab>([{ v: 'auto', label: '🎣 Auto' }, { v: 'uji', label: '🧪 Uji' }, { v: 'level', label: '⭐ Level' }, { v: 'stat', label: '📊 Statistik' }], tab, setTab)}
+          {seg<Tab>([{ v: 'auto', label: '🎣 Auto' }, { v: 'uji', label: '🧪 Uji' }, { v: 'gacha', label: '🎰 Gacha' }, { v: 'level', label: '⭐ Level' }, { v: 'stat', label: '📊 Statistik' }], tab, setTab)}
 
           {tab === 'auto' && (
             <>
@@ -254,6 +258,22 @@ export default function DevTools(p: Props) {
                 <button style={{ ...small(false), flex: 1 }} onClick={() => p.engine?.devShoal('hiu')}>🦈 Hiu</button>
                 <button style={{ ...small(false), flex: 1 }} onClick={() => p.engine?.devShoal('raksasa')}>🐋 Raksasa</button>
               </div>
+            </>
+          )}
+
+          {tab === 'gacha' && (
+            <>
+              {H('Gacha Rod wangi (minimal rarity)')}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: px(5) }}>
+                <button style={small(p.gachaMin === '')} onClick={() => p.setGachaMin('')}>🍀 Normal</button>
+                {(['epic', 'legendary', 'mythic'] as Rarity[]).map((r) => (
+                  <button key={r} onClick={() => p.setGachaMin(r)} style={{ ...small(false), background: p.gachaMin === r ? RARITY[r].color : 'rgba(255,255,255,0.09)', color: p.gachaMin === r ? '#111' : RARITY[r].color }}>
+                    {RARITY[r].label}+
+                  </button>
+                ))}
+              </div>
+              <div style={{ marginTop: px(10) }}>{toggle(p.gachaFree, p.setGachaFree, '💎 Gacha gratis', 'Buka peti tanpa memotong Crystal')}</div>
+              <div style={{ fontSize: px(10.5), color: '#8a96b8', marginTop: px(6), lineHeight: 1.35 }}>Berlaku untuk Gacha Rod di Toko (1× dan 5×). Hanya joran dengan rarity terpilih atau lebih tinggi yang keluar. Joran ganda tetap dihitung duplikat.</div>
             </>
           )}
 

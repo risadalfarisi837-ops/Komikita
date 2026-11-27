@@ -10,7 +10,7 @@ import { MAIN_ROOM, islandName } from '@/lib/fishingIslands';
 import {
   DEFAULT_ROD, GACHA_DUPLICATE_REFUND, GACHA_PRICE, ROD_MAX_LV, RODS_BY_ID, SPECIES_BY_ID, clampRodLv, fishPrice, rodAt, rodUpgradeCost, rollGacha, nextPity, sanitizeBag, sanitizeRodLv, sanitizeRods,
 } from '@/lib/fishing';
-import type { BagItem, Rod } from '@/lib/fishing';
+import type { BagItem, Rarity, Rod } from '@/lib/fishing';
 import { DEFAULT_OUTFIT, sanitizeOutfit } from '@/components/fishing/outfit';
 import type { Outfit } from '@/components/fishing/outfit';
 
@@ -46,6 +46,7 @@ export default function MancingPage() {
   const equipRef = useRef<string>(DEFAULT_ROD);
   const rodLvRef = useRef<Record<string, number>>({});
   const pityRef = useRef(0);
+  const isDevRef = useRef(false);
   const starterRef = useRef(false);
 
   const setBag = (b: BagItem[]) => { bagRef.current = b; setBagState(b); };
@@ -64,7 +65,7 @@ export default function MancingPage() {
       off = f.auth.onAuthStateChanged(async (u: any) => {
         if (stop) return;
         setStage((x) => Math.max(x, 2)); setPct((x) => Math.max(x, 10));
-        if (!u) { uid.current = ''; setName(''); setPhoto(''); setIsDev(false); setReady(true); return; }
+        if (!u) { uid.current = ''; setName(''); setPhoto(''); setIsDev(false); isDevRef.current = false; setReady(true); return; }
         uid.current = u.uid;
         setStage((x) => Math.max(x, 3)); setPct((x) => Math.max(x, 13));
         setName(u.displayName || '');
@@ -75,7 +76,7 @@ export default function MancingPage() {
           if (typeof v.displayName === 'string' && v.displayName) setName(v.displayName);
           if (typeof v.photoURL === 'string' && v.photoURL) setPhoto(v.photoURL);
           setCrystal(typeof v.koin === 'number' ? v.koin : 0);
-          setIsDev(v.role === 'Developer');
+          setIsDev(v.role === 'Developer'); isDevRef.current = v.role === 'Developer';
           const fx = typeof v.fishing?.xp === 'number' ? v.fishing.xp : 0;
           xpRef.current = fx;
           setXp(fx);
@@ -226,10 +227,14 @@ export default function MancingPage() {
     fb.current.db.ref('users/' + uid.current + '/fishing').update({ equippedRod: id }).catch(() => warn('Joran belum tersimpan'));
   }, [warn]);
 
-  const onGacha = useCallback(async (): Promise<{ rod: Rod; duplicate: boolean } | 'kurang' | 'gagal'> => {
-    const st = await spend(GACHA_PRICE);
-    if (st !== 'ok') return st;
-    const rod = rollGacha(Math.random, pityRef.current);
+  const onGacha = useCallback(async (opt?: { min?: Rarity | ''; free?: boolean }): Promise<{ rod: Rod; duplicate: boolean } | 'kurang' | 'gagal'> => {
+    const d = isDevRef.current ? opt : undefined; // opsi gacha wangi hanya dihormati untuk role Developer
+    if (!uid.current || !fb.current) return 'gagal';
+    if (!d?.free) {
+      const st = await spend(GACHA_PRICE);
+      if (st !== 'ok') return st;
+    }
+    const rod = rollGacha(Math.random, pityRef.current, d?.min || '');
     const duplicate = rodsRef.current.includes(rod.id);
     const np = nextPity(rod, pityRef.current);
     pityRef.current = np;

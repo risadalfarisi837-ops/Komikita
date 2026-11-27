@@ -292,8 +292,15 @@ export const GACHA_ODDS: Record<string, number> = (() => {
   return out;
 })();
 
-export function rollGacha(rnd: () => number = Math.random, pity = 0): Rod {
-  const pool = pity >= GACHA_PITY - 1 ? GACHA_RODS.filter((r) => TOP_RARITY.includes(r.rarity)) : GACHA_RODS;
+// minRarity hanya dipakai Dev Tools (gacha wangi): hanya joran dengan rarity itu atau lebih tinggi yang bisa keluar.
+const RARITY_RANK: Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'];
+export function rollGacha(rnd: () => number = Math.random, pity = 0, minRarity: Rarity | '' = ''): Rod {
+  let pool = pity >= GACHA_PITY - 1 ? GACHA_RODS.filter((r) => TOP_RARITY.includes(r.rarity)) : GACHA_RODS;
+  if (minRarity) {
+    const min = RARITY_RANK.indexOf(minRarity);
+    const wangi = GACHA_RODS.filter((r) => RARITY_RANK.indexOf(r.rarity) >= min);
+    if (wangi.length) pool = wangi;
+  }
   const total = pool.reduce((a, r) => a + GACHA_ODDS[r.id], 0);
   let roll = rnd() * total;
   for (const r of pool) {
