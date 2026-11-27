@@ -97,7 +97,7 @@ const ell: React.CSSProperties = { whiteSpace: 'nowrap', overflow: 'hidden', tex
 function Header({ onSearch }: { onSearch: () => void }) {
   const router = useRouter();
   const [hasGift, setHasGift] = useState(false);
-  const [me, setMe] = useState<{ name: string; photo: string; level: number; exp: number } | null>(null);
+  const [me, setMe] = useState<{ name: string; photo: string; level: number } | null>(null);
   useEffect(() => {
     let alive = true;
     const t = setTimeout(async () => {
@@ -107,8 +107,7 @@ function Header({ onSearch }: { onSearch: () => void }) {
         if (!u || !alive) return;
         const d = (await db.ref(`users/${u.uid}`).get()).val() || {};
         if (!alive) return;
-        const exp = Math.max(0, Math.floor(Number(d.exp) || 0));
-        setMe({ name: d.displayName || u.displayName || 'User', photo: d.photoURL || u.photoURL || '', level: Number(d.level) || Math.floor(exp / 200) + 1, exp });
+        setMe({ name: d.displayName || u.displayName || 'User', photo: d.photoURL || u.photoURL || '', level: Math.max(1, Math.floor(Number(d.level) || 1)) });
         const v = d.gifts || {};
         setHasGift(Object.values(v).some((g: any) => g && !g.claimed));
       } catch {}
@@ -116,11 +115,7 @@ function Header({ onSearch }: { onSearch: () => void }) {
     return () => { alive = false; clearTimeout(t); };
   }, []);
 
-  const EXP_PER_LEVEL = 200; // 200 poin per level
-  const points = me ? me.exp : 0;
-  const level = Math.floor(points / EXP_PER_LEVEL) + 1; // level murni dari poin
-  const cur = points % EXP_PER_LEVEL;
-  const pct = Math.min(100, (cur / EXP_PER_LEVEL) * 100);
+  const level = me ? me.level : 1; // level diambil dari data level akun (bisa diset dari Dev)
   const BOX: React.CSSProperties = { background: '#26252C', border: '1px solid #3A3942', borderRadius: 20 };
 
   return (
@@ -142,13 +137,6 @@ function Header({ onSearch }: { onSearch: () => void }) {
           <svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 01-3.4 0" /></svg>
           {hasGift && <span style={{ position: 'absolute', top: 12, right: 13, width: 9, height: 9, borderRadius: '50%', background: ACCENT }} />}
         </button>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14 }}>
-        <span style={{ fontSize: 13, fontWeight: 800, color: MUTED }}>EXP</span>
-        <div style={{ flex: 1, height: 7, borderRadius: 99, background: '#3A3942', overflow: 'hidden' }}>
-          <div className="gold-fill" style={{ width: `${pct}%`, height: '100%', borderRadius: 99, transition: 'width .6s' }} />
-        </div>
-        <span style={{ fontSize: 13, fontWeight: 800, color: '#D6D4DE' }}>{cur.toLocaleString('id-ID')} / {EXP_PER_LEVEL.toLocaleString('id-ID')}</span>
       </div>
       </div>
       <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
