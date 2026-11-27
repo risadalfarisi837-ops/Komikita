@@ -800,14 +800,14 @@ export class FishingEngine {
     if (tg && (ph === 'wait' || ph === 'bite')) {
       bx = tg.wx; by = tg.wy; showBobber = true;
       const dip = ph === 'bite' ? 2.5 + Math.sin(t * 38) * 1.3 : Math.sin(t * 3) * 0.7;
-      drawBobber(ctx, bx, by, dip);
+      drawBobber(ctx, bx, by, dip, this.profile.rodId || 'default');
       by += dip;
     } else if (tg && ph === 'cast') {
       const k = Math.min(1, this.castT / 0.5);
       bx = geo.tx + (tg.wx - geo.tx) * k;
       by = geo.ty + (tg.wy - geo.ty) * k - Math.sin(k * Math.PI) * 16;
       showBobber = true;
-      drawBobber(ctx, bx, by, 0);
+      drawBobber(ctx, bx, by, 0, this.profile.rodId || 'default');
     } else if (tg && ph === 'reel') {
       bx = tg.wx; by = tg.wy;
     }
@@ -906,7 +906,7 @@ export class FishingEngine {
     if (p.casting && p.bx) {
       const g = rodGeometry(x, y, p.dir, 0);
       const dip = Math.sin(t * 3 + x);
-      drawBobber(ctx, p.bx, p.by, dip);
+      drawBobber(ctx, p.bx, p.by, dip, p.rodId || 'default');
       drawLine(ctx, g.tx, g.ty, p.bx, p.by - 3, 7);
     }
   }

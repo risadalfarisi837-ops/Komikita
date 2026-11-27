@@ -1480,18 +1480,110 @@ export function drawPlayerRaw(ctx: CanvasRenderingContext2D, x: number, y: numbe
 }
 
 // ---------- umpan, riak, percikan ----------
-export function drawBobber(ctx: CanvasRenderingContext2D, x: number, y: number, dip: number) {
+export function drawBobber(ctx: CanvasRenderingContext2D, x: number, y: number, dip: number, rodId = 'default') {
   const X = Math.round(x);
   const Y = Math.round(y + dip);
+  const sk = ROD_SKINS[rodId] || ROD_SKINS.default;
+  const t = performance.now() / 1000;
+  const plain = !rodId || rodId === 'default';
+  const acc = sk.accent || sk.ring;
+
+  // bayangan di air
   ctx.fillStyle = 'rgba(0,40,80,0.18)';
   ctx.beginPath();
   ctx.ellipse(X, Y + 2, 4, 1.4, 0, 0, Math.PI * 2);
   ctx.fill();
-  R(ctx, X - 2, Y - 3, 4, 2, '#e8412f');
-  R(ctx, X - 2, Y - 1, 4, 2, '#ffffff');
-  R(ctx, X - 1, Y - 4, 2, 1, '#e8412f');
-  R(ctx, X - 3, Y - 2, 1, 2, '#9c2a1d');
-  R(ctx, X + 2, Y - 2, 1, 2, '#9c2a1d');
+
+  // cahaya lembut sesuai skin joran
+  if (!plain && sk.glow) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const gr = ctx.createRadialGradient(X, Y - 1, 1, X, Y - 1, 10);
+    gr.addColorStop(0, sk.glow + '66');
+    gr.addColorStop(1, sk.glow + '00');
+    ctx.fillStyle = gr;
+    ctx.fillRect(X - 11, Y - 12, 22, 22);
+    ctx.restore();
+  }
+
+  // umpan kecil menggantung di bawah pelampung (warna ikut skin)
+  const bt = Math.sin(t * 4 + X) > 0 ? 1 : 0;
+  R(ctx, X, Y + 2, 1, 2, 'rgba(255,255,255,0.55)');
+  if (plain) {
+    R(ctx, X - 1, Y + 4, 3, 2, '#e89a8a');
+    R(ctx, X + 2, Y + 4 + bt, 1, 1, '#c96f5e');
+    R(ctx, X - 1, Y + 4, 1, 1, '#ffffff');
+  } else {
+    R(ctx, X - 2, Y + 4, 4, 2, sk.shaft);
+    R(ctx, X - 2, Y + 5, 4, 1, sk.shaftD);
+    R(ctx, X + 2, Y + 4 + bt, 1, 2, acc);
+    R(ctx, X - 2, Y + 4, 1, 1, '#ffffff');
+  }
+
+  // badan pelampung
+  if (plain) {
+    R(ctx, X - 2, Y - 3, 4, 2, '#e8412f');
+    R(ctx, X - 2, Y - 1, 4, 2, '#ffffff');
+    R(ctx, X - 1, Y - 4, 2, 1, '#e8412f');
+    R(ctx, X - 3, Y - 2, 1, 2, '#9c2a1d');
+    R(ctx, X + 2, Y - 2, 1, 2, '#9c2a1d');
+  } else {
+    R(ctx, X - 2, Y - 3, 4, 2, sk.shaft);
+    R(ctx, X - 2, Y - 1, 4, 2, sk.tip);
+    R(ctx, X - 1, Y - 4, 2, 1, acc);
+    R(ctx, X - 3, Y - 2, 1, 2, sk.shaftD);
+    R(ctx, X + 2, Y - 2, 1, 2, sk.shaftD);
+    R(ctx, X - 2, Y - 2, 4, 1, acc);
+  }
+
+  // efek khas tiap joran
+  const tw = (i: number, sp = 3) => 0.35 + 0.65 * Math.abs(Math.sin(t * sp + i * 1.7));
+  switch (sk.style) {
+    case 'shine': {
+      const k = (t * 0.9) % 1.4;
+      if (k < 1) R(ctx, X - 2 + Math.round(k * 4), Y - 3, 1, 1, '#ffffff');
+      break;
+    }
+    case 'gem':
+      for (let i = 0; i < 3; i++) {
+        ctx.globalAlpha = tw(i);
+        R(ctx, X + Math.round(Math.cos(i * 2.1 + t) * 6), Y - 4 + Math.round(Math.sin(i * 2.1 + t) * 4), 1, 1, sk.spark || '#fff6c8');
+      }
+      ctx.globalAlpha = 1;
+      break;
+    case 'crystal':
+      ctx.globalAlpha = tw(0, 5);
+      R(ctx, X - 1, Y - 7, 3, 1, '#ffffff');
+      R(ctx, X, Y - 8, 1, 3, '#ffffff');
+      ctx.globalAlpha = 1;
+      break;
+    case 'moon':
+      for (let i = 0; i < 3; i++) {
+        const a = t * 1.8 + i * 2.1;
+        ctx.globalAlpha = tw(i);
+        R(ctx, Math.round(X + Math.cos(a) * 6), Math.round(Y - 2 + Math.sin(a) * 3), 1, 1, '#fff7c2');
+      }
+      ctx.globalAlpha = 1;
+      break;
+    case 'dragon':
+      for (let i = 0; i < 4; i++) {
+        const k = (t * 1.3 + i * 0.25) % 1;
+        ctx.globalAlpha = 1 - k;
+        R(ctx, X - 2 + ((i * 3) % 5), Math.round(Y - 4 - k * 9), 1, 1, i % 2 ? '#ffd27a' : '#ff6a3a');
+      }
+      ctx.globalAlpha = 1;
+      break;
+    case 'tentacle':
+      for (let i = 0; i < 3; i++) {
+        const k = (t * 0.9 + i * 0.33) % 1;
+        ctx.globalAlpha = 0.9 * (1 - k);
+        R(ctx, Math.round(X - 3 + i * 3 + Math.sin(t * 3 + i) * 1.5), Math.round(Y - 4 - k * 8), 1, 1, i % 2 ? '#f6d6ff' : '#b05cff');
+      }
+      ctx.globalAlpha = 1;
+      break;
+    default:
+      break;
+  }
 }
 
 export function drawRipple(ctx: CanvasRenderingContext2D, x: number, y: number, k: number) {
