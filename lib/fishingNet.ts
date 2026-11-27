@@ -24,7 +24,7 @@ export interface NetOptions {
   db: any;
   uid: string;
   room?: string;
-  getSelf: () => { name: string; level: number; rodId: string };
+  getSelf: () => { name: string; level: number; rodId: string; outfit?: string };
   getPose: () => NetPose | null;
   onPlayers: (list: RemotePlayer[]) => void;
   onChat: (m: NetChat) => void;
@@ -88,6 +88,7 @@ export function startFishingNet(o: NetOptions): { stop: () => void; send: (msg: 
     const self = o.getSelf();
     const data: any = { x: Math.round(pose.x * 10) / 10, y: Math.round(pose.y * 10) / 10, dir: pose.dir || 'down', moving: !!pose.moving, casting: !!pose.casting, bx: Math.round(pose.bx || 0), by: Math.round(pose.by || 0), name: self.name, level: self.level, rodId: self.rodId, t: SV };
     if (pose.held) data.held = pose.held;
+    if (self.outfit) data.o = self.outfit; // gaya karakter dari Lemari
     me.set(data).catch(() => {});
   }, 250);
 

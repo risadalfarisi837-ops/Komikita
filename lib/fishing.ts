@@ -90,7 +90,7 @@ export function levelFromXp(xp: number) {
   return { level, into: rest, need: level >= MAX_LEVEL ? Math.max(1, rest) : xpNeed(level) };
 }
 
-const TITLES: [number, string][] = [
+export const TITLES: [number, string][] = [
   [1, 'Pendatang Baru'],
   [3, 'Pemancing Pantai'],
   [6, 'Pemancing Karang'],

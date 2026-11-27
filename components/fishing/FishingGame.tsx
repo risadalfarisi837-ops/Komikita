@@ -7,11 +7,14 @@ import type { Catch, EngineStatus, Phase } from './engine';
 import { FISH_H, FISH_W, drawFish } from './art';
 import {
   BAG_MAX, DEFAULT_ROD, GACHA_PRICE, RARITY, RODS, RODS_BY_ID, SPECIES, SPECIES_BY_ID,
-  fishPrice, formatNum, formatWeight, isShowoff, isXL, levelFromXp, newId, rodAt, rodEase, sizeRatio, sizeTier, titleFor, xpFor,
+  fishPrice, formatNum, formatWeight, isShowoff, isXL, levelFromXp, newId, rodAt, rodEase, sizeRatio, sizeTier, xpFor,
 } from '@/lib/fishing';
 import { SPECIES as KSPECIES, sizeRatio as kSizeRatio } from '@/lib/fishing';
 import type { BagItem, Rarity, Rod, SizeTier } from '@/lib/fishing';
 import DevTools, { DevFab, EMPTY_STATS } from './DevTools';
+import ProfileModal from './ProfileModal';
+import { DEFAULT_OUTFIT, encodeOutfit, titleOf } from './outfit';
+import type { Outfit } from './outfit';
 import { startFishingNet } from '@/lib/fishingNet';
 import { MAIN_ROOM, islandName } from '@/lib/fishingIslands';
 import { getFirebase } from '@/lib/firebase-client';
@@ -35,6 +38,8 @@ interface Props {
   onUpgradeRod?: (id: string) => Promise<'ok' | 'kurang' | 'gagal' | 'maks'>;
   onCatch: (item: BagItem, xpGain: number) => void;
   onSetXp?: (xp: number) => void; // Dev Tools: set XP/level langsung
+  outfit?: Outfit; // gaya karakter (Lemari)
+  onSaveOutfit?: (o: Outfit) => void;
   onSell: (ids: string[]) => Promise<number>;
   onBuyRod: (id: string) => Promise<'ok' | 'kurang' | 'gagal'>;
   onEquipRod: (id: string) => void;
@@ -332,6 +337,7 @@ export default function FishingGame(props: Props) {
   const [sel, setSel] = useState('');
   const [shopOpen, setShopOpen] = useState(false);
   const [rodOpen, setRodOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [upgrading, setUpgrading] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmExit, setConfirmExit] = useState(false);
@@ -568,6 +574,7 @@ export default function FishingGame(props: Props) {
   }, [say]);
 
   const lv = levelFromXp(xp);
+  const outfit = props.outfit ?? DEFAULT_OUTFIT;
   const [online, setOnline] = useState(1);
   const [chatText, setChatText] = useState('');
   const netRef = useRef<{ send: (m: string) => void } | null>(null);
@@ -583,7 +590,7 @@ export default function FishingGame(props: Props) {
         if (!u || dead) { setOnline(1); return; }
         net = startFishingNet({
           db, uid: u.uid, room: propsRef.current.room,
-          getSelf: () => ({ name: propsRef.current.name || u.displayName || 'Tamu', level: levelFromXp(propsRef.current.xp).level, rodId: propsRef.current.equippedRod }),
+          getSelf: () => ({ name: propsRef.current.name || u.displayName || 'Tamu', level: levelFromXp(propsRef.current.xp).level, rodId: propsRef.current.equippedRod, outfit: encodeOutfit(propsRef.current.outfit ?? DEFAULT_OUTFIT) }),
           getPose: () => (engineRef.current ? engineRef.current.netPose() : null),
           onPlayers: (l) => { engineRef.current?.setRemotes(l); setOnline(l.length + 1); },
           onChat: (m) => { setChat((c) => [...c.slice(-19), { who: m.who, msg: m.msg, t: Date.now() }]); engineRef.current?.setBubble(m.mine ? 'me' : m.uid, m.msg); },
@@ -601,8 +608,8 @@ export default function FishingGame(props: Props) {
     engineRef.current?.setLuck(rod.luck);
     engineRef.current?.setEase(rodEase(rod.power));
     engineRef.current?.setBagFull(bag.length >= BAG_MAX);
-    engineRef.current?.setProfile({ name: name || 'Tamu', title: titleFor(lv.level), level: lv.level, rodName: rod.name, rodId: rod.id });
-  }, [lv.level, bag.length, rod.luck, rod.power, rod.name, rod.id, name]);
+    engineRef.current?.setProfile({ name: name || 'Tamu', title: titleOf(lv.level, outfit.ttl), level: lv.level, rodName: rod.name, rodId: rod.id, outfit });
+  }, [lv.level, bag.length, rod.luck, rod.power, rod.name, rod.id, name, outfit]);
 
   // ikan yang dipegang karakter (pamer)
   useEffect(() => {
@@ -802,7 +809,7 @@ export default function FishingGame(props: Props) {
       {/* kiri atas: kartu pemain + pulau, lalu deretan tombol (chat, mic, headset, emoji) */}
       <div style={{ position: 'absolute', left: `calc(env(safe-area-inset-left, 0px) + ${hx(6)}px)`, top: `calc(env(safe-area-inset-top, 0px) + ${hx(6)}px)`, display: fishing ? 'none' : 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: hx(8) }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: hx(8) }}>
-          <div style={{ ...pillBox, display: 'flex', alignItems: 'center', gap: hx(8), width: hx(215), height: hx(72), boxSizing: 'border-box', padding: `${hx(8)}px ${hx(10)}px ${hx(8)}px ${hx(7)}px`, borderRadius: hx(36) }}>
+          <div role="button" aria-label="Buka profil" onClick={() => setProfileOpen(true)} style={{ ...pillBox, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: hx(8), width: hx(215), height: hx(72), boxSizing: 'border-box', padding: `${hx(8)}px ${hx(10)}px ${hx(8)}px ${hx(7)}px`, borderRadius: hx(36) }}>
             <div style={{ width: hx(44), height: hx(44), borderRadius: '50%', overflow: 'hidden', border: `${hx(2.5)}px solid ${CREAM_EDGE}`, boxSizing: 'border-box', background: '#35405c', flex: '0 0 auto' }}>
               {photo ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -811,7 +818,7 @@ export default function FishingGame(props: Props) {
             </div>
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
               <div style={{ fontSize: hx(14.5), fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.25, paddingTop: hx(1) }}>{name || 'Tamu'}</div>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: hx(3), marginTop: hx(2), padding: `0 ${hx(7)}px`, borderRadius: 99, background: '#e6f6df', border: `${hx(1.5)}px solid #5fbf6a`, fontSize: hx(11.5), fontWeight: 800, color: '#1f7a35', lineHeight: 1.35, whiteSpace: 'nowrap', maxWidth: '100%' }}><BoatIcon size={hx(12)} />{titleFor(lv.level)}</div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: hx(3), marginTop: hx(2), padding: `0 ${hx(7)}px`, borderRadius: 99, background: '#e6f6df', border: `${hx(1.5)}px solid #5fbf6a`, fontSize: hx(11.5), fontWeight: 800, color: '#1f7a35', lineHeight: 1.35, whiteSpace: 'nowrap', maxWidth: '100%' }}><BoatIcon size={hx(12)} />{titleOf(lv.level, outfit.ttl)}</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: hx(5), marginTop: hx(2) }}>
                 <span style={{ fontSize: hx(11.5), fontWeight: 800, color: '#2b7fc2' }}>Lv{lv.level}</span>
                 <div style={{ flex: 1, height: hx(5), borderRadius: hx(3), background: '#eadfc4', overflow: 'hidden' }}>
@@ -1218,6 +1225,14 @@ export default function FishingGame(props: Props) {
             <button onClick={() => setMenuOpen(false)} style={{ borderRadius: px(12), border: 0, background: 'transparent', color: 'rgba(255,255,255,0.6)', fontFamily: HUD, fontWeight: 600, fontSize: px(14), padding: `${px(6)}px 0`, cursor: 'pointer' }}>Tutup</button>
           </div>
         </div>
+      )}
+
+      {/* Profil: statistik, Lemari (ganti baju), Title */}
+      {profileOpen && (
+        <ProfileModal
+          px={(n: number) => px(n * 0.64)} font={HUD} name={name || 'Tamu'} photo={photo} xp={xp} crystal={crystal} bag={bag} rods={rods}
+          outfit={outfit} dev={!!props.dev} onSave={(o) => props.onSaveOutfit?.(o)} onClose={() => setProfileOpen(false)}
+        />
       )}
 
       {/* Joran (semua joran, level, pakai) */}

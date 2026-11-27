@@ -8,10 +8,12 @@ import {
   drawStall, drawFlowers, drawPine, drawLighthouse, drawBigTree, drawBarrel, drawCrate, drawNet, drawUmbrella, drawBoat, drawGiantFish, drawShop, palForId, mulberry32,
 } from './art';
 import type { Dir, Pal, World } from './art';
+import { palFromCode, palFromOutfit } from './outfit';
+import type { Outfit } from './outfit';
 
 export type Phase = 'idle' | 'cast' | 'wait' | 'bite' | 'reel' | 'catching' | 'result';
 export interface Catch { species: Species; weight: number }
-export interface Profile { name: string; title: string; level: number; rodName: string; rodId?: string }
+export interface Profile { name: string; title: string; level: number; rodName: string; rodId?: string; outfit?: Outfit }
 export interface ShoalStatus { dist: number; ang: number; left: number; kind: 'ikan' | 'hiu' | 'raksasa' }
 export interface EngineStatus { shoal: ShoalStatus | null; inShoal: boolean }
 interface Shoal { x: number; y: number; r: number; until: number; kind: 'ikan' | 'hiu' | 'raksasa' }
@@ -119,7 +121,8 @@ export class FishingEngine {
   private ease = 0;
   setEase(n: number) { this.ease = Math.min(1, Math.max(0, n)); }
   setBagFull(b: boolean) { this.bagFull = b; }
-  setProfile(p: Profile) { this.profile = p; }
+  private pal: Pal = PAL_PLAYER; // gaya karakter sendiri (dari Lemari)
+  setProfile(p: Profile) { this.profile = p; this.pal = p.outfit ? palFromOutfit(p.outfit) : PAL_PLAYER; }
 
   // ---------- mabar ----------
   setClockOffset(ms: number) { this.clockOffset = ms; }
@@ -128,8 +131,9 @@ export class FishingEngine {
     for (const p of list) {
       seen.add(p.id);
       const cur = this.remotes.get(p.id);
-      if (cur) cur.p = p;
-      else this.remotes.set(p.id, { p, rx: p.x ?? 0, ry: p.y ?? 0, step: 0, moving: !!p.moving, pal: palForId(p.id) });
+      const pal = palFromCode(p.o) || palForId(p.id); // gaya dari Lemari pemain itu; kalau belum ada, acak dari id
+      if (cur) { cur.p = p; cur.pal = pal; }
+      else this.remotes.set(p.id, { p, rx: p.x ?? 0, ry: p.y ?? 0, step: 0, moving: !!p.moving, pal });
     }
     for (const id of Array.from(this.remotes.keys())) if (!seen.has(id)) this.remotes.delete(id);
   }
@@ -848,7 +852,7 @@ export class FishingEngine {
       y: this.py,
       f: () => {
         if (show && show.species.giant) drawShowFish(ctx, this.px, this.py, show.species, show.weight);
-        drawPlayer(ctx, this.px, this.py, this.dir, this.moving, this.stepT, rod, shake, PAL_PLAYER, rodId, !rod && !show, !!show);
+        drawPlayer(ctx, this.px, this.py, this.dir, this.moving, this.stepT, rod, shake, this.pal, rodId, !rod && !show, !!show);
         if (show && !show.species.giant) drawShowFish(ctx, this.px, this.py, show.species, show.weight);
       },
     });

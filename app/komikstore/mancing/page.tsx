@@ -11,6 +11,8 @@ import {
   DEFAULT_ROD, GACHA_DUPLICATE_REFUND, GACHA_PRICE, ROD_MAX_LV, RODS_BY_ID, SPECIES_BY_ID, clampRodLv, fishPrice, rodAt, rodUpgradeCost, rollGacha, nextPity, sanitizeBag, sanitizeRodLv, sanitizeRods,
 } from '@/lib/fishing';
 import type { BagItem, Rod } from '@/lib/fishing';
+import { DEFAULT_OUTFIT, sanitizeOutfit } from '@/components/fishing/outfit';
+import type { Outfit } from '@/components/fishing/outfit';
 
 export default function MancingPage() {
   const router = useRouter();
@@ -20,6 +22,7 @@ export default function MancingPage() {
   const [photo, setPhoto] = useState('');
   const [crystal, setCrystal] = useState(0);
   const [xp, setXp] = useState(0);
+  const [outfit, setOutfit] = useState<Outfit>(DEFAULT_OUTFIT);
   const [bag, setBagState] = useState<BagItem[]>([]);
   const [err, setErr] = useState('');
   const [isDev, setIsDev] = useState(false); // role Developer -> Dev Tools mancing
@@ -76,6 +79,7 @@ export default function MancingPage() {
           const fx = typeof v.fishing?.xp === 'number' ? v.fishing.xp : 0;
           xpRef.current = fx;
           setXp(fx);
+          setOutfit(sanitizeOutfit(v.fishing?.outfit));
           setBag(sanitizeBag(v.fishing?.bag));
           const owned = sanitizeRods(v.fishing?.rods);
           setRods(owned);
@@ -124,6 +128,14 @@ export default function MancingPage() {
     const ref = fb.current.db.ref('users/' + uid.current + '/fishing');
     ref.update({ bag: nb, xp: nx }).catch(() => warn('Hasil tangkapan belum tersimpan'));
     ref.child('caught/' + item.s).transaction((c: any) => (typeof c === 'number' ? c : 0) + 1).catch(() => {});
+  }, [warn]);
+
+  // Lemari: simpan gaya karakter ke akun
+  const onSaveOutfit = useCallback((o: Outfit) => {
+    const s = sanitizeOutfit(o);
+    setOutfit(s);
+    if (!uid.current || !fb.current) return;
+    fb.current.db.ref('users/' + uid.current + '/fishing/outfit').set(s).catch(() => warn('Gaya karakter belum tersimpan'));
   }, [warn]);
 
   // Dev Tools: set XP langsung (level ikut berubah karena level dihitung dari XP)
@@ -272,7 +284,7 @@ export default function MancingPage() {
       <FishingGame
         name={name} photo={photo} crystal={crystal} xp={xp} bag={bag}
         rods={rods} equippedRod={equippedRod} rodLv={rodLv} onUpgradeRod={onUpgradeRod} dev={isDev}
-        onCatch={onCatch} onSetXp={onSetXp} onSell={onSell} onBuyRod={onBuyRod} onEquipRod={onEquipRod} onGacha={onGacha}
+        onCatch={onCatch} onSetXp={onSetXp} outfit={outfit} onSaveOutfit={onSaveOutfit} onSell={onSell} onBuyRod={onBuyRod} onEquipRod={onEquipRod} onGacha={onGacha}
         room={room} pity={pity} starterClaimed={starter} onClaimStarter={onClaimStarter}
         onExit={() => router.push('/komikstore')}
       />
