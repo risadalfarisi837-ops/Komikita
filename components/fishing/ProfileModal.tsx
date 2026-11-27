@@ -234,12 +234,23 @@ export default function ProfileModal(p: Props) {
     };
     const gcard = (key: string, text: string, need: number, rIdx: number, desc: string, on: boolean, pick: () => void) => {
       const ok = open(need);
+      const pct2 = Math.min(100, (lv.level / Math.max(1, need)) * 100);
       return (
-        <button key={key} onClick={() => { if (ok) pick(); }} style={{ background: '#f7ebcc', border: `${px(3)}px solid ${on ? '#1f5fbf' : 'transparent'}`, borderRadius: px(18), padding: `${px(12)}px ${px(10)}px`, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: px(8), cursor: ok ? 'pointer' : 'default', fontFamily: font, color: BROWN, boxSizing: 'border-box' }}>
-          {plaque(text, !ok, rIdx)}
-          <span style={{ display: 'flex', alignItems: 'flex-start', gap: px(5), fontSize: px(13), fontWeight: 700, textAlign: 'center', lineHeight: 1.25 }}>
-            <span style={{ fontSize: px(12) }}>{ok ? '✓' : '🔒'}</span><span>{desc}</span>
-          </span>
+        <button key={key} onClick={() => { if (ok) pick(); }} style={{ background: '#f7ebcc', border: `${px(3)}px solid ${on ? '#1f5fbf' : 'transparent'}`, borderRadius: px(18), padding: `${px(12)}px ${px(12)}px`, minHeight: px(96), display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: ok ? 'center' : 'flex-start', gap: px(7), cursor: ok ? 'pointer' : 'default', fontFamily: font, color: BROWN, boxSizing: 'border-box' }}>
+          {plaque(text, !ok, rIdx, ok ? 13 : 15)}
+          {!ok && (
+            <>
+              <span style={{ display: 'flex', alignItems: 'flex-start', gap: px(5), fontSize: px(13), fontWeight: 700, textAlign: 'center', lineHeight: 1.25 }}>
+                <span style={{ fontSize: px(12) }}>🔒</span><span>{desc}</span>
+              </span>
+              <span style={{ width: '100%', display: 'flex', alignItems: 'center', gap: px(8), marginTop: 'auto' }}>
+                <span style={{ flex: 1, height: px(6), borderRadius: 99, background: '#e6d8b0', overflow: 'hidden' }}>
+                  <span style={{ display: 'block', width: pct2 + '%', height: '100%', background: '#1f6fd0', borderRadius: 99 }} />
+                </span>
+                <span style={{ fontSize: px(12), fontWeight: 800, opacity: 0.75 }}>{lv.level}/{need}</span>
+              </span>
+            </>
+          )}
         </button>
       );
     };
