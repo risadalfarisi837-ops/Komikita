@@ -1166,7 +1166,7 @@ function line(ctx: CanvasRenderingContext2D, x0: number, y0: number, x1: number,
 }
 
 // ---------- skin joran (tampil di tangan karakter) ----------
-export type RodStyle = 'wood' | 'stripe' | 'weave' | 'shine' | 'gem' | 'crystal' | 'moon' | 'dragon' | 'tentacle';
+export type RodStyle = 'wood' | 'stripe' | 'weave' | 'shine' | 'gem' | 'crystal' | 'moon' | 'dragon' | 'seadragon' | 'tentacle';
 export interface RodSkin { shaft: string; shaftD: string; grip: string; tip: string; ring: string; glow?: string; spark?: string; style?: RodStyle; reel?: string; accent?: string }
 export const ROD_SKINS: Record<string, RodSkin> = {
   default: { shaft: '#8a5a2b', shaftD: '#5e3a18', grip: '#3d2610', tip: '#e8d9b0', ring: '#b88a4a', style: 'wood' },
@@ -1176,7 +1176,7 @@ export const ROD_SKINS: Record<string, RodSkin> = {
   emas: { shaft: '#f2c230', shaftD: '#b8860b', grip: '#6b3f12', tip: '#fff3b0', ring: '#ffe27a', glow: '#ffd24a', spark: '#fff6c8', style: 'gem' },
   kristal: { shaft: '#58d6ff', shaftD: '#2b8fc9', grip: '#2a3f7a', tip: '#e6fbff', ring: '#a8ecff', glow: '#7df9ff', spark: '#ffffff', style: 'crystal' },
   bulan: { shaft: '#d9d2ff', shaftD: '#8f86d6', grip: '#3a2f78', tip: '#fffbe0', ring: '#f0ecff', glow: '#c9bfff', spark: '#fff7c2', style: 'moon' },
-  naga: { shaft: '#c0392b', shaftD: '#7a1d14', grip: '#1f3b2a', tip: '#ffcf5a', ring: '#ffa14a', glow: '#ff6a3a', spark: '#ffd27a', style: 'dragon' },
+  naga: { shaft: '#1f9bd1', shaftD: '#0d4f7a', grip: '#12303f', tip: '#c9f6ff', ring: '#6fe3ff', glow: '#2fd0ff', spark: '#d8fbff', style: 'seadragon' },
   sisik: { shaft: '#d9482b', shaftD: '#7a1d14', grip: '#2a1a10', tip: '#ffe27a', ring: '#ffb347', glow: '#ff7a3a', spark: '#ffd27a', style: 'dragon' },
   tentakel: { shaft: '#8e44d6', shaftD: '#4a1d7a', grip: '#1a1030', tip: '#f0b8ff', ring: '#c58bff', glow: '#b05cff', spark: '#f6d6ff', style: 'tentacle' },
 };
@@ -1235,8 +1235,11 @@ export function drawRodSkin(ctx: CanvasRenderingContext2D, g: RodGeo, rodId: str
         break;
       }
       case 'gem': if (k > 0.3 && i % 4 === 0) R(ctx, px, py, 1, 1, '#fff3b0'); break;
+      case 'crystal': if (k > 0.3 && i % 4 === 0) R(ctx, px, py, 1, 1, i % 8 === 0 ? '#ffffff' : acc); break;
+      case 'moon': if (k > 0.3 && i % 5 === 0) R(ctx, px, py, 1, 1, i % 10 === 0 ? '#fff7c2' : '#8f86d6'); break;
+      case 'seadragon': if (k > 0.3) R(ctx, px + Math.round(Math.sin(i * 0.9 + t * 3)), py, 1, 1, i % 2 === 0 ? acc : '#0d4f7a'); break;
       case 'tentacle': if (k > 0.3 && i % 3 === 0) R(ctx, px + (i % 6 === 0 ? 1 : 0), py, 1, 1, i % 6 === 0 ? acc : '#4a1d7a'); break;
-      case 'dragon': if (k > 0.3 && i % 3 === 0) R(ctx, px, py, 1, 1, i % 6 === 0 ? acc : '#7a1d14'); break;
+      case 'dragon': if (k > 0.3) { if (i % 4 === 0) R(ctx, px, py, 2, 1, '#ffb347'); else if (i % 4 === 2) R(ctx, px, py, 1, 1, '#7a1d14'); } break;
       default: break;
     }
   }
@@ -1263,6 +1266,26 @@ export function drawRodSkin(ctx: CanvasRenderingContext2D, g: RodGeo, rodId: str
     R(ctx, qx - 1, qy - 1, 3, 3, '#7a1d36');
     R(ctx, qx - 1, qy - 1, 2, 2, acc);
     R(ctx, qx - 1, qy - 1, 1, 1, '#ffffff');
+    // kilau koin emas berkedip di batang
+    for (let i = 0; i < 3; i++) {
+      const ph = (t * 1.1 + i * 0.37) % 1;
+      if (ph < 0.3) {
+        const [wx, wy] = at(0.5 + i * 0.2);
+        ctx.globalAlpha = Math.sin((ph / 0.3) * Math.PI);
+        R(ctx, wx, wy - 2, 1, 5, '#fff6c8');
+        R(ctx, wx - 2, wy, 5, 1, '#fff6c8');
+      }
+    }
+    ctx.globalAlpha = 1;
+    // koin emas kecil jatuh dari ujung
+    for (let i = 0; i < 2; i++) {
+      const k = (t * 0.8 + i * 0.5) % 1;
+      ctx.globalAlpha = 1 - k;
+      const cx0 = tx + (i ? 3 : -2);
+      R(ctx, cx0, Math.round(ty + 2 + k * 9), 2, 2, '#ffd24a');
+      R(ctx, cx0, Math.round(ty + 2 + k * 9), 1, 1, '#fff3b0');
+    }
+    ctx.globalAlpha = 1;
   } else if (sk.style === 'crystal') {
     for (const k of [0.46, 0.66, 0.86]) {
       const [qx, qy] = at(k);
@@ -1276,6 +1299,21 @@ export function drawRodSkin(ctx: CanvasRenderingContext2D, g: RodGeo, rodId: str
     R(ctx, tx - 1, ty - 2, 3, 1, '#ffffff');
     R(ctx, tx, ty - 3, 1, 3, '#ffffff');
     ctx.globalAlpha = 1;
+    // petir menyambar dari ujung (Kristal Badai)
+    const ph = (t * 0.9) % 1;
+    if (ph < 0.18) {
+      ctx.globalAlpha = 1 - ph / 0.18;
+      const off = [-1, 2, -2, 1, -1];
+      let bx = tx;
+      let by = ty - 3;
+      for (let s2 = 0; s2 < 5; s2++) {
+        bx += off[(s2 + Math.floor(t * 9)) % 5];
+        by -= 2;
+        R(ctx, bx, by, 1, 2, '#ffffff');
+        R(ctx, bx + 1, by, 1, 2, '#7df9ff');
+      }
+      ctx.globalAlpha = 1;
+    }
   } else if (sk.style === 'moon') {
     R(ctx, tx - 1, ty - 3, 2, 1, sk.tip);
     R(ctx, tx - 2, ty - 2, 1, 3, sk.tip);
@@ -1303,6 +1341,60 @@ export function drawRodSkin(ctx: CanvasRenderingContext2D, g: RodGeo, rodId: str
       R(ctx, Math.round(tx + Math.sin(t * 6 + i * 2) * 1.5), Math.round(ty - 3 - k * 10), 1, 1, k < 0.35 ? '#fff2a0' : k < 0.7 ? '#ff9a3a' : '#ff3b1e');
     }
     ctx.globalAlpha = 1;
+    // bara api melayang naik dari batang (Sisik Naga)
+    for (let i = 0; i < 4; i++) {
+      const k = (t * 0.9 + i / 4) % 1;
+      const [ex, ey] = at(0.4 + i * 0.18);
+      ctx.globalAlpha = 1 - k;
+      R(ctx, Math.round(ex + Math.sin(t * 5 + i * 2) * 1.5), Math.round(ey - 2 - k * 9), 1, 1, k < 0.5 ? '#ffb347' : '#ff3b1e');
+    }
+    ctx.globalAlpha = 1;
+  } else if (sk.style === 'seadragon') {
+    // kepala naga laut: sirip gelombang, mata putih, tanpa api
+    R(ctx, tx - 1, ty - 2, 4, 3, '#0d4f7a');
+    R(ctx, tx - 1, ty - 2, 3, 1, sk.shaft);
+    R(ctx, tx + 2, ty - 1, 2, 1, '#0d4f7a');
+    R(ctx, tx + 1, ty - 1, 1, 1, '#ffffff');
+    R(ctx, tx - 3, ty - 1, 2, 1, acc);
+    R(ctx, tx - 4, ty, 2, 1, sk.shaft);
+    R(ctx, tx - 2, ty - 3, 2, 1, acc);
+    // tetes air menetes dari batang
+    for (let i = 0; i < 4; i++) {
+      const k = (t * 1.0 + i / 4) % 1;
+      const [wx, wy] = at(0.35 + i * 0.18);
+      ctx.globalAlpha = 1 - k;
+      R(ctx, wx + (i % 2 ? 1 : -1), Math.round(wy + 2 + k * 10), 1, 2, '#bff3ff');
+    }
+    ctx.globalAlpha = 1;
+  } else if (sk.style === 'tentacle') {
+    // sulur laut dalam menggeliat dari ujung + titik cahaya biru-ungu
+    for (let j = 0; j < 3; j++) {
+      for (let s2 = 1; s2 <= 5; s2++) {
+        const wx = Math.round(tx + (j - 1) * 2 + Math.sin(t * 3 + j * 2 + s2 * 0.7) * s2 * 0.8);
+        R(ctx, wx, ty - 1 - s2 * 2 + (j === 1 ? -1 : 0), 1, 2, s2 === 5 ? '#f6d6ff' : j === 1 ? '#8e44d6' : '#c58bff');
+      }
+    }
+    for (let i = 0; i < 4; i++) {
+      const [wx, wy] = at(0.4 + i * 0.16);
+      ctx.globalAlpha = 0.3 + 0.7 * Math.abs(Math.sin(t * 2.5 + i * 1.3));
+      R(ctx, wx + 1, wy, 1, 1, '#7df9ff');
+    }
+    ctx.globalAlpha = 1;
+  } else if (sk.style === 'shine') {
+    // gelembung laut kecil naik dari ujung (Perak Laut)
+    for (let i = 0; i < 3; i++) {
+      const k = (t * 0.7 + i / 3) % 1;
+      ctx.globalAlpha = 1 - k;
+      R(ctx, Math.round(tx + 1 + Math.sin(t * 3 + i * 2) * 2), Math.round(ty - 2 - k * 10), 2, 2, '#eaf2ff');
+      R(ctx, Math.round(tx + 1 + Math.sin(t * 3 + i * 2) * 2), Math.round(ty - 2 - k * 10), 1, 1, '#ffffff');
+    }
+    ctx.globalAlpha = 1;
+  } else if (sk.style === 'weave') {
+    // percik listrik merah kecil di ujung (Karbon)
+    if (Math.sin(t * 11) > 0.55) {
+      R(ctx, tx + 2, ty - 2, 1, 1, '#ff6b5e');
+      R(ctx, tx - 1, ty - 3, 1, 1, '#ffffff');
+    }
   }
 
   // ujung joran dan cahaya ujung
@@ -1317,7 +1409,7 @@ export function drawRodSkin(ctx: CanvasRenderingContext2D, g: RodGeo, rodId: str
     ctx.restore();
   }
   // kilau berjalan sepanjang joran
-  if (sk.spark) {
+  if (sk.spark && sk.style === 'moon') {
     for (let i = 0; i < 3; i++) {
       const k = (t * 0.7 + i / 3) % 1;
       const sx = Math.round(g.hx + dx * k + Math.sin(t * 5 + i * 2) * 2);
@@ -1557,7 +1649,7 @@ export function drawBobber(ctx: CanvasRenderingContext2D, x: number, y: number, 
   // cincin riak bercahaya untuk joran langka
   if (!plain && sk.glow) {
     for (let j = 0; j < 2; j++) {
-      const k = (t * 0.7 + j * 0.5) % 1;
+      const k = (t * (sk.style === 'crystal' ? 1.4 : sk.style === 'tentacle' ? 0.4 : sk.style === 'dragon' ? 1.0 : 0.7) + j * 0.5) % 1;
       ctx.strokeStyle = sk.glow + Math.round((1 - k) * 150).toString(16).padStart(2, '0');
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -1578,8 +1670,17 @@ export function drawBobber(ctx: CanvasRenderingContext2D, x: number, y: number, 
       break;
     }
     case 'gem':
-      orbit(6, 7, 4, sk.spark || '#fff6c8', 1.6);
-      rise(6, 5, 11, ['#fff3b0', '#ffd24a', '#ffffff'], 1.1);
+      // koin emas melompat dari air
+      for (let i = 0; i < 4; i++) {
+        const k = (t * 0.9 + i / 4) % 1;
+        ctx.globalAlpha = 1 - k * 0.7;
+        const cx0 = Math.round(X - 6 + i * 4);
+        const cy0 = Math.round(Y - 2 - Math.sin(k * Math.PI) * 10);
+        R(ctx, cx0, cy0, 2, 2, '#ffd24a');
+        R(ctx, cx0, cy0, 1, 1, '#fff3b0');
+      }
+      ctx.globalAlpha = 1;
+      orbit(3, 6, 3, '#fff6c8', 1.6);
       break;
     case 'crystal':
       for (let i = 0; i < 3; i++) {
@@ -1590,8 +1691,19 @@ export function drawBobber(ctx: CanvasRenderingContext2D, x: number, y: number, 
         R(ctx, ox, oy - 1, 1, 3, '#ffffff');
       }
       ctx.globalAlpha = 1;
-      orbit(5, 7, 4, '#a8ecff', 2.0);
-      rise(5, 5, 11, ['#ffffff', '#7df9ff'], 1.2);
+      // petir menyambar di atas pelampung
+      if ((t * 1.3) % 1 < 0.15) {
+        const off = [1, -2, 2, -1, 1];
+        let bx = X;
+        let by = Y - 5;
+        for (let s2 = 0; s2 < 5; s2++) {
+          bx += off[(s2 + Math.floor(t * 9)) % 5];
+          by -= 3;
+          R(ctx, bx, by, 1, 3, '#ffffff');
+          R(ctx, bx + 1, by, 1, 3, '#7df9ff');
+        }
+      }
+      orbit(3, 6, 3, '#a8ecff', 3.2);
       break;
     case 'moon':
       orbit(7, 8, 4, '#fff7c2', 1.8);
@@ -1606,6 +1718,17 @@ export function drawBobber(ctx: CanvasRenderingContext2D, x: number, y: number, 
       ctx.restore();
       rise(9, 5, 14, ['#ffd27a', '#ff6a3a', '#ff9a3a'], 1.5);
       orbit(4, 7, 3, '#ffd27a', 2.2);
+      break;
+    case 'seadragon':
+      // percikan air memancar naik-turun + riak biru
+      for (let i = 0; i < 6; i++) {
+        const k = (t * 1.1 + i / 6) % 1;
+        ctx.globalAlpha = 1 - k * 0.6;
+        R(ctx, Math.round(X + (i - 2.5) * 2.2), Math.round(Y - 3 - Math.sin(k * Math.PI) * 11), 1, 2, i % 2 ? '#bff3ff' : '#2fd0ff');
+      }
+      ctx.globalAlpha = 1;
+      R(ctx, X - 5, Y + 3, 3, 1, '#bff3ff');
+      R(ctx, X + 3, Y + 3, 3, 1, '#bff3ff');
       break;
     case 'tentacle':
       rise(8, 5, 13, ['#f6d6ff', '#b05cff', '#8e44d6'], 1.0);
@@ -1629,7 +1752,7 @@ export function drawRipple(ctx: CanvasRenderingContext2D, x: number, y: number, 
   ctx.stroke();
 }
 
-const LINE_FX: Record<string, 1 | 2> = { bulan: 1, naga: 1, sisik: 2, tentakel: 2 };
+const LINE_FX: Record<string, 1 | 2> = { emas: 1, kristal: 1, bulan: 1, naga: 1, sisik: 2, tentakel: 2 };
 
 export function drawLine(ctx: CanvasRenderingContext2D, x0: number, y0: number, x1: number, y1: number, sag: number, rodId = 'default') {
   const cx = (x0 + x1) / 2;
@@ -1669,7 +1792,7 @@ export function drawLine(ctx: CanvasRenderingContext2D, x0: number, y0: number, 
     return [u * u * (x0 + 0.5) + 2 * u * k * cx + k * k * (x1 + 0.5), u * u * (y0 + 0.5) + 2 * u * k * cy + k * k * (y1 + 0.5)];
   };
   const n = lvl === 2 ? 12 : 7;
-  const cols = sk.style === 'dragon' ? ['#ffd27a', '#ff6a3a'] : sk.style === 'tentacle' ? ['#f6d6ff', '#b05cff'] : ['#fff7c2', '#ffffff'];
+  const cols = sk.style === 'dragon' ? ['#ffd27a', '#ff6a3a'] : sk.style === 'seadragon' ? ['#bff3ff', '#2fd0ff'] : sk.style === 'crystal' ? ['#ffffff', '#7df9ff'] : sk.style === 'gem' ? ['#fff3b0', '#ffd24a'] : sk.style === 'tentacle' ? ['#f6d6ff', '#b05cff'] : ['#fff7c2', '#ffffff'];
   for (let i = 0; i < n; i++) {
     const k = (t * 0.55 + i / n) % 1;
     const [px, py] = bez(k);
