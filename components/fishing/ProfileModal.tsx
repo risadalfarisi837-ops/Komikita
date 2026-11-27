@@ -83,7 +83,7 @@ export default function ProfileModal(p: Props) {
   const card: CSSProperties = { background: '#fff8e8', border: `${px(3)}px solid ${EDGE}`, borderRadius: px(20), boxShadow: `0 ${px(3)}px 0 #e0cb97`, boxSizing: 'border-box' };
   const btn = (on = false): CSSProperties => ({ border: `${px(2.5)}px solid ${on ? '#1f5fbf' : EDGE}`, background: on ? 'linear-gradient(180deg,#3d8ef2,#2069d2)' : 'linear-gradient(180deg,#fffdf4,#f6e9c6)', color: on ? '#fff' : BROWN, borderRadius: px(14), boxShadow: `0 ${px(3)}px 0 ${on ? '#1559b8' : '#e0cb97'}`, fontFamily: font, fontWeight: 800, fontSize: px(17), padding: `${px(9)}px ${px(12)}px`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: px(8) });
   const label = (t: string, extra?: ReactNode) => (
-    <div style={{ display: 'flex', alignItems: 'center', margin: `${px(10)}px 0 ${px(7)}px`, fontSize: px(17), fontWeight: 800 }}>
+    <div style={{ display: 'flex', alignItems: 'center', margin: `${px(6)}px 0 ${px(2)}px`, fontSize: px(15), fontWeight: 800 }}>
       <span style={{ flex: 1 }}>{t}</span>{extra}
     </div>
   );
@@ -91,7 +91,7 @@ export default function ProfileModal(p: Props) {
     <span style={{ background: '#1f4f9a', color: '#fff', fontWeight: 800, fontSize: px(15), borderRadius: 99, padding: `${px(2)}px ${px(10)}px`, border: `${px(2)}px solid #fff` }}>Lv <span style={{ fontSize: px(19) }}>{lv.level}</span></span>
   );
   const titlePill = (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: px(5), background: '#dff0ff', border: `${px(2)}px solid #5b9be0`, color: '#1f4f9a', fontWeight: 800, fontSize: px(15), borderRadius: px(10), padding: `${px(2)}px ${px(10)}px` }}>🎖️ {title}</span>
+    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: px(6), background: 'linear-gradient(180deg,#eef7ff,#cfe6ff)', border: `${px(2)}px solid #7fb0ea`, color: '#1f4f9a', fontWeight: 800, fontSize: px(15), borderRadius: px(99), padding: `${px(2)}px ${px(16)}px`, boxShadow: '0 2px 0 #9cc4ee' }}>✦ {title} ✦</span>
   );
   const rotate = () => setDir((d) => DIRS[(DIRS.indexOf(d) + 1) % DIRS.length]);
   const stage = (
@@ -117,33 +117,35 @@ export default function ProfileModal(p: Props) {
   const tabs: [Tab, string, string][] = [['tubuh', '🙂', 'Tubuh'], ['baju', '👕', 'Baju'], ['topi', '👒', 'Topi']];
 
   const header = (icon: string, text: string, back: () => void) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: px(16), background: 'linear-gradient(180deg,#3d8ef2,#2069d2)', padding: `${px(10)}px ${px(18)}px`, boxShadow: '0 4px 0 #1559b8', position: 'relative', zIndex: 2 }}>
-      <span style={{ width: px(48), height: px(48), borderRadius: '50%', background: '#fff2d1', border: `${px(3)}px solid #fff`, boxShadow: '0 2px 0 rgba(0,0,60,.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: px(26) }}>{icon}</span>
-      <span style={{ color: '#fff', fontWeight: 800, fontSize: px(26), textShadow: '0 2px 0 rgba(0,0,60,0.35)' }}>{text}</span>
-      <button onClick={back} aria-label="Tutup" style={{ marginLeft: 'auto', width: px(48), height: px(46), borderRadius: px(12), border: 0, background: '#e5484d', boxShadow: `0 ${px(4)}px 0 #a62a2f`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: px(16), background: 'linear-gradient(180deg,#3d8ef2,#2069d2)', padding: `${px(6)}px ${px(14)}px`, boxShadow: '0 3px 0 #1559b8', position: 'relative', zIndex: 2 }}>
+      <span style={{ width: px(42), height: px(42), borderRadius: '50%', background: '#fff2d1', border: `${px(3)}px solid #fff`, boxShadow: '0 2px 0 rgba(0,0,60,.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: px(26) }}>{icon}</span>
+      <span style={{ color: '#fff', fontWeight: 800, fontSize: px(24), textShadow: '0 2px 0 rgba(0,0,60,0.35)' }}>{text}</span>
+      <button onClick={back} aria-label="Tutup" style={{ marginLeft: 'auto', width: px(46), height: px(42), borderRadius: px(12), border: 0, background: '#e5484d', boxShadow: `0 ${px(4)}px 0 #a62a2f`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
         <svg width={px(26)} height={px(26)} viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19" stroke="#fff" strokeWidth="3.4" strokeLinecap="round" /></svg>
       </button>
     </div>
   );
 
   const shell = (head: ReactNode, body: ReactNode) => (
-    <div onPointerDown={(e) => e.stopPropagation()} style={{ position: 'absolute', inset: 0, zIndex: 32, display: 'flex', flexDirection: 'column', background: '#fff5e1', fontFamily: font, color: BROWN }}>
-      {head}
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', gap: px(14), padding: `${px(14)}px ${px(16)}px`, boxSizing: 'border-box' }}>{body}</div>
+    <div onPointerDown={(e) => e.stopPropagation()} style={{ position: 'absolute', inset: 0, zIndex: 32, background: 'rgba(0,0,0,.55)', padding: px(14), boxSizing: 'border-box', fontFamily: font, color: BROWN }}>
+      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#fff5e1', border: `${px(4)}px solid #1f5fbf`, borderRadius: px(22), overflow: 'hidden', boxSizing: 'border-box' }}>
+        {head}
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', gap: px(12), padding: `${px(12)}px ${px(14)}px`, boxSizing: 'border-box' }}>{body}</div>
+      </div>
     </div>
   );
 
   // ================= PROFIL =================
   if (view === 'profil') {
     const chip = (icon: string, v: string) => (
-      <div key={icon} style={{ ...card, flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: px(8), padding: `${px(10)}px ${px(6)}px`, fontWeight: 800, fontSize: px(22) }}>
-        <span style={{ fontSize: px(26) }}>{icon}</span>{v}
+      <div key={icon} style={{ ...card, flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: px(8), padding: `${px(7)}px ${px(6)}px`, fontWeight: 800, fontSize: px(21), borderRadius: px(16) }}>
+        <span style={{ fontSize: px(24) }}>{icon}</span>{v}
       </div>
     );
     return shell(
       header('🏆', 'Profil', p.onClose),
       <>
-        <div style={{ ...card, width: px(270), flex: 'none', padding: px(12), display: 'flex', flexDirection: 'column', alignItems: 'center', gap: px(6), overflowY: 'auto' }}>
+        <div style={{ ...card, width: px(250), flex: 'none', padding: px(10), display: 'flex', flexDirection: 'column', alignItems: 'center', gap: px(5), overflowY: 'auto' }}>
           <div style={{ position: 'relative', width: '100%' }}>
             {stage}
             <span style={{ position: 'absolute', top: px(8), left: px(8) }}>{lvPill}</span>
@@ -154,10 +156,10 @@ export default function ProfileModal(p: Props) {
           </div>
           <div style={{ fontSize: px(22), fontWeight: 800, lineHeight: 1.15, textAlign: 'center', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
           {titlePill}
-          <div style={{ width: '100%', height: px(10), borderRadius: 99, background: '#eadfc4', overflow: 'hidden', marginTop: px(2) }}>
-            <div style={{ width: pct + '%', height: '100%', background: 'linear-gradient(90deg,#2fbf8a,#6fdc8c)' }} />
+          <div style={{ width: '100%', height: px(12), borderRadius: 99, background: '#eadfc4', overflow: 'hidden', marginTop: px(2), border: `${px(1.5)}px solid #d9c690`, boxSizing: 'border-box' }}>
+            <div style={{ width: pct + '%', height: '100%', background: 'linear-gradient(180deg,#7be06a,#3fb84a)' }} />
           </div>
-          <div style={{ fontSize: px(14), fontWeight: 800, opacity: 0.75 }}>{lv.level >= MAX_LEVEL ? 'Level maksimal' : `${formatNum(lv.into)}/${formatNum(lv.need)} XP`}</div>
+          <div style={{ fontSize: px(14), fontWeight: 800, opacity: 0.8, marginBottom: px(4) }}>{lv.level >= MAX_LEVEL ? 'Level maksimal' : `${formatNum(lv.into)}/${formatNum(lv.need)} XP`}</div>
           <div style={{ display: 'flex', gap: px(8), width: '100%', marginTop: 'auto' }}>
             <button onClick={() => setView('lemari')} style={{ ...btn(), flex: 1 }}>👕 Lemari</button>
             <button onClick={() => setView('title')} style={{ ...btn(), flex: 1 }}>🏆 Title</button>
@@ -170,7 +172,7 @@ export default function ProfileModal(p: Props) {
             {chip('✨', formatNum(p.xp))}
             {chip('💎', formatNum(p.crystal))}
           </div>
-          {label('Ikan terbaik di tas')}
+          {label('Ikan terbaik')}
           {best.length === 0 ? (
             <div style={{ ...card, padding: px(18), textAlign: 'center', fontWeight: 700, opacity: 0.7, fontSize: px(16) }}>Tas masih kosong. Tangkap ikan dulu!</div>
           ) : (
