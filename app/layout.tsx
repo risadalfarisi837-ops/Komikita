@@ -9,6 +9,7 @@ import RegisterSW from '@/components/RegisterSW';
 import PageScale from '@/components/PageScale';
 import GiftWatcher from '@/components/GiftWatcher';
 import NoPageZoom from '@/components/NoPageZoom';
+import { LevelSheetHost } from '@/components/LevelPill';
 
 const jakarta = Plus_Jakarta_Sans({ subsets: ['latin'], weight: ['500', '700', '800'], display: 'swap', variable: '--font-jakarta' });
 
@@ -41,6 +42,7 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
           <RegisterSW />
           <GiftWatcher />
           <NoPageZoom />
+          <LevelSheetHost />
         </div>
       </body>
     </html>

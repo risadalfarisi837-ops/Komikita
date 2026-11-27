@@ -7,6 +7,7 @@ import { useHistory } from '@/lib/store';
 import { primeGameFullscreen } from '@/components/GameMode';
 import { currentSeason } from '@/lib/season';
 import { charismaBuckets } from '@/lib/charisma';
+import { LevelPill } from '@/components/LevelPill';
 
 // ─── Firebase ────────────────────────────────────────────────────────────────
 declare global { interface Window { firebase: any; _fbReady: boolean; } }
@@ -135,10 +136,7 @@ function Header({ onSearch }: { onSearch: () => void }) {
         </Link>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ ...ell, fontSize: 19, fontWeight: 800, letterSpacing: -0.5 }}>{me?.name || 'Komikita'}</div>
-          <span className="gold-pill" style={{ marginTop: 6 }}>
-            <svg width={14} height={14} viewBox="0 0 24 24" aria-hidden style={{ position: 'relative', zIndex: 1 }}><path d="M3 17h18l-1.6 3.2H4.6z" fill="#ffe9a0" /><path d="M5 11.5h14l-1.5 3.2h-11z" fill="#ffd45a" /><path d="M7 6h10l-1.4 3.2H8.4z" fill="#fff3c4" /></svg>
-            <span style={{ position: 'relative', zIndex: 1 }}>Lvl. {level}</span>
-          </span>
+          <div style={{ marginTop: 6 }}><LevelPill level={level} label="Lvl." fontSize="13px" iconSize={15} style={{ padding: '3px 12px 3px 8px' }} /></div>
         </div>
         <button onClick={() => { window.location.assign('/notifikasi'); }} aria-label="Notifikasi" style={{ position: 'relative', flex: '0 0 auto', width: 52, height: 52, borderRadius: '50%', background: '#3A3942', border: 0, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 01-3.4 0" /></svg>
@@ -184,9 +182,9 @@ type BoardTheme = {
 };
 const nf = (n: number) => Math.round(n).toLocaleString('id-ID');
 const BOARDS: BoardTheme[] = [
-  { id: 'giveaway', title: 'TOP PREMIUM', href: '/premium', tabs: false, border: '#1F6F86', bg: 'linear-gradient(160deg, #0E3446 0%, #115063 55%, #0B2C3C 100%)', accent: '#2DD4E8', accentText: '#06303A', glow: 'rgba(45,212,232,.25)', unit: 'hari premium', fmt: nf },
-  { id: 'charisma', title: 'TOP CHARISMA', href: '/ranking', tabs: true, tabLabels: ['ALL', 'BULAN', 'MINGGU'], border: '#8E2F66', bg: 'linear-gradient(160deg, #4A1636 0%, #6B1F4C 55%, #3F1230 100%)', accent: '#FF5C9A', accentText: '#3A0B22', glow: 'rgba(255,92,154,.25)', unit: 'hati diterima', fmt: nf },
-  { id: 'reader', title: 'TOP PEMBACA', href: '/ranking', tabs: false, border: '#55545C', bg: 'linear-gradient(160deg, #2E2E34 0%, #4A4A52 55%, #28282D 100%)', accent: '#F5C451', accentText: '#2A2208', glow: 'rgba(255,255,255,.14)', unit: 'poin musim ini', fmt: nf },
+  { id: 'giveaway', title: 'TOP PREMIUM', href: '/ranking?board=premium', tabs: false, border: '#1F6F86', bg: 'linear-gradient(160deg, #0E3446 0%, #115063 55%, #0B2C3C 100%)', accent: '#2DD4E8', accentText: '#06303A', glow: 'rgba(45,212,232,.25)', unit: 'hari premium', fmt: nf },
+  { id: 'charisma', title: 'TOP CHARISMA', href: '/ranking?board=charisma', tabs: true, tabLabels: ['ALL', 'BULAN', 'MINGGU'], border: '#8E2F66', bg: 'linear-gradient(160deg, #4A1636 0%, #6B1F4C 55%, #3F1230 100%)', accent: '#FF5C9A', accentText: '#3A0B22', glow: 'rgba(255,92,154,.25)', unit: 'hati diterima', fmt: nf },
+  { id: 'reader', title: 'TOP PEMBACA', href: '/ranking?board=reader', tabs: false, border: '#55545C', bg: 'linear-gradient(160deg, #2E2E34 0%, #4A4A52 55%, #28282D 100%)', accent: '#F5C451', accentText: '#2A2208', glow: 'rgba(255,255,255,.14)', unit: 'poin musim ini', fmt: nf },
 ];
 
 // Cahaya latar di balik banner: berubah halus mengikuti slide yang aktif
@@ -307,7 +305,7 @@ const Heart = ({ size = 14, color = '#FF5C9A' }: { size?: number; color?: string
   <svg width={size} height={size} viewBox="0 0 24 24" fill={color} aria-hidden><path d="M12 21s-8-5-8-11a4.6 4.6 0 018-3 4.6 4.6 0 018 3c0 6-8 11-8 11z" /></svg>
 );
 
-function BoardSlide({ theme, rowsByTab, onOpen }: { theme: BoardTheme; rowsByTab: Record<string, BoardRow[]>; onOpen: () => void }) {
+function BoardSlide({ theme, rowsByTab, onOpen }: { theme: BoardTheme; rowsByTab: Record<string, BoardRow[]>; onOpen: (tab: string) => void }) {
   const [tab, setTab] = useState<'all' | 'd30' | 'd7'>('all');
   const [shown, setShown] = useState<'all' | 'd30' | 'd7'>('all'); // isi yang tampil (menyusul tab setelah fade-out)
   const [fading, setFading] = useState(false);
@@ -342,7 +340,7 @@ function BoardSlide({ theme, rowsByTab, onOpen }: { theme: BoardTheme; rowsByTab
     : <svg width={16} height={16} viewBox="0 0 24 24" fill={theme.accent} aria-hidden><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5L3 8z" /></svg>;
 
   return (
-    <div role="button" onClick={onOpen} style={{ position: 'relative', flex: '0 0 100%', aspectRatio: '984 / 446', borderRadius: 20, overflow: 'hidden', scrollSnapAlign: 'start', cursor: 'pointer', background: theme.bg, border: `2px solid ${theme.border}`, boxSizing: 'border-box', padding: '3.2% 3.4%', display: 'flex', flexDirection: 'column', gap: '3%' }}>
+    <div role="button" onClick={() => onOpen(tab)} style={{ position: 'relative', flex: '0 0 100%', aspectRatio: '984 / 446', borderRadius: 20, overflow: 'hidden', scrollSnapAlign: 'start', cursor: 'pointer', background: theme.bg, border: `2px solid ${theme.border}`, boxSizing: 'border-box', padding: '3.2% 3.4%', display: 'flex', flexDirection: 'column', gap: '3%' }}>
       <Sparkles color={theme.accent} />
       <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, color: theme.accent, fontSize: 13, fontWeight: 800, letterSpacing: 1.2 }}>
@@ -472,7 +470,7 @@ function Hero({ onGlow }: { onGlow?: (id: string) => void }) {
           </div>
         ))}
         {boardSlides.map(({ t, rowsByTab }) => (
-          <BoardSlide key={t.id} theme={t} rowsByTab={rowsByTab} onOpen={() => router.push(t.href)} />
+          <BoardSlide key={t.id} theme={t} rowsByTab={rowsByTab} onOpen={(tb) => router.push(t.tabs ? `${t.href}&tab=${tb}` : t.href)} />
         ))}
       </div>
     </div>

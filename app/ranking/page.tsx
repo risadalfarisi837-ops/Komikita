@@ -17,6 +17,7 @@ import { BORDER_CATALOG } from '@/components/BorderSheet';
 import { WALLPAPER_CATALOG } from '@/lib/wallpapers';
 import { isPremiumRole } from '@/lib/premium';
 import { formatShortId } from '@/lib/utils';
+import { LevelPill } from '@/components/LevelPill';
 
 // Font & ukuran mengikuti desain acuan: 1u = 1% lebar layar (maks. kolom 448px), jadi proporsinya sama di semua HP.
 const mont = Montserrat({ subsets: ['latin'], weight: ['500', '600', '700', '800'], display: 'swap' });
@@ -112,13 +113,6 @@ async function loadRows(b: BoardId, tab: string, seasonId: number): Promise<BRow
 }
 
 // ───────────────────────── potongan UI kecil ─────────────────────────
-const TIERS = [
-  { min: 0, max: 49, color: '#9ca3af', icon: '🌑' }, { min: 50, max: 149, color: '#cd7f32', icon: '🥉' }, { min: 150, max: 499, color: '#bdc3c7', icon: '🥈' },
-  { min: 500, max: 2499, color: '#f1c40f', icon: '🥇' }, { min: 2500, max: 4999, color: '#2ecc71', icon: '🔮' }, { min: 5000, max: 9999, color: '#3498db', icon: '💎' },
-  { min: 10000, max: 19999, color: '#9b59b6', icon: '👑' }, { min: 20000, max: Infinity, color: '#ef4444', icon: '🌟' },
-];
-const tierOf = (lv: number) => TIERS.find((t) => lv >= t.min && lv <= t.max) || TIERS[0];
-
 const Shield = ({ color, size = 22 }: { color: string; size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill={color} stroke="rgba(255,255,255,.55)" strokeWidth={1.4} strokeLinejoin="round"><path d="M12 2.5l8 3v6c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10v-6l8-3z" /></svg>
 );
@@ -140,14 +134,8 @@ function FavBtn({ on, onToggle, round }: { on: boolean; onToggle: () => void; ro
   );
 }
 
-const LvPill = ({ lv }: { lv: number }) => {
-  const t = tierOf(lv);
-  return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: `${U(0.3)} ${U(1.7)} ${U(0.3)} ${U(1.2)}`, borderRadius: 99, fontSize: F(2.25, 10.5), fontWeight: 700, color: t.color, background: 'rgba(8,10,28,.7)', border: `1px solid ${t.color}88`, whiteSpace: 'nowrap', lineHeight: 1.25 }}>
-      <span style={{ fontSize: '0.85em' }}>{t.icon}</span>Lv. {fmt(lv)}
-    </span>
-  );
-};
+const LvPill = ({ lv }: { lv: number }) => <LevelPill level={lv} label="Lv." fontSize={F(2.25, 10.5)} iconSize={13} />;
+
 function Ava({ name, photo, size, ring, ringW = 2, borderKey }: { name: string; photo?: string; size: string; ring: string; ringW?: number | string; borderKey?: string }) {
   const bg = AVATAR_COLORS[(name.charCodeAt(0) || 0) % AVATAR_COLORS.length];
   const b: any = borderKey ? (BORDER_CATALOG as any)[borderKey] : null;
