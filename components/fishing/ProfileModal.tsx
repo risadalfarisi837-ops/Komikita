@@ -216,32 +216,49 @@ export default function ProfileModal(p: Props) {
     );
   }
 
-  // ================= TITLE =================
+  // ================= GELAR (Title) =================
   if (view === 'title') {
-    const row = (key: string, text: string, need: number, on: boolean, pick: () => void) => {
+    const RAR: [string, string, string, string][] = [
+      ['Common', '#d8dde3', '#8d96a3', '#aeb7c2'], ['Rare', '#bfe0ff', '#4a90d9', '#7fb6ec'], ['Rare', '#bfe0ff', '#4a90d9', '#7fb6ec'],
+      ['Epic', '#e4d3ff', '#8b5cd6', '#b995ee'], ['Epic', '#e4d3ff', '#8b5cd6', '#b995ee'], ['Legendary', '#ffe7a3', '#d19a1f', '#eec55a'], ['Mythic', '#ffc4c4', '#d94a4a', '#ee8a8a'],
+    ];
+    const idx = o.ttl >= 0 && lv.level >= (TITLES[o.ttl]?.[0] ?? 99) ? o.ttl : TITLES.findIndex(([n], i) => lv.level >= n && !(TITLES[i + 1] && lv.level >= TITLES[i + 1][0]));
+    const cur = Math.max(0, idx);
+    const plaque = (text: string, lock: boolean, r: number, size = 15) => {
+      const c = RAR[Math.min(r, RAR.length - 1)];
+      return (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: px(5), padding: `${px(2)}px ${px(14)}px`, borderRadius: px(6), fontWeight: 900, fontSize: px(size), color: lock ? '#2b2b33' : '#10315f', background: lock ? 'linear-gradient(180deg,#d4d4da,#8f8f99)' : `linear-gradient(180deg,${c[1]},${c[3]})`, border: `${px(2)}px solid ${lock ? '#3a3a44' : '#10315f'}`, boxShadow: '0 2px 0 rgba(0,0,0,.25)', whiteSpace: 'nowrap' }}>
+          {text}
+        </span>
+      );
+    };
+    const gcard = (key: string, text: string, need: number, rIdx: number, desc: string, on: boolean, pick: () => void) => {
       const ok = open(need);
       return (
-        <button key={key} onClick={() => { if (ok) pick(); }} style={{ ...card, width: '100%', display: 'flex', alignItems: 'center', gap: px(10), padding: `${px(10)}px ${px(14)}px`, cursor: ok ? 'pointer' : 'default', fontFamily: font, color: BROWN, borderColor: on ? '#1f5fbf' : EDGE, background: ok ? '#fff8e8' : '#e3d6b6', textAlign: 'left' }}>
-          <span style={{ fontSize: px(22) }}>{ok ? '🎖️' : '🔒'}</span>
-          <span style={{ flex: 1, fontSize: px(18), fontWeight: 800, opacity: ok ? 1 : 0.55 }}>{text}</span>
-          <span style={{ fontSize: px(14), fontWeight: 800, opacity: 0.7 }}>{need > 1 ? `Lv ${need}` : ''}</span>
-          {on && <span style={{ background: '#2f9e44', color: '#fff', fontSize: px(13), fontWeight: 800, borderRadius: 99, padding: `${px(1)}px ${px(9)}px` }}>Dipakai</span>}
+        <button key={key} onClick={() => { if (ok) pick(); }} style={{ background: '#f7ebcc', border: `${px(3)}px solid ${on ? '#1f5fbf' : 'transparent'}`, borderRadius: px(18), padding: `${px(12)}px ${px(10)}px`, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: px(8), cursor: ok ? 'pointer' : 'default', fontFamily: font, color: BROWN, boxSizing: 'border-box' }}>
+          {plaque(text, !ok, rIdx)}
+          <span style={{ display: 'flex', alignItems: 'flex-start', gap: px(5), fontSize: px(13), fontWeight: 700, textAlign: 'center', lineHeight: 1.25 }}>
+            <span style={{ fontSize: px(12) }}>{ok ? '✓' : '🔒'}</span><span>{desc}</span>
+          </span>
         </button>
       );
     };
     return shell(
-      header('🏆', 'Title', () => setView('profil')),
-      <>
-        <div style={{ ...card, width: px(250), flex: 'none', padding: px(12), display: 'flex', flexDirection: 'column', alignItems: 'center', gap: px(8) }}>
-          {stage}
-          <div style={{ fontSize: px(21), fontWeight: 800, textAlign: 'center' }}>{p.name}</div>
-          {titlePill}
+      header('🏆', 'Gelar', () => setView('profil')),
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: px(12) }}>
+        <div style={{ flex: 'none', display: 'flex', alignItems: 'center', gap: px(24), padding: `${px(14)}px ${px(22)}px`, borderRadius: px(18), background: 'linear-gradient(180deg,#17407f,#0e2a5a)', border: `${px(2)}px solid #0b2350`, boxShadow: '0 3px 0 #0b2350', color: '#fff' }}>
+          {plaque(title, false, cur, 24)}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: px(4) }}>
+            <span style={{ fontSize: px(18), fontWeight: 800, color: '#d9c8ff' }}>{RAR[Math.min(cur, RAR.length - 1)][0]}</span>
+            <span style={{ fontSize: px(16), fontWeight: 800 }}>✓ Dipakai</span>
+            <span style={{ fontSize: px(15), fontWeight: 700 }}>{o.ttl < 0 ? 'Otomatis sesuai level' : `Capai Level ${TITLES[cur][0]}`}</span>
+          </div>
         </div>
-        <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: px(8) }}>
-          {row('auto', 'Otomatis (sesuai level)', 1, o.ttl < 0, () => set({ ttl: -1 }))}
-          {TITLES.map(([need, text], i) => row(text, text, need, o.ttl === i && lv.level >= need, () => set({ ttl: i })))}
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: px(12), alignContent: 'start', paddingRight: px(4) }}>
+          {gcard('auto', 'Otomatis', 1, 0, 'Gelar mengikuti level kamu', o.ttl < 0, () => set({ ttl: -1 }))}
+          {TITLES.map(([need, text], i) => gcard(text, text, need, i, `Capai Level ${need}`, o.ttl === i && lv.level >= need, () => set({ ttl: i })))}
         </div>
-      </>,
+      </div>,
     );
   }
 
