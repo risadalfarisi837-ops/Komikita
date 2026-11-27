@@ -205,17 +205,17 @@ const DEV_ITEMS = {
 } as const;
 type ItemCat = keyof typeof DEV_ITEMS;
 type DevUser = { uid: string; name: string; photo: string; level: number; koin: number; role: string };
-const DEV_ACTS = [['koin', 'Crystal'], ['level', 'Level'], ['exp', 'EXP'], ['poin', 'Poin'], ['role', 'Role'], ['item', 'Item'], ['reset', 'Reset']] as const;
+const DEV_ACTS = [['koin', 'Crystal'], ['poin', 'Poin'], ['role', 'Role'], ['item', 'Item'], ['reset', 'Reset']] as const;
 type DevAct = typeof DEV_ACTS[number][0];
 const DEV_MODES = [['add', 'Tambah'], ['sub', 'Kurangi'], ['set', 'Set jadi']] as const;
 type DevMode = typeof DEV_MODES[number][0];
-const DEV_PRESETS: Record<'koin' | 'level' | 'exp' | 'poin', number[]> = { koin: [100, 500, 1000, 5000, 10000], level: [1, 5, 10, 50], exp: [100, 200, 1000, 5000], poin: [100, 300, 700, 1500, 5000, 8000] };
-const DEV_UNIT: Record<'koin' | 'level' | 'exp' | 'poin', string> = { koin: 'Crystal', level: 'level', exp: 'EXP', poin: 'poin musim ini' };
+const DEV_PRESETS: Record<'koin' | 'poin', number[]> = { koin: [100, 500, 1000, 5000, 10000], poin: [100, 300, 700, 1500, 5000, 8000] };
+const DEV_UNIT: Record<'koin' | 'poin', string> = { koin: 'Crystal', poin: 'poin musim ini' };
 const DEV_ROLES = ['Member', 'Komikita Premium', 'Admin', 'Developer'];
-const DEV_RESETS = [['poin', 'Poin musim'], ['level', 'Level & EXP'], ['koin', 'Crystal'], ['hapus', 'Hapus data user']] as const;
+const DEV_RESETS = [['poin', 'Poin musim'], ['koin', 'Crystal'], ['hapus', 'Hapus data user']] as const;
 type DevReset = typeof DEV_RESETS[number][0];
 type GType = 'koin' | 'level' | 'exp' | 'poin' | 'border' | 'wallpaper' | 'effect';
-const GIFT_TYPES: [GType, string][] = [['koin', 'Crystal'], ['level', 'Level up'], ['exp', 'EXP'], ['poin', 'Poin musim'], ['border', 'Border'], ['wallpaper', 'Wallpaper'], ['effect', 'Efek']];
+const GIFT_TYPES: [GType, string][] = [['koin', 'Crystal'], ['poin', 'Poin musim'], ['border', 'Border'], ['wallpaper', 'Wallpaper'], ['effect', 'Efek']];
 const GIFT_PRESETS: Record<GType, number[]> = { koin: [100, 500, 1000, 5000], level: [1, 3, 5, 10], exp: [100, 200, 1000, 5000], poin: [50, 100, 300, 700], border: [], wallpaper: [], effect: [] };
 // crystal = bonus Crystal yang diterima user saat pesanan disetujui
 const DEV_PLAN_DAYS: Record<string, { nama: string; days: number; crystal: number }> = { mingguan: { nama: 'Mingguan', days: 7, crystal: 150 }, bulanan: { nama: 'Bulanan', days: 30, crystal: 500 }, tahunan: { nama: 'Tahunan', days: 365, crystal: 6000 } };
@@ -412,7 +412,7 @@ function DevPanel({ open, onClose, uid, db, userData, onUpdate }: {
   };
 
   const applyNumber = () => {
-    if (act !== 'koin' && act !== 'level' && act !== 'exp' && act !== 'poin') return;
+    if (act !== 'koin' && act !== 'poin') return;
     const n = parseInt(amount);
     if (isNaN(n) || n < 0) { showToast('Isi angka yang benar.', 'error'); return; }
     if ((mode as string) === 'add') {
@@ -423,18 +423,13 @@ function DevPanel({ open, onClose, uid, db, userData, onUpdate }: {
     if (act === 'poin') { applyPoints(n); return; }
     const calc = (c: number) => (mode === 'add' ? c + n : mode === 'sub' ? c - n : n);
     run((cur) => {
-      const lvl = Number(cur.level) || 1;
-      if (act === 'koin') return { koin: Math.max(0, calc(Number(cur.koin) || 0)) };
-      if (act === 'level') { const l = Math.max(1, calc(lvl)); return { level: l, exp: (l - 1) * 200 }; }
-      const e = Math.max(0, calc(Number.isFinite(Number(cur.exp)) ? Number(cur.exp) : (lvl - 1) * 200));
-      return { exp: e, level: Math.floor(e / 200) + 1 };
-    }, 'Berhasil diterapkan.', mode === 'add' ? { title: 'Gift terkirim!', sub: '+' + n + ' ' + (act === 'koin' ? 'Crystal' : act === 'level' ? 'Level' : 'EXP') + ' untuk ' + (target?.name || 'user') } : undefined);
+      return { koin: Math.max(0, calc(Number(cur.koin) || 0)) };
+    }, 'Berhasil diterapkan.', mode === 'add' ? { title: 'Gift terkirim!', sub: '+' + n + ' ' + 'Crystal' + ' untuk ' + (target?.name || 'user') } : undefined);
   };
 
   const applyReset = async () => {
     if (!target) { showToast('Pilih user dulu.', 'error'); return; }
     const lbRef = db.ref(`leaderboard/s${currentSeason().id}/${target.uid}`);
-    if (resetPick === 'level') { run(() => ({ level: 1, exp: 0 }), 'Level & EXP direset.'); return; }
     if (resetPick === 'koin') { run(() => ({ koin: 0 }), 'Crystal direset.'); return; }
     if (resetPick === 'poin') {
       setSaving(true);
@@ -555,7 +550,7 @@ function DevPanel({ open, onClose, uid, db, userData, onUpdate }: {
   const ql = q.trim().replace('#', '').toLowerCase();
   const matches = (users || []).filter(u => !ql || u.name.toLowerCase().includes(ql) || u.uid.toLowerCase().startsWith(ql) || formatShortId((u as any).shortId, u.uid).replace('#', '').includes(ql.replace(/^#/, ''))).slice(0, 6);
   const cnt = (o: any) => Object.keys(o || {}).length;
-  const numAct = act === 'koin' || act === 'level' || act === 'exp' || act === 'poin';
+  const numAct = act === 'koin' || act === 'poin';
   const modeLabel = DEV_MODES.find(m => m[0] === mode)![1];
   const catDef = DEV_ITEMS[itemCat];
   const nameOf = (cat: ItemCat, key: string) => DEV_ITEMS[cat].items.find(i => i.key === key)?.nama || '';
@@ -646,13 +641,13 @@ function DevPanel({ open, onClose, uid, db, userData, onUpdate }: {
                 {DEV_MODES.map(([k, l]) => <button key={k} onClick={() => setMode(k)} style={chip(mode === k)}>{l}</button>)}
               </div>
               <div style={ROW}>
-                {DEV_PRESETS[act as 'koin' | 'level' | 'exp' | 'poin'].map(n => (
+                {DEV_PRESETS[act as 'koin' | 'poin'].map(n => (
                   <button key={n} onClick={() => setAmount(String(n))} style={chip(amount === String(n))}>{n.toLocaleString('id-ID')}</button>
                 ))}
               </div>
               <input style={FIELD} value={amount} onChange={e => setAmount(e.target.value)} type="number" inputMode="numeric" placeholder="Atau ketik jumlah sendiri" />
               <button onClick={applyNumber} disabled={saving || !target} style={{ ...BTN, background: '#0E8A6A', color: '#fff', opacity: saving || !target ? 0.5 : 1 }}>
-                {saving ? 'Memproses...' : `${modeLabel} ${amount || '…'} ${DEV_UNIT[act as 'koin' | 'level' | 'exp' | 'poin']}`}
+                {saving ? 'Memproses...' : `${modeLabel} ${amount || '…'} ${DEV_UNIT[act as 'koin' | 'poin']}`}
               </button>
             </div>
           )}
@@ -758,7 +753,7 @@ function DevPanel({ open, onClose, uid, db, userData, onUpdate }: {
             </div>
           ) : (
             <div>
-              <label style={LABEL}>{gType === 'koin' ? 'Jumlah crystal' : gType === 'level' ? 'Naik berapa level' : gType === 'exp' ? 'Jumlah EXP' : 'Jumlah poin musim ini'}</label>
+              <label style={LABEL}>{gType === 'koin' ? 'Jumlah crystal' : 'Jumlah poin musim ini'}</label>
               <div style={{ ...ROW, marginBottom: 8 }}>
                 {GIFT_PRESETS[gType].map(n => <button key={n} onClick={() => { setGVal(String(n)); setConfirmGlobal(false); }} style={chip(gVal === String(n))}>{n.toLocaleString('id-ID')}</button>)}
               </div>

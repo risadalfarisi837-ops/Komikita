@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft, ChevronRight, Crown, Palette, Globe, Smartphone, Image as ImageIcon, Download,
-  Bookmark, Bell, Reply, Info, RefreshCw, Trash2, Share2, Bug, LogOut, Hash, Upload,
+  Bookmark, Bell, Reply, Info, RefreshCw, Trash2, Share2, Bug, LogOut, Wrench, Hash, Upload,
 } from 'lucide-react';
 import { useFavorites, useHistory } from '@/lib/store';
 import type { FavoriteItem, HistoryItem } from '@/lib/store';
@@ -172,6 +172,7 @@ export default function SettingsPage() {
   }, [readCache]);
 
   const isPremium = role === 'Komikita Premium';
+  const isDev = role === 'Developer';
 
   const goBack = () => {
     if (typeof window !== 'undefined' && window.history.length > 1) router.back();
@@ -369,6 +370,17 @@ export default function SettingsPage() {
         </Group>
         <input ref={fileRef} type="file" accept="application/json,.json" hidden
           onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) importData(f); }} />
+
+        {/* Developer */}
+        {isDev && (
+          <>
+            <Label>Developer</Label>
+            <Group>
+              <Row icon={<Wrench size={22} color={ICON} />} title="Panel Developer" sub="Kelola user, item, dan hadiah" chevron onClick={() => router.push('/profile?dev=1')} />
+              <Row border icon={<Bug size={22} color={ICON} />} title="Dev Tools" sub="API tester, storage, Firebase, cache. Auto fishing ada di menu game Mancing" chevron onClick={() => router.push('/dev')} />
+            </Group>
+          </>
+        )}
 
         {/* Dukung */}
         <Label>Dukung Komikita</Label>
