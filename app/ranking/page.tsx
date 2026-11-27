@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Montserrat } from 'next/font/google';
 import { useUserStats } from '@/lib/store';
-import { currentSeason, RANKS, rankFor, fmt, fmtC, targetsFor, POINTS_PER_CHAPTER, NIGHT_BONUS, DAILY_BONUS, Track } from '@/lib/season';
+import { currentSeason, RANKS, rankFor, fmt, fmtC, targetsFor, POINTS_PER_CHAPTER, NIGHT_BONUS, DAILY_BONUS } from '@/lib/season';
 import { fetchTop, pushSeasonScore, getUser, getFirebase } from '@/lib/leaderboard';
 import { charismaBuckets } from '@/lib/charisma';
 import { findLencana, heldLencana, TRACK_COLOR } from '@/lib/lencana';
@@ -20,11 +21,22 @@ import { WALLPAPER_CATALOG } from '@/lib/wallpapers';
 import { isPremiumRole } from '@/lib/premium';
 import { formatShortId } from '@/lib/utils';
 
+// Font & ukuran mengikuti desain acuan: 1u = 1% lebar layar (maks. kolom 448px), jadi proporsinya sama di semua HP.
+const mont = Montserrat({ subsets: ['latin'], weight: ['500', '600', '700', '800'], display: 'swap' });
+const U = (n: number) => `calc(var(--u) * ${n})`;
+const F = (n: number, min = 10) => `max(${min}px, calc(var(--u) * ${n}))`;
+
 const MUTED = '#8F8D9B';
 const GREEN = '#0E8A6A';
 const MAROON = '#4A2A33';
 const AVATAR_COLORS = ['#4A2A2E', '#F26B21', '#3B3F8C', '#0F6B55', '#7A1D2E', '#5B3A8C'];
+const RING_GRAD = [
+  'linear-gradient(135deg,#ff5c8a,#ff9a5c)', 'linear-gradient(135deg,#ff4d6d,#c13584)', 'linear-gradient(135deg,#a855f7,#ec4899)',
+  'linear-gradient(135deg,#f43f5e,#fb7185)', 'linear-gradient(135deg,#6366f1,#ec4899)',
+];
+const ringFor = (uid: string) => RING_GRAD[(uid.charCodeAt(0) + uid.charCodeAt(uid.length - 1)) % RING_GRAD.length];
 const GOLD = '#F5C451', SILVER = '#C9D1DA', BRONZE = '#E08A3C';
+const PINK = '#FF5C9A';
 
 // ───────────────────────── papan & tema ─────────────────────────
 type BoardId = 'reader' | 'premium' | 'charisma';
@@ -35,8 +47,7 @@ type Theme = {
 const THEMES: Record<BoardId, Theme> = {
   reader: {
     id: 'reader', title: 'Top Pembaca', accent: GOLD, accentText: '#2A2208', border: 'rgba(245,196,81,.5)', bgTop: '#4D3C12', bgBottom: '#1D1809', unit: 'poin',
-    tabs: [{ k: 'Semua', label: 'Semua' }, { k: 'Noble', label: 'Noble' }, { k: 'Murim', label: 'Murim' }, { k: 'Demon', label: 'Demon' }],
-    section: (t) => (t === 'Semua' ? 'Top Pembaca Musim Ini' : 'Top Pembaca · ' + t),
+    tabs: [], section: () => 'Top Pembaca Musim Ini',
     chip: (_t, d, s) => `Season ${s} · ${d} hari lagi`,
   },
   premium: {
@@ -44,7 +55,7 @@ const THEMES: Record<BoardId, Theme> = {
     tabs: [], section: () => 'Top Premium', chip: () => 'Sisa hari premium',
   },
   charisma: {
-    id: 'charisma', title: 'Paling Dicintai', accent: '#FF5C9A', accentText: '#3A0B22', border: 'rgba(255,92,154,.5)', bgTop: '#6E2A55', bgBottom: '#26111E', unit: 'hati',
+    id: 'charisma', title: 'Paling Dicintai', accent: PINK, accentText: '#3A0B22', border: 'rgba(255,92,154,.5)', bgTop: '#6E2A55', bgBottom: '#26111E', unit: 'hati',
     tabs: [{ k: 'all', label: 'All Time' }, { k: 'd30', label: 'Bulan Ini' }, { k: 'd7', label: 'Minggu Ini' }],
     section: (t) => 'Top Charisma ' + (t === 'all' ? 'Sepanjang Masa' : t === 'd30' ? 'Bulan Ini' : 'Minggu Ini'),
     chip: (t) => (t === 'all' ? 'Sepanjang masa' : t === 'd30' ? 'Bulan ini' : 'Minggu ini'),
@@ -114,54 +125,67 @@ const tierOf = (lv: number) => TIERS.find((t) => lv >= t.min && lv <= t.max) || 
 const Shield = ({ color, size = 22 }: { color: string; size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill={color} stroke="rgba(255,255,255,.55)" strokeWidth={1.4} strokeLinejoin="round"><path d="M12 2.5l8 3v6c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10v-6l8-3z" /></svg>
 );
-const HeartIcon = ({ size = 14, color = '#FF5C9A' }: { size?: number; color?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill={color} aria-hidden style={{ flex: `0 0 ${size}px` }}><path d="M12 21s-8-5-8-11a4.6 4.6 0 018-3 4.6 4.6 0 018 3c0 6-8 11-8 11z" /></svg>
+const HEART_D = 'M12 21s-8-5-8-11a4.6 4.6 0 018-3 4.6 4.6 0 018 3c0 6-8 11-8 11z';
+const HeartIcon = ({ size = 14, color = PINK }: { size?: number; color?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={color} aria-hidden style={{ flex: `0 0 ${size}px` }}><path d={HEART_D} /></svg>
 );
-const Crown = ({ w }: { w: number }) => (
-  <svg aria-hidden width={w} height={w * 0.75} viewBox="0 0 24 18"><path d="M1 5l5 4 6-8 6 8 5-4-2 12H3z" fill="#FFC53D" stroke="#B8860B" strokeWidth={0.8} strokeLinejoin="round" /></svg>
+const Crown = ({ w }: { w: string }) => (
+  <svg aria-hidden viewBox="0 0 24 18" style={{ width: w, height: 'auto', display: 'block' }}><path d="M1 5l5 4 6-8 6 8 5-4-2 12H3z" fill="#FFC53D" stroke="#B8860B" strokeWidth={0.8} strokeLinejoin="round" /></svg>
 );
+
+// Tombol hati (tanda favorit) — tersimpan di perangkat ini
+function FavBtn({ on, onToggle, round }: { on: boolean; onToggle: () => void; round?: boolean }) {
+  return (
+    <button type="button" aria-label={on ? 'Hapus tanda' : 'Tandai'} aria-pressed={on} onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggle(); }} className="rk-fav"
+      style={{ flex: '0 0 auto', width: round ? 'max(28px, calc(var(--u) * 6))' : 'max(34px, calc(var(--u) * 8))', height: round ? 'max(28px, calc(var(--u) * 6))' : 'max(34px, calc(var(--u) * 8))', borderRadius: '50%', border: round ? '1px solid rgba(255,255,255,.14)' : 0, background: round ? 'rgba(255,255,255,.07)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+      <svg viewBox="0 0 24 24" style={{ width: round ? '56%' : '68%', height: round ? '56%' : '68%', transition: 'transform .25s cubic-bezier(.3,1.6,.5,1)', transform: on ? 'scale(1.12)' : 'scale(1)' }} fill={on ? PINK : 'none'} stroke={PINK} strokeWidth={2.1} strokeLinejoin="round"><path d={HEART_D} /></svg>
+    </button>
+  );
+}
 
 const LvPill = ({ lv }: { lv: number }) => {
   const t = tierOf(lv);
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '1px 8px 1px 5px', borderRadius: 99, fontSize: 11, fontWeight: 800, color: t.color, background: 'rgba(255,255,255,.06)', border: `1px solid ${t.color}77`, whiteSpace: 'nowrap', lineHeight: '15px' }}>
-      <span style={{ fontSize: 9 }}>{t.icon}</span>Lv. {fmt(lv)}
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: `${U(0.3)} ${U(1.7)} ${U(0.3)} ${U(1.2)}`, borderRadius: 99, fontSize: F(2.25, 10.5), fontWeight: 700, color: t.color, background: 'rgba(8,10,28,.7)', border: `1px solid ${t.color}88`, whiteSpace: 'nowrap', lineHeight: 1.25 }}>
+      <span style={{ fontSize: '0.85em' }}>{t.icon}</span>Lv. {fmt(lv)}
     </span>
   );
 };
 const LChip = ({ l }: { l: Lencana }) => (
-  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '0 8px 0 2px', height: 18, borderRadius: 6, background: TRACK_COLOR[l.track], fontSize: 10.5, fontWeight: 800, letterSpacing: 0.2, color: '#fff', whiteSpace: 'nowrap' }}>
-    <LencanaIcon l={l} size={16} />{l.name.toUpperCase()}
+  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '0 8px 0 2px', height: F(3.7, 18), maxWidth: '100%', borderRadius: 6, background: TRACK_COLOR[l.track], fontSize: F(2.1, 9.5), fontWeight: 800, letterSpacing: 0.2, color: '#fff', whiteSpace: 'nowrap' }}>
+    <LencanaIcon l={l} size={15} /><span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.name.toUpperCase()}</span>
   </span>
 );
 
-function Ava({ name, photo, size, ring, ringW = 2, borderKey }: { name: string; photo?: string; size: number; ring: string; ringW?: number; borderKey?: string }) {
+function Ava({ name, photo, size, ring, ringW = 2, borderKey }: { name: string; photo?: string; size: string; ring: string; ringW?: number | string; borderKey?: string }) {
   const bg = AVATAR_COLORS[(name.charCodeAt(0) || 0) % AVATAR_COLORS.length];
   const b: any = borderKey ? (BORDER_CATALOG as any)[borderKey] : null;
   const hasB = !!(b && b.url);
   return (
-    <div style={{ position: 'relative', width: size, height: size, flex: `0 0 ${size}px` }}>
-      <div style={{ width: '100%', height: '100%', borderRadius: '50%', border: `${ringW}px solid ${ring}`, boxSizing: 'border-box', overflow: 'hidden', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.34, fontWeight: 800 }}>
-        {photo
-          // eslint-disable-next-line @next/next/no-img-element
-          ? <img decoding="async" src={photo} alt="" referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          : name.slice(0, 2).toUpperCase()}
+    <div style={{ ['--s' as string]: size, position: 'relative', width: 'var(--s)', height: 'var(--s)', flex: '0 0 var(--s)' } as CSSProperties}>
+      <div style={{ width: '100%', height: '100%', borderRadius: '50%', padding: ringW, boxSizing: 'border-box', background: ring }}>
+        <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'calc(var(--s) * 0.34)', fontWeight: 800 }}>
+          {photo
+            // eslint-disable-next-line @next/next/no-img-element
+            ? <img decoding="async" src={photo} alt="" referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : name.slice(0, 2).toUpperCase()}
+        </div>
       </div>
       {hasB && <div style={{ position: 'absolute', top: '50%', left: '50%', width: '130%', height: '130%', transform: 'translate(-50%,-50%)', backgroundImage: "url('" + b.url + "')", backgroundSize: 'contain', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', pointerEvents: 'none', zIndex: 2 }} />}
     </div>
   );
 }
 
-function NameLine({ name, ex, size = 16, prefix, center }: { name: string; ex?: Extra; size?: number; prefix?: string; center?: boolean }) {
+function NameLine({ name, ex, size = '16px', weight = 700, prefix, center }: { name: string; ex?: Extra; size?: string; weight?: number; prefix?: string; center?: boolean }) {
   const pu = Number(ex?.premiumUntil) || 0;
   const verified = isPremiumRole(ex?.role) && (!pu || pu > Date.now());
   const dev = ex?.role === 'Developer';
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0, justifyContent: center ? 'center' : 'flex-start', maxWidth: '100%' }}>
-      {prefix && <span style={{ fontSize: size, fontWeight: 800, letterSpacing: -0.3, whiteSpace: 'nowrap' }}>{prefix}</span>}
-      <PremiumName premium={verified} dev={dev} style={{ fontSize: size, fontWeight: 800, letterSpacing: -0.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{name}</PremiumName>
-      {verified && <VerifiedBadge size={size - 2} />}
-      {dev && <DevBadge size={size - 1} />}
+    <div style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0, justifyContent: center ? 'center' : 'flex-start', maxWidth: '100%', fontSize: size }}>
+      {prefix && <span style={{ fontWeight: weight, whiteSpace: 'nowrap' }}>{prefix}</span>}
+      <PremiumName premium={verified} dev={dev} style={{ fontWeight: weight, letterSpacing: -0.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{name}</PremiumName>
+      {verified && <VerifiedBadge size={14} />}
+      {dev && <DevBadge size={15} />}
     </div>
   );
 }
@@ -198,12 +222,12 @@ const BoardIcon = ({ id, color, size = 18 }: { id: BoardId; color: string; size?
 const SPARK: [number, number, number][] = [[10, 22, 7], [88, 18, 9], [20, 55, 6], [78, 50, 7], [50, 12, 6], [93, 62, 6], [6, 70, 5]];
 const HEARTS: [number, number, number, number][] = [[18, 8, 8.5, 12], [36, 2, 10.5, 9], [58, 5, 7.5, 13], [76, 1, 9.5, 10], [88, 6, 8, 11], [47, 0, 11, 14]];
 
-function Valtxt({ b, v, size, theme }: { b: BoardId; v: number; size: number; theme: Theme }) {
+function Valtxt({ b, v, size, unit, color }: { b: BoardId; v: number; size: string; unit: string; color: string }) {
   const num = b === 'reader' ? fmtC(v) : fmt(v);
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 4, fontWeight: 800, fontSize: size, letterSpacing: -0.5, color: b === 'charisma' ? '#fff' : theme.accent, whiteSpace: 'nowrap' }}>
-      {b === 'charisma' && <span style={{ alignSelf: 'center', display: 'inline-flex' }}><HeartIcon size={size * 0.8} color={theme.accent} /></span>}
-      {num}{b !== 'charisma' && <span style={{ fontSize: size * 0.55, color: '#C9C7D3', fontWeight: 700 }}>{theme.unit}</span>}
+    <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 4, fontWeight: 800, fontSize: size, letterSpacing: -0.4, color, whiteSpace: 'nowrap', lineHeight: 1.1 }}>
+      {b === 'charisma' && <span style={{ alignSelf: 'center', display: 'inline-flex' }}><HeartIcon size={14} color={PINK} /></span>}
+      {num}{b !== 'charisma' && <span style={{ fontSize: '0.62em', color: '#B9B7C4', fontWeight: 600 }}>{unit}</span>}
     </span>
   );
 }
@@ -214,42 +238,48 @@ function Lenc({ r, ex, b }: { r: BRow; ex?: Extra; b: BoardId }) {
   return l ? <LChip l={l} /> : null;
 }
 
-function PodiumCol({ r, pos, ex, theme }: { r?: BRow; pos: 1 | 2 | 3; ex?: Extra; theme: Theme }) {
+type FavProps = { favs: string[]; onFav: (uid: string) => void };
+
+function PodiumCol({ r, pos, ex, theme, favs, onFav }: { r?: BRow; pos: 1 | 2 | 3; ex?: Extra } & { theme: Theme } & FavProps) {
   const ring = pos === 1 ? GOLD : pos === 2 ? SILVER : BRONZE;
-  const size = pos === 1 ? 78 : 62;
-  const blockH = pos === 1 ? 84 : pos === 2 ? 58 : 42;
-  const blockBg = pos === 1 ? 'linear-gradient(180deg,#8A6A14,#4B3A0C)' : pos === 2 ? 'linear-gradient(180deg,#575B63,#2D3036)' : 'linear-gradient(180deg,#86531F,#4A2C10)';
-  const blockBorder = pos === 1 ? GOLD : pos === 2 ? '#9AA2AD' : '#B5702E';
+  const size = pos === 1 ? U(15.5) : U(10.8);
+  const blockH = pos === 1 ? 14.6 : pos === 2 ? 9.8 : 7;
+  const blockBg = pos === 1 ? 'linear-gradient(180deg,#8A6A14,#4B3A0C)' : pos === 2 ? 'linear-gradient(180deg,#5D6168,#2F3236)' : 'linear-gradient(180deg,#8B5A22,#4B2D10)';
+  const blockBorder = pos === 1 ? GOLD : pos === 2 ? '#C3C8CF' : '#C98A4B';
   const numColor = pos === 1 ? '#F7D774' : pos === 2 ? '#DCE1E8' : '#E9A25C';
   const nm = r ? (ex?.displayName || r.name) : '';
-  const inner = r ? (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '0 2px 8px', minWidth: 0, width: '100%' }}>
-      <div style={{ position: 'relative', marginBottom: 2 }}>
-        {pos === 1 && <div style={{ position: 'absolute', left: '50%', top: -18, transform: 'translateX(-50%)', zIndex: 3 }}><Crown w={28} /></div>}
-        <Ava name={nm} photo={ex?.photoURL || r.photo} size={size} ring={ring} ringW={3} borderKey={ex?.activeBorder} />
+  const info = r ? (
+    <Link href={`/user?uid=${r.uid}`} className="rk-tap" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: U(0.7), width: '100%', color: 'inherit', textDecoration: 'none' }}>
+      <div style={{ position: 'relative', marginBottom: U(0.6) }}>
+        {pos === 1 && <div style={{ position: 'absolute', left: '50%', top: U(-4.3), transform: 'translateX(-50%) rotate(-4deg)', zIndex: 3, width: U(7.4) }}><Crown w="100%" /></div>}
+        <Ava name={nm} photo={ex?.photoURL || r.photo} size={size} ring={ring} ringW={U(0.55)} borderKey={ex?.activeBorder} />
       </div>
-      <NameLine name={nm} ex={ex} size={pos === 1 ? 16 : 14} center />
-      <div style={{ fontSize: 10.5, fontWeight: 700, color: MUTED }}>{formatShortId(ex?.shortId, r.uid)}</div>
+      <NameLine name={nm} ex={ex} size={F(pos === 1 ? 3.2 : 2.9, 12)} weight={800} center />
+      <div style={{ fontSize: F(2.2, 10), fontWeight: 600, color: MUTED }}>{formatShortId(ex?.shortId, r.uid)}</div>
       {ex?.level !== undefined && <LvPill lv={Number(ex.level) || 1} />}
-      <Valtxt b={theme.id} v={r.value} size={pos === 1 ? 22 : 17} theme={theme} />
-      <Lenc r={r} ex={ex} b={theme.id} />
-    </div>
-  ) : <div style={{ height: 40 }} />;
-  const col: CSSProperties = { flex: pos === 1 ? '1.15 1 0' : '1 1 0', minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', position: 'relative', zIndex: pos === 1 ? 2 : 1 };
+      <Valtxt b={theme.id} v={r.value} size={F(pos === 1 ? 5.1 : 4, 15)} unit={theme.unit} color={pos === 1 ? GOLD : '#fff'} />
+    </Link>
+  ) : <div style={{ height: U(8) }} />;
   return (
-    <div style={col} className={'rk-pod rk-pod' + pos}>
-      {r ? <Link href={`/user?uid=${r.uid}`} style={{ width: '100%', color: 'inherit', textDecoration: 'none' }} className="rk-tap">{inner}</Link> : inner}
-      <div style={{ width: '100%', height: blockH, borderRadius: '14px 14px 0 0', background: blockBg, borderTop: `2px solid ${blockBorder}`, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: pos === 1 ? 36 : 28, fontWeight: 800, color: numColor, textShadow: '0 2px 6px rgba(0,0,0,.35)' }}>{pos}</div>
+    <div className={'rk-pod rk-pod' + pos} style={{ flex: pos === 1 ? '32 1 0' : pos === 2 ? '27 1 0' : '27.4 1 0', minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', position: 'relative', zIndex: pos === 1 ? 2 : 1 }}>
+      {info}
+      {r && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: U(1.2), margin: `${U(1.2)} 0 ${U(1.6)}`, maxWidth: '100%' }}>
+          <div style={{ minWidth: 0, display: 'flex' }}><Lenc r={r} ex={ex} b={theme.id} /></div>
+          <FavBtn round on={favs.includes(r.uid)} onToggle={() => onFav(r.uid)} />
+        </div>
+      )}
+      <div style={{ width: '100%', height: U(blockH), borderRadius: `${U(2.6)} ${U(2.6)} 0 0`, background: blockBg, borderTop: `2px solid ${blockBorder}`, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: F(pos === 1 ? 7.2 : 5.4, 22), fontWeight: 800, color: numColor, textShadow: '0 2px 6px rgba(0,0,0,.35)' }}>{pos}</div>
     </div>
   );
 }
 
-function Podium({ rows, ex, theme, tab, chip }: { rows: BRow[]; ex: Record<string, Extra>; theme: Theme; tab: string; chip: string }) {
+function Podium({ rows, ex, theme, tab, chip, favs, onFav }: { rows: BRow[]; ex: Record<string, Extra>; theme: Theme; tab: string; chip: string } & FavProps) {
   return (
-    <div style={{ position: 'relative', margin: '14px 16px 0', borderRadius: 24, border: `1.5px solid ${theme.border}`, background: `linear-gradient(180deg, ${theme.bgTop} 0%, ${theme.bgBottom} 100%)`, overflow: 'hidden', padding: '14px 10px 0', minHeight: 400, boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ position: 'relative', margin: `${U(2.6)} ${U(2.8)} 0`, borderRadius: U(5), border: `1.5px solid ${theme.border}`, background: `linear-gradient(180deg, ${theme.bgTop} 0%, ${theme.bgBottom} 100%)`, overflow: 'hidden', padding: `${U(3.6)} ${U(2.2)} 0`, minHeight: U(80), boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
       {/* sorotan cahaya + kilau + (khusus charisma) hati melayang */}
-      <div aria-hidden style={{ position: 'absolute', left: '50%', top: 0, width: '62%', height: '86%', transform: 'translateX(-50%)', clipPath: 'polygon(36% 0, 64% 0, 100% 100%, 0 100%)', background: 'linear-gradient(180deg, rgba(255,255,255,.26) 0%, rgba(255,255,255,.06) 70%, rgba(255,255,255,0) 100%)', pointerEvents: 'none' }} />
-      <div aria-hidden className="rk-sparks" style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+      <div aria-hidden style={{ position: 'absolute', left: '50%', top: 0, width: '62%', height: '88%', transform: 'translateX(-50%)', clipPath: 'polygon(36% 0, 64% 0, 100% 100%, 0 100%)', background: 'linear-gradient(180deg, rgba(255,255,255,.26) 0%, rgba(255,255,255,.06) 70%, rgba(255,255,255,0) 100%)', pointerEvents: 'none' }} />
+      <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
         {SPARK.map(([x, y, z], i) => (
           <svg key={i} width={z * 2} height={z * 2} viewBox="0 0 24 24" style={{ position: 'absolute', left: x + '%', top: y + '%', opacity: 0.45, animationDelay: -(i * 0.7) + 's' }} className="rk-tw"><path d="M12 0l2.6 9.4L24 12l-9.4 2.6L12 24l-2.6-9.4L0 12l9.4-2.6z" fill="#fff" /></svg>
         ))}
@@ -260,25 +290,28 @@ function Podium({ rows, ex, theme, tab, chip }: { rows: BRow[]; ex: Record<strin
         </div>
       )}
 
-      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px', zIndex: 3 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 17, fontWeight: 800, color: theme.accent }}>
-          {theme.id === 'charisma' ? <HeartIcon size={17} color={theme.accent} /> : <Crown w={20} />}The Big 3
+      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `0 ${U(0.8)}`, zIndex: 3 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: U(1.6), fontSize: F(3.1, 13), fontWeight: 800, color: theme.accent }}>
+          {theme.id === 'charisma' ? <HeartIcon size={16} color={theme.accent} /> : <Crown w={U(3.9)} />}The Big 3
         </div>
-        <span style={{ fontSize: 11.5, fontWeight: 700, color: '#D5D3DE', background: 'rgba(0,0,0,.35)', border: '1px solid rgba(255,255,255,.1)', padding: '4px 11px', borderRadius: 99 }}>{chip}</span>
+        <span style={{ fontSize: F(2.2, 10), fontWeight: 600, color: '#D5D3DE', background: 'rgba(0,0,0,.35)', border: '1px solid rgba(255,255,255,.1)', padding: `${U(0.9)} ${U(2.2)}`, borderRadius: 99, whiteSpace: 'nowrap' }}>{chip}</span>
       </div>
 
-      <div key={theme.id + ':' + tab} style={{ position: 'relative', zIndex: 2, flex: 1, display: 'flex', alignItems: 'flex-end', gap: 4, marginTop: 8 }}>
-        <PodiumCol r={rows[1]} pos={2} ex={rows[1] ? ex[rows[1].uid] : undefined} theme={theme} />
-        <PodiumCol r={rows[0]} pos={1} ex={rows[0] ? ex[rows[0].uid] : undefined} theme={theme} />
-        <PodiumCol r={rows[2]} pos={3} ex={rows[2] ? ex[rows[2].uid] : undefined} theme={theme} />
+      <div key={theme.id + ':' + tab} style={{ position: 'relative', zIndex: 2, flex: 1, display: 'flex', alignItems: 'flex-end', gap: U(1.7), marginTop: U(6) }}>
+        <PodiumCol r={rows[1]} pos={2} ex={rows[1] ? ex[rows[1].uid] : undefined} theme={theme} favs={favs} onFav={onFav} />
+        <PodiumCol r={rows[0]} pos={1} ex={rows[0] ? ex[rows[0].uid] : undefined} theme={theme} favs={favs} onFav={onFav} />
+        <PodiumCol r={rows[2]} pos={3} ex={rows[2] ? ex[rows[2].uid] : undefined} theme={theme} favs={favs} onFav={onFav} />
       </div>
     </div>
   );
 }
 
 // ───────────────────────── halaman ─────────────────────────
-export default function RankingPage() {
+function RankingInner() {
   const router = useRouter();
+  const sp = useSearchParams();
+  const spBoard = sp?.get('board') || '';
+  const spTab = sp?.get('tab') || '';
   const season = currentSeason();
   const mine = useUserStats((s) => s.season);
   const [mounted, setMounted] = useState(false);
@@ -291,20 +324,27 @@ export default function RankingPage() {
   const [myCh, setMyCh] = useState<number | null>(null);
   const [sheet, setSheet] = useState(false);
   const [menu, setMenu] = useState(false);
+  const [favs, setFavs] = useState<string[]>([]);
 
   const putEx = (o: Record<string, Extra>) => { exRef.current = { ...exRef.current, ...o }; setEx(exRef.current); };
+  const toggleFav = (uid: string) => setFavs((prev) => {
+    const n = prev.includes(uid) ? prev.filter((x) => x !== uid) : [...prev, uid];
+    try { localStorage.setItem('komikita_rk_fav', JSON.stringify(n)); } catch {}
+    return n;
+  });
 
-  // baca ?board= & ?tab= dari alamat (tanpa useSearchParams supaya tidak perlu Suspense)
   useEffect(() => {
     setMounted(true);
-    const q = new URLSearchParams(window.location.search);
-    const b = q.get('board');
-    const id: BoardId = b === 'premium' || b === 'charisma' ? b : 'reader';
-    const t = q.get('tab');
-    setBoard(id);
-    setTab(id === 'charisma' ? (t === 'd30' || t === 'd7' ? t : 'all') : 'Semua');
+    try { const f = JSON.parse(localStorage.getItem('komikita_rk_fav') || '[]'); if (Array.isArray(f)) setFavs(f); } catch {}
     getUser().then((u) => { setMe(u || null); if (u) fetchExtras([u.uid], putEx, exRef.current); }).catch(() => {});
   }, []);
+
+  // papan & tab mengikuti alamat (?board=reader|premium|charisma &tab=all|d30|d7), jadi banner langsung buka papan yang sesuai
+  useEffect(() => {
+    const id: BoardId = spBoard === 'premium' || spBoard === 'charisma' ? spBoard : 'reader';
+    setBoard(id);
+    setTab(id === 'charisma' ? (spTab === 'd30' || spTab === 'd7' ? spTab : 'all') : 'Semua');
+  }, [spBoard, spTab]);
 
   const theme = THEMES[board || 'reader'];
   const key = board === 'charisma' ? 'charisma:' + tab : board || '';
@@ -329,7 +369,7 @@ export default function RankingPage() {
 
   const rows = cur?.rows || [];
   const loading = !board || !cur;
-  const list = board === 'reader' && tab !== 'Semua' ? rows.filter((r) => rankFor(r.points || 0).rank.track === (tab as Track)) : rows;
+  const list = rows;
 
   // posisi kamu
   const pts = mounted && mine.id === season.id ? mine.points + (mine.bonus || 0) : 0;
@@ -370,55 +410,52 @@ export default function RankingPage() {
   };
   const goBack = () => { if (window.history.length > 1) router.back(); else router.push('/'); };
   const tabIdx = Math.max(0, theme.tabs.findIndex((t) => t.k === tab));
+  const valColor = theme.id === 'charisma' ? '#fff' : '#fff';
 
   return (
-    <div style={{ background: '#1B1A20', color: '#fff', minHeight: '100vh', paddingBottom: 170 }}>
+    <div className={'rk-root ' + mont.className} style={{ ['--u' as string]: 'min(1vw, 4.48px)', background: '#1B1A20', color: '#fff', minHeight: '100vh', paddingBottom: 170, maxWidth: 448, margin: '0 auto' } as CSSProperties}>
       <style>{`
 a{text-decoration:none;color:inherit} button{font-family:inherit;cursor:pointer}
 @keyframes rkIn{from{opacity:0;transform:translate3d(0,10px,0)}to{opacity:1;transform:none}}
 @keyframes rkPod{from{opacity:0;transform:translate3d(0,26px,0) scale(.94)}to{opacity:1;transform:none}}
 @keyframes rkTw{0%,100%{opacity:.15;transform:scale(.7)}50%{opacity:.75;transform:scale(1.1)}}
 @keyframes rkFh{0%{transform:translate3d(0,0,0) scale(.7);opacity:0}15%{opacity:.5}100%{transform:translate3d(0,-300px,0) scale(1.1);opacity:0}}
-.rk-row{animation:rkIn .4s ease both;content-visibility:auto;contain-intrinsic-size:auto 76px}
+.rk-row{animation:rkIn .4s ease both;content-visibility:auto;contain-intrinsic-size:auto 56px}
 .rk-pod{animation:rkPod .55s cubic-bezier(.2,.9,.25,1.1) both}
 .rk-pod1{animation-delay:.12s}.rk-pod2{animation-delay:0s}.rk-pod3{animation-delay:.2s}
 .rk-tw{animation:rkTw 2.6s ease-in-out infinite;will-change:opacity,transform}
 .rk-fh{animation:rkFh 11s linear infinite;will-change:transform,opacity}
-.rk-tap{display:block;transition:transform .15s}.rk-tap:active{transform:scale(.96)}
-.rk-r{transition:transform .15s}.rk-r:active{transform:scale(.98)}
+.rk-tap{display:flex;transition:transform .15s}.rk-tap:active{transform:scale(.96)}
+.rk-r{transition:transform .15s}.rk-r:active{transform:scale(.985)}
+.rk-fav{-webkit-tap-highlight-color:transparent}.rk-fav:active svg{transform:scale(.8)!important}
 @media (prefers-reduced-motion:reduce){.rk-row,.rk-pod,.rk-tw,.rk-fh{animation:none!important}}
 `}</style>
 
       {/* header */}
-      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 6, padding: '14px 12px 8px' }}>
-        <button onClick={goBack} aria-label="Kembali" style={{ background: 'none', border: 0, padding: 8, display: 'flex', color: '#fff' }}>
-          <svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
+      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: U(2), padding: `${U(3.4)} ${U(3)} ${U(1.4)}` }}>
+        <button onClick={goBack} aria-label="Kembali" style={{ background: 'none', border: 0, padding: 6, display: 'flex', color: '#fff' }}>
+          <svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.3} strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
         </button>
         <button onClick={() => setMenu((m) => !m)} aria-label="Ganti papan" style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 0, color: '#fff', padding: '4px 4px', textAlign: 'left' }}>
-          <span style={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{theme.title}</span>
-          <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" style={{ transform: menu ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}><path d="M6 9l6 6 6-6" /></svg>
+          <span style={{ fontSize: F(4.6, 17), fontWeight: 700, letterSpacing: -0.4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{theme.title}</span>
+          <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" style={{ flex: '0 0 auto', transform: menu ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}><path d="M6 9l6 6 6-6" /></svg>
         </button>
-        {board === 'reader' && (
-          <button onClick={() => { window.location.assign('/ranking/lencana'); }} aria-label="Daftar lencana" style={{ background: 'none', border: 0, padding: 8, display: 'flex' }}>
-            <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={1.8} strokeLinejoin="round"><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5L3 8z" /></svg>
-          </button>
-        )}
         <button onClick={() => setSheet(true)} aria-label="Info peringkat" style={{ background: 'none', border: 0, padding: 8, display: 'flex' }}>
-          <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={1.8} strokeLinecap="round"><circle cx={12} cy={12} r={9.5} /><line x1={12} y1={11} x2={12} y2={17} /><circle cx={12} cy={7.6} r={0.6} fill="#fff" /></svg>
+          <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="#D5D3DE" strokeWidth={1.8} strokeLinecap="round"><circle cx={12} cy={12} r={9.5} /><line x1={12} y1={11} x2={12} y2={17} /><circle cx={12} cy={7.6} r={0.6} fill="#D5D3DE" /></svg>
         </button>
 
         {menu && (
           <>
             <div onClick={() => setMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 30 }} />
-            <div style={{ position: 'absolute', left: 44, top: 58, zIndex: 31, width: 'min(300px, calc(100% - 60px))', background: '#26252D', border: '1px solid rgba(255,255,255,.12)', borderRadius: 18, padding: 6, boxShadow: '0 12px 32px rgba(0,0,0,.5)', animation: 'rkIn .18s ease both' }}>
+            <div style={{ position: 'absolute', left: U(10), top: U(15), zIndex: 31, width: 'min(300px, calc(100% - 60px))', background: '#26252D', border: '1px solid rgba(255,255,255,.12)', borderRadius: 18, padding: 6, boxShadow: '0 12px 32px rgba(0,0,0,.5)', animation: 'rkIn .18s ease both' }}>
               {BOARD_ORDER.map((id) => {
                 const t = THEMES[id]; const on = id === board;
                 return (
                   <button key={id} onClick={() => pickBoard(id)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 13, border: 0, background: on ? 'rgba(255,255,255,.08)' : 'transparent', color: '#fff', textAlign: 'left' }}>
                     <span style={{ width: 34, height: 34, borderRadius: 11, background: t.bgTop, border: `1.5px solid ${t.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 34px' }}><BoardIcon id={id} color={t.accent} /></span>
                     <span style={{ flex: 1, minWidth: 0 }}>
-                      <span style={{ display: 'block', fontSize: 16, fontWeight: 800, letterSpacing: -0.3 }}>{t.title}</span>
-                      <span style={{ display: 'block', fontSize: 12, fontWeight: 600, color: MUTED }}>{BOARD_SUB[id]}</span>
+                      <span style={{ display: 'block', fontSize: 16, fontWeight: 700, letterSpacing: -0.3 }}>{t.title}</span>
+                      <span style={{ display: 'block', fontSize: 12, fontWeight: 500, color: MUTED }}>{BOARD_SUB[id]}</span>
                     </span>
                     {on && <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={t.accent} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5L20 7" /></svg>}
                   </button>
@@ -431,35 +468,35 @@ a{text-decoration:none;color:inherit} button{font-family:inherit;cursor:pointer}
 
       {/* tab (segmen) */}
       {theme.tabs.length > 0 && (
-        <div style={{ position: 'relative', margin: '6px 16px 0', display: 'flex', borderRadius: 18, border: '1px solid rgba(255,255,255,.14)', background: '#131318', padding: 4 }}>
-          <span aria-hidden style={{ position: 'absolute', top: 4, bottom: 4, left: 4, width: `calc((100% - 8px) / ${theme.tabs.length})`, borderRadius: 14, background: theme.accent, transform: `translateX(${tabIdx * 100}%)`, transition: 'transform .32s cubic-bezier(.3,1.25,.4,1), background .3s' }} />
+        <div style={{ position: 'relative', margin: `${U(1.4)} ${U(4)} 0`, display: 'flex', borderRadius: U(2.8), border: '1px solid rgba(255,255,255,.16)', background: '#131318', padding: U(0.8) }}>
+          <span aria-hidden style={{ position: 'absolute', top: U(0.8), bottom: U(0.8), left: U(0.8), width: `calc((100% - ${U(1.6)}) / ${theme.tabs.length})`, borderRadius: U(2.2), background: theme.accent, transform: `translateX(${tabIdx * 100}%)`, transition: 'transform .32s cubic-bezier(.3,1.25,.4,1), background .3s' }} />
           {theme.tabs.map((t) => (
-            <button key={t.k} onClick={() => setTab(t.k)} style={{ position: 'relative', zIndex: 1, flex: 1, border: 0, background: 'none', padding: '11px 0', fontSize: 15.5, fontWeight: 800, letterSpacing: -0.2, color: tab === t.k ? theme.accentText : '#B4B2BE', transition: 'color .25s' }}>{t.label}</button>
+            <button key={t.k} onClick={() => setTab(t.k)} style={{ position: 'relative', zIndex: 1, flex: 1, border: 0, background: 'none', padding: `${U(2.5)} 0`, fontSize: F(3.2, 13), fontWeight: 700, letterSpacing: -0.1, color: tab === t.k ? theme.accentText : '#B4B2BE', transition: 'color .25s' }}>{t.label}</button>
           ))}
         </div>
       )}
 
       {loading ? (
-        <div style={{ padding: '90px 20px', textAlign: 'center', color: MUTED, fontWeight: 700 }}>Memuat peringkat...</div>
+        <div style={{ padding: '90px 20px', textAlign: 'center', color: MUTED, fontWeight: 600 }}>Memuat peringkat...</div>
       ) : cur?.err ? (
-        <div style={{ padding: '60px 20px', textAlign: 'center', color: MUTED, fontWeight: 700, lineHeight: 1.4 }}>
+        <div style={{ padding: '60px 20px', textAlign: 'center', color: MUTED, fontWeight: 600, lineHeight: 1.4 }}>
           Peringkat belum bisa dimuat.
           <div style={{ fontSize: 11.5, marginTop: 8, opacity: 0.8 }}>{cur.err}</div>
         </div>
       ) : list.length === 0 ? (
-        <div style={{ padding: '70px 20px', textAlign: 'center', color: MUTED, fontWeight: 700, lineHeight: 1.5 }}>
+        <div style={{ padding: '70px 20px', textAlign: 'center', color: MUTED, fontWeight: 600, lineHeight: 1.5 }}>
           {board === 'premium' ? <>Belum ada pengguna Premium aktif.<br />Jadi yang pertama lewat menu Premium.</> : board === 'charisma' ? <>Belum ada hati yang diterima di periode ini.<br />Komentar yang disukai akan muncul di sini.</> : <>Belum ada pembaca di peringkat ini.<br />Baca chapter untuk jadi yang pertama.</>}
         </div>
       ) : (
         <>
-          <Podium rows={list} ex={ex} theme={theme} tab={tab} chip={theme.chip(tab, season.daysLeft, season.id)} />
+          <Podium rows={list} ex={ex} theme={theme} tab={tab} chip={theme.chip(tab, season.daysLeft, season.id)} favs={favs} onFav={toggleFav} />
 
-          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', padding: '22px 18px 10px' }}>
-            <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: -0.5 }}>{theme.section(tab)}</div>
-            <div style={{ fontSize: 13, fontWeight: 800, color: MUTED }}>4–100</div>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', padding: `${U(5.2)} ${U(4)} ${U(2.4)}` }}>
+            <div style={{ fontSize: F(3.7, 16), fontWeight: 700, letterSpacing: -0.4 }}>{theme.section(tab)}</div>
+            <div style={{ fontSize: F(2.4, 11), fontWeight: 700, color: MUTED }}>4–100</div>
           </div>
 
-          <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '0 14px' }}>
+          <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: U(2), padding: `0 ${U(3.1)}` }}>
             {list.slice(3).map((r, i) => {
               const e = ex[r.uid];
               const nm = e?.displayName || r.name;
@@ -467,22 +504,25 @@ a{text-decoration:none;color:inherit} button{font-family:inherit;cursor:pointer}
               const mineRow = me && r.uid === me.uid;
               return (
                 <div key={r.uid} className="rk-row" style={{ animationDelay: Math.min(i, 12) * 0.03 + 's' }}>
-                  <WallpaperBg wpKey={e?.activeWallpaper} noGlow className="rk-r" style={{ borderRadius: 18, borderStyle: 'solid', borderWidth: 1, ...(hasWp ? {} : { borderColor: mineRow ? theme.accent : 'rgba(255,255,255,.07)', background: '#25242B' }) }}>
-                    <Link href={`/user?uid=${r.uid}`} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '11px 14px 11px 8px', color: 'inherit', textDecoration: 'none' }}>
-                      <span style={{ width: 30, textAlign: 'center', fontSize: 19, fontWeight: 800, letterSpacing: -0.5, color: '#E8E6F0' }}>{i + 4}</span>
-                      <Ava name={nm} photo={e?.photoURL || r.photo} size={46} ring={theme.accent} ringW={2} borderKey={e?.activeBorder} />
-                      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
-                        <NameLine name={nm} ex={e} size={16} />
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
-                          {e?.level !== undefined && <LvPill lv={Number(e.level) || 1} />}
-                          <Lenc r={r} ex={e} b={theme.id} />
-                          <span style={{ fontSize: 11, fontWeight: 700, color: MUTED }}>{formatShortId(e?.shortId, r.uid)}</span>
+                  <WallpaperBg wpKey={e?.activeWallpaper} noGlow className="rk-r" style={{ borderRadius: U(3), borderStyle: 'solid', borderWidth: 1, ...(hasWp ? {} : { borderColor: mineRow ? theme.accent : 'rgba(255,255,255,.09)', background: '#1D1D21' }) }}>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                      <Link href={`/user?uid=${r.uid}`} style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: U(2.2), padding: `${U(1.9)} 0 ${U(1.9)} ${U(1.2)}`, color: 'inherit', textDecoration: 'none' }}>
+                        <span style={{ width: U(6.8), flex: `0 0 ${U(6.8)}`, textAlign: 'center', fontSize: F(3.5, 15), fontWeight: 700, letterSpacing: -0.3 }}>{i + 4}</span>
+                        <Ava name={nm} photo={e?.photoURL || r.photo} size={`max(38px, ${U(10.2)})`} ring={ringFor(r.uid)} ringW={U(0.6)} borderKey={e?.activeBorder} />
+                        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: U(1) }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: U(2) }}>
+                            <div style={{ minWidth: 0, flex: '1 1 auto' }}><NameLine name={nm} ex={e} size={F(3.15, 13.5)} weight={600} /></div>
+                            <Valtxt b={theme.id} v={r.value} size={F(3.2, 13.5)} unit={theme.unit} color={valColor} />
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: U(1.3), overflow: 'hidden', flexWrap: 'nowrap' }}>
+                            {e?.level !== undefined && <span style={{ flex: '0 0 auto' }}><LvPill lv={Number(e.level) || 1} /></span>}
+                            <span style={{ minWidth: 0, display: 'flex', flex: '0 1 auto' }}><Lenc r={r} ex={e} b={theme.id} /></span>
+                            <span style={{ flex: '0 0 auto', fontSize: F(2.3, 10), fontWeight: 600, color: MUTED }}>{formatShortId(e?.shortId, r.uid)}</span>
+                          </div>
                         </div>
-                      </div>
-                      <div style={{ textAlign: 'right', flex: '0 0 auto' }}>
-                        <Valtxt b={theme.id} v={r.value} size={17} theme={{ ...theme, accent: theme.id === 'charisma' ? theme.accent : '#fff' }} />
-                      </div>
-                    </Link>
+                      </Link>
+                      <div style={{ padding: `0 ${U(1)}` }}><FavBtn on={favs.includes(r.uid)} onToggle={() => toggleFav(r.uid)} /></div>
+                    </div>
                   </WallpaperBg>
                 </div>
               );
@@ -495,19 +535,19 @@ a{text-decoration:none;color:inherit} button{font-family:inherit;cursor:pointer}
       <div style={{ position: 'fixed', left: '50%', transform: 'translateX(-50%)', width: 'min(100%, 448px)', bottom: 'calc(74px + env(safe-area-inset-bottom, 0px))', padding: '8px 14px', background: '#1B1A20', borderTop: '1px solid rgba(255,255,255,.12)', zIndex: 40 }}>
         {me ? (
           <WallpaperBg wpKey={meEx?.activeWallpaper} noGlow style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#1B1A20', border: `2px solid ${theme.accent}`, borderRadius: 18, padding: '8px 12px' }}>
-            <span style={{ minWidth: 42, textAlign: 'center', fontSize: myRank.length > 3 ? 18 : 21, fontWeight: 800, letterSpacing: -0.5 }}>{myRank}</span>
-            <Ava name={meName} photo={meEx?.photoURL || me.photoURL} size={38} ring={theme.accent} ringW={2} borderKey={meEx?.activeBorder} />
+            <span style={{ minWidth: 42, textAlign: 'center', fontSize: myRank.length > 3 ? 17 : 20, fontWeight: 800, letterSpacing: -0.5 }}>{myRank}</span>
+            <Ava name={meName} photo={meEx?.photoURL || me.photoURL} size="38px" ring={theme.accent} ringW={2} borderKey={meEx?.activeBorder} />
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <NameLine name={meName} ex={meEx} size={16} prefix="Kamu · " />
-              {board === 'reader' ? <RankPill points={pts} /> : <span style={{ fontSize: 12, fontWeight: 700, color: MUTED }}>{BOARD_SUB[board || 'reader']}</span>}
+              <NameLine name={meName} ex={meEx} size="15px" weight={700} prefix="Kamu · " />
+              {board === 'reader' ? <RankPill points={pts} /> : <span style={{ fontSize: 12, fontWeight: 600, color: MUTED }}>{BOARD_SUB[board || 'reader']}</span>}
             </div>
             <div style={{ textAlign: 'right' }}>
-              <Valtxt b={theme.id} v={myVal} size={17} theme={{ ...theme, accent: theme.id === 'charisma' ? theme.accent : '#fff' }} />
+              <Valtxt b={theme.id} v={myVal} size="17px" unit={theme.unit} color="#fff" />
             </div>
           </WallpaperBg>
         ) : (
           !loading && (
-            <Link href="/profile" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#1B1A20', border: `2px solid ${theme.accent}`, borderRadius: 16, padding: '10px 14px', fontSize: 14, fontWeight: 800 }}>
+            <Link href="/profile" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#1B1A20', border: `2px solid ${theme.accent}`, borderRadius: 16, padding: '10px 14px', fontSize: 14, fontWeight: 700 }}>
               <span>Masuk untuk ikut peringkat</span>
               <span style={{ background: theme.accent, color: theme.accentText, padding: '8px 18px', borderRadius: 99 }}>Masuk</span>
             </Link>
@@ -550,7 +590,10 @@ a{text-decoration:none;color:inherit} button{font-family:inherit;cursor:pointer}
                   • Chapter yang sama hanya dihitung sekali per musim<br />
                   • Poin direset tiap musim (2 bulan)
                 </div>
-                <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: -1, margin: '22px 0 10px' }}>Daftar lencana</div>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '22px 0 10px' }}>
+                  <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: -1 }}>Daftar lencana</div>
+                  <Link href="/ranking/lencana" style={{ fontSize: 13, fontWeight: 800, color: theme.accent }}>Lihat semua</Link>
+                </div>
                 {RANKS.map((r) => (
                   <div key={r.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0' }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: r.bg, padding: '4px 12px 4px 6px', borderRadius: 99, fontSize: 14, fontWeight: 800 }}><Shield color={r.bg} />{r.name}</span>
@@ -584,5 +627,13 @@ a{text-decoration:none;color:inherit} button{font-family:inherit;cursor:pointer}
         </div>
       )}
     </div>
+  );
+}
+
+export default function RankingPage() {
+  return (
+    <Suspense fallback={<div style={{ background: '#1B1A20', minHeight: '100vh' }} />}>
+      <RankingInner />
+    </Suspense>
   );
 }
