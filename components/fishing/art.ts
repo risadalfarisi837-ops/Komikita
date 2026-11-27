@@ -1536,50 +1536,85 @@ export function drawBobber(ctx: CanvasRenderingContext2D, x: number, y: number, 
     R(ctx, X - 2, Y - 2, 4, 1, acc);
   }
 
-  // efek khas tiap joran
+  // efek khas tiap joran (ramai)
   const tw = (i: number, sp = 3) => 0.35 + 0.65 * Math.abs(Math.sin(t * sp + i * 1.7));
+  const orbit = (n: number, rx: number, ry: number, col: string, sp = 1.8, cy = -2) => {
+    for (let i = 0; i < n; i++) {
+      const a = t * sp + (i * Math.PI * 2) / n;
+      ctx.globalAlpha = tw(i);
+      R(ctx, Math.round(X + Math.cos(a) * rx), Math.round(Y + cy + Math.sin(a) * ry), 1, 1, col);
+    }
+    ctx.globalAlpha = 1;
+  };
+  const rise = (n: number, spread: number, h: number, cols: string[], sp = 1.2) => {
+    for (let i = 0; i < n; i++) {
+      const k = (t * sp + i / n) % 1;
+      ctx.globalAlpha = 1 - k;
+      R(ctx, Math.round(X - spread + ((i * 7) % (spread * 2 + 1)) + Math.sin(t * 3 + i) * 1.2), Math.round(Y - 4 - k * h), 1, 1, cols[i % cols.length]);
+    }
+    ctx.globalAlpha = 1;
+  };
+  // cincin riak bercahaya untuk joran langka
+  if (!plain && sk.glow) {
+    for (let j = 0; j < 2; j++) {
+      const k = (t * 0.7 + j * 0.5) % 1;
+      ctx.strokeStyle = sk.glow + Math.round((1 - k) * 150).toString(16).padStart(2, '0');
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.ellipse(X + 0.5, Y + 2.5, 4 + k * 10, 1.6 + k * 4, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
   switch (sk.style) {
+    case 'stripe': rise(3, 4, 6, [acc, sk.tip], 0.9); break;
+    case 'weave': rise(3, 4, 6, [acc, '#8a93a8'], 0.9); break;
     case 'shine': {
-      const k = (t * 0.9) % 1.4;
-      if (k < 1) R(ctx, X - 2 + Math.round(k * 4), Y - 3, 1, 1, '#ffffff');
+      for (let j = 0; j < 2; j++) {
+        const k = (t * 0.9 + j * 0.7) % 1.4;
+        if (k < 1) R(ctx, X - 2 + Math.round(k * 4), Y - 3, 1, 1, '#ffffff');
+      }
+      orbit(4, 6, 3, '#ffffff', 1.4);
+      rise(4, 5, 9, ['#ffffff', sk.glow || '#bcd8ff'], 1.0);
       break;
     }
     case 'gem':
-      for (let i = 0; i < 3; i++) {
-        ctx.globalAlpha = tw(i);
-        R(ctx, X + Math.round(Math.cos(i * 2.1 + t) * 6), Y - 4 + Math.round(Math.sin(i * 2.1 + t) * 4), 1, 1, sk.spark || '#fff6c8');
-      }
-      ctx.globalAlpha = 1;
+      orbit(6, 7, 4, sk.spark || '#fff6c8', 1.6);
+      rise(6, 5, 11, ['#fff3b0', '#ffd24a', '#ffffff'], 1.1);
       break;
     case 'crystal':
-      ctx.globalAlpha = tw(0, 5);
-      R(ctx, X - 1, Y - 7, 3, 1, '#ffffff');
-      R(ctx, X, Y - 8, 1, 3, '#ffffff');
+      for (let i = 0; i < 3; i++) {
+        ctx.globalAlpha = tw(i, 5);
+        const ox = X + (i - 1) * 6;
+        const oy = Y - 7 - (i === 1 ? 3 : 0);
+        R(ctx, ox - 1, oy, 3, 1, '#ffffff');
+        R(ctx, ox, oy - 1, 1, 3, '#ffffff');
+      }
       ctx.globalAlpha = 1;
+      orbit(5, 7, 4, '#a8ecff', 2.0);
+      rise(5, 5, 11, ['#ffffff', '#7df9ff'], 1.2);
       break;
     case 'moon':
-      for (let i = 0; i < 3; i++) {
-        const a = t * 1.8 + i * 2.1;
-        ctx.globalAlpha = tw(i);
-        R(ctx, Math.round(X + Math.cos(a) * 6), Math.round(Y - 2 + Math.sin(a) * 3), 1, 1, '#fff7c2');
-      }
-      ctx.globalAlpha = 1;
+      orbit(7, 8, 4, '#fff7c2', 1.8);
+      orbit(4, 5, 2, '#ffffff', -2.4, -3);
+      rise(5, 5, 11, ['#fff7c2', '#c9bfff'], 0.9);
       break;
     case 'dragon':
-      for (let i = 0; i < 4; i++) {
-        const k = (t * 1.3 + i * 0.25) % 1;
-        ctx.globalAlpha = 1 - k;
-        R(ctx, X - 2 + ((i * 3) % 5), Math.round(Y - 4 - k * 9), 1, 1, i % 2 ? '#ffd27a' : '#ff6a3a');
-      }
-      ctx.globalAlpha = 1;
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = 'rgba(255,106,58,' + (0.18 + 0.1 * Math.sin(t * 9)).toFixed(3) + ')';
+      ctx.beginPath(); ctx.arc(X, Y - 2, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      rise(9, 5, 14, ['#ffd27a', '#ff6a3a', '#ff9a3a'], 1.5);
+      orbit(4, 7, 3, '#ffd27a', 2.2);
       break;
     case 'tentacle':
+      rise(8, 5, 13, ['#f6d6ff', '#b05cff', '#8e44d6'], 1.0);
+      orbit(5, 7, 4, '#c58bff', 1.5);
       for (let i = 0; i < 3; i++) {
-        const k = (t * 0.9 + i * 0.33) % 1;
-        ctx.globalAlpha = 0.9 * (1 - k);
-        R(ctx, Math.round(X - 3 + i * 3 + Math.sin(t * 3 + i) * 1.5), Math.round(Y - 4 - k * 8), 1, 1, i % 2 ? '#f6d6ff' : '#b05cff');
+        const w = Math.sin(t * 4 + i * 2) * 2;
+        R(ctx, Math.round(X - 4 + i * 4 + w), Y + 5, 1, 3, '#8e44d6');
+        R(ctx, Math.round(X - 4 + i * 4 + w * 1.4), Y + 8, 1, 1, '#c58bff');
       }
-      ctx.globalAlpha = 1;
       break;
     default:
       break;
@@ -1594,15 +1629,67 @@ export function drawRipple(ctx: CanvasRenderingContext2D, x: number, y: number, 
   ctx.stroke();
 }
 
-export function drawLine(ctx: CanvasRenderingContext2D, x0: number, y0: number, x1: number, y1: number, sag: number) {
+const LINE_FX: Record<string, 1 | 2> = { bulan: 1, naga: 1, sisik: 2, tentakel: 2 };
+
+export function drawLine(ctx: CanvasRenderingContext2D, x0: number, y0: number, x1: number, y1: number, sag: number, rodId = 'default') {
   const cx = (x0 + x1) / 2;
   const cy = Math.max(y0, y1) + sag;
-  ctx.strokeStyle = 'rgba(240,248,255,0.9)';
-  ctx.lineWidth = 0.6;
-  ctx.beginPath();
-  ctx.moveTo(x0 + 0.5, y0 + 0.5);
-  ctx.quadraticCurveTo(cx, cy, x1 + 0.5, y1 + 0.5);
+  const lvl = LINE_FX[rodId];
+  const path = () => {
+    ctx.beginPath();
+    ctx.moveTo(x0 + 0.5, y0 + 0.5);
+    ctx.quadraticCurveTo(cx, cy, x1 + 0.5, y1 + 0.5);
+  };
+  if (!lvl) {
+    ctx.strokeStyle = 'rgba(240,248,255,0.9)';
+    ctx.lineWidth = 0.6;
+    path();
+    ctx.stroke();
+    return;
+  }
+  const sk = ROD_SKINS[rodId] || ROD_SKINS.default;
+  const t = performance.now() / 1000;
+  const glow = sk.glow || '#ffffff';
+  // cahaya di sekitar senar
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.strokeStyle = glow + (lvl === 2 ? '66' : '44');
+  ctx.lineWidth = lvl === 2 ? 3.4 : 2.6;
+  path();
   ctx.stroke();
+  ctx.restore();
+  // inti senar berwarna
+  ctx.strokeStyle = sk.tip;
+  ctx.lineWidth = 0.8;
+  path();
+  ctx.stroke();
+  // titik titik cahaya mengalir sepanjang senar
+  const bez = (k: number): [number, number] => {
+    const u = 1 - k;
+    return [u * u * (x0 + 0.5) + 2 * u * k * cx + k * k * (x1 + 0.5), u * u * (y0 + 0.5) + 2 * u * k * cy + k * k * (y1 + 0.5)];
+  };
+  const n = lvl === 2 ? 12 : 7;
+  const cols = sk.style === 'dragon' ? ['#ffd27a', '#ff6a3a'] : sk.style === 'tentacle' ? ['#f6d6ff', '#b05cff'] : ['#fff7c2', '#ffffff'];
+  for (let i = 0; i < n; i++) {
+    const k = (t * 0.55 + i / n) % 1;
+    const [px, py] = bez(k);
+    const off = Math.sin(t * 6 + i * 2) * (lvl === 2 ? 1.6 : 1);
+    ctx.globalAlpha = Math.sin(k * Math.PI);
+    R(ctx, Math.round(px), Math.round(py + off), 1, 1, cols[i % cols.length]);
+    if (lvl === 2 && i % 3 === 0) R(ctx, Math.round(px) + 1, Math.round(py + off), 1, 1, cols[(i + 1) % cols.length]);
+  }
+  ctx.globalAlpha = 1;
+  // butir terang yang meluncur dari joran ke umpan
+  const kb = (t * 0.9) % 1;
+  const [bx, by] = bez(kb);
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.fillStyle = glow + 'aa';
+  ctx.beginPath();
+  ctx.arc(bx, by, 2.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+  R(ctx, Math.round(bx), Math.round(by), 1, 1, '#ffffff');
 }
 
 export function drawBubbleAlert(ctx: CanvasRenderingContext2D, x: number, y: number, t: number) {

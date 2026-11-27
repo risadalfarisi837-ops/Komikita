@@ -866,7 +866,7 @@ export class FishingEngine {
     // tali pancing
     if (rod && tg && ph !== 'catching') {
       const sag = ph === 'reel' ? 2 : ph === 'cast' ? 4 : 7 + Math.sin(t * 2) * 1.2;
-      drawLine(ctx, geo.tx, geo.ty, bx, by - (showBobber ? 3 : 0), sag);
+      drawLine(ctx, geo.tx, geo.ty, bx, by - (showBobber ? 3 : 0), sag, this.profile.rodId || 'default');
     }
     if (ph === 'bite') {
       drawBubbleAlert(ctx, this.px, this.py - 24, t);
@@ -907,7 +907,7 @@ export class FishingEngine {
       const g = rodGeometry(x, y, p.dir, 0);
       const dip = Math.sin(t * 3 + x);
       drawBobber(ctx, p.bx, p.by, dip, p.rodId || 'default');
-      drawLine(ctx, g.tx, g.ty, p.bx, p.by - 3, 7);
+      drawLine(ctx, g.tx, g.ty, p.bx, p.by - 3, 7, p.rodId || 'default');
     }
   }
 
