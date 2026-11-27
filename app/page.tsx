@@ -1,13 +1,9 @@
 'use client';
 
-import { useEffect, useState, memo, useCallback, useRef, useMemo } from 'react';
+import { useEffect, useState, memo, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useHistory } from '@/lib/store';
-import { primeGameFullscreen } from '@/components/GameMode';
-import { currentSeason } from '@/lib/season';
-import { charismaBuckets } from '@/lib/charisma';
-import { LevelPill } from '@/components/LevelPill';
 
 // ─── Firebase ────────────────────────────────────────────────────────────────
 declare global { interface Window { firebase: any; _fbReady: boolean; } }
@@ -93,11 +89,9 @@ function typeLabel(item: any): string {
 const clamp = (n: number): React.CSSProperties => ({ display: '-webkit-box', WebkitLineClamp: n, WebkitBoxOrient: 'vertical', overflow: 'hidden' });
 const ell: React.CSSProperties = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
 
-// ─── Header: kartu profil (level + EXP) + search + Minigame ─────────────────
+// ─── Header: logo + search + lonceng ─────────────────────────────────────────
 function Header({ onSearch }: { onSearch: () => void }) {
-  const router = useRouter();
   const [hasGift, setHasGift] = useState(false);
-  const [me, setMe] = useState<{ name: string; photo: string; level: number; exp: number } | null>(null);
   useEffect(() => {
     let alive = true;
     const t = setTimeout(async () => {
@@ -105,393 +99,80 @@ function Header({ onSearch }: { onSearch: () => void }) {
         const { auth, db } = await getFirebase();
         const u: any = auth.currentUser || await new Promise((res) => { const un = auth.onAuthStateChanged((x: any) => { un(); res(x); }); });
         if (!u || !alive) return;
-        const d = (await db.ref(`users/${u.uid}`).get()).val() || {};
-        if (!alive) return;
-        const exp = Math.max(0, Math.floor(Number(d.exp) || 0));
-        setMe({ name: d.displayName || u.displayName || 'User', photo: d.photoURL || u.photoURL || '', level: Number(d.level) || Math.floor(exp / 200) + 1, exp });
-        const v = d.gifts || {};
-        setHasGift(Object.values(v).some((g: any) => g && !g.claimed));
+        const v = (await db.ref(`users/${u.uid}/gifts`).get()).val() || {};
+        if (alive) setHasGift(Object.values(v).some((g: any) => g && !g.claimed));
       } catch {}
     }, 1500);
     return () => { alive = false; clearTimeout(t); };
   }, []);
-
-  const EXP_PER_LEVEL = 200; // 200 poin per level
-  const points = me ? me.exp : 0;
-  const level = Math.floor(points / EXP_PER_LEVEL) + 1; // level murni dari poin
-  const cur = points % EXP_PER_LEVEL;
-  const pct = Math.min(100, (cur / EXP_PER_LEVEL) * 100);
-  const BOX: React.CSSProperties = { background: '#26252C', border: '1px solid #3A3942', borderRadius: 20 };
-
   return (
-    <div style={{ padding: '14px 14px 8px' }}>
-      <div style={{ ...BOX, padding: '14px 16px', borderRadius: 24 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-        <Link href="/profile" style={{ flex: '0 0 auto' }}>
-          {me?.photo ? (
-            <img decoding="async" src={me.photo} alt="" referrerPolicy="no-referrer" style={{ width: 62, height: 62, borderRadius: '50%', objectFit: 'cover', border: '2px solid #3A3942', display: 'block' }} />
-          ) : (
-            <div style={{ width: 62, height: 62, borderRadius: '50%', background: '#3A3942', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, fontWeight: 800 }}>{(me?.name || 'K').slice(0, 1).toUpperCase()}</div>
-          )}
-        </Link>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ ...ell, fontSize: 19, fontWeight: 800, letterSpacing: -0.5 }}>{me?.name || 'Komikita'}</div>
-          <div style={{ marginTop: 6 }}><LevelPill level={level} label="Lvl." fontSize="13px" iconSize={15} style={{ padding: '3px 12px 3px 8px' }} /></div>
-        </div>
-        <button onClick={() => { window.location.assign('/notifikasi'); }} aria-label="Notifikasi" style={{ position: 'relative', flex: '0 0 auto', width: 52, height: 52, borderRadius: '50%', background: '#3A3942', border: 0, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 01-3.4 0" /></svg>
-          {hasGift && <span style={{ position: 'absolute', top: 12, right: 13, width: 9, height: 9, borderRadius: '50%', background: ACCENT }} />}
-        </button>
+    <div style={{ display: 'flex', alignItems: 'center', padding: '14px 14px 12px' }}>
+      <div style={{ width: 38, height: 38, borderRadius: 10, background: '#26252C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 800 }}>K</div>
+      <div style={{ fontSize: 25, fontWeight: 800, letterSpacing: -1.5, marginLeft: 8, flex: 1 }}>
+        Komi<span style={{ color: ACCENT }}>kita</span>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14 }}>
-        <span style={{ fontSize: 13, fontWeight: 800, color: MUTED }}>Poin</span>
-        <div style={{ flex: 1, height: 7, borderRadius: 99, background: '#3A3942', overflow: 'hidden' }}>
-          <div className="gold-fill" style={{ width: `${pct}%`, height: '100%', borderRadius: 99, transition: 'width .6s' }} />
-        </div>
-        <span style={{ fontSize: 13, fontWeight: 800, color: '#D6D4DE' }}>{cur.toLocaleString('id-ID')} / {EXP_PER_LEVEL.toLocaleString('id-ID')}</span>
-      </div>
-      </div>
-      <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
-        <button onClick={onSearch} style={{ ...BOX, flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 12, padding: '0 16px', height: 54, color: MUTED, fontSize: 16, textAlign: 'left' }}>
-          <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth={2} strokeLinecap="round"><circle cx={11} cy={11} r={7.5} /><line x1={21} y1={21} x2={16.5} y2={16.5} /></svg>
-          <span style={ell}>Cari komik di sini</span>
-        </button>
-        <button onClick={() => router.push('/komikstore')} style={{ ...BOX, flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 10, padding: '0 18px', height: 54, color: '#fff', fontSize: 16, fontWeight: 800 }}>
-          <svg width={26} height={26} viewBox="0 0 24 24" fill="#4ADE80"><path d="M7 7h10a5 5 0 014.9 6l-.9 4.3a2.6 2.6 0 01-4.4 1.3L15 17H9l-1.6 1.6A2.6 2.6 0 013 17.3L2.1 13A5 5 0 017 7zm1 3v1.5H6.5V13H8v1.5h1.5V13H11v-1.5H9.5V10H8zm7.5.5a1 1 0 100 2 1 1 0 000-2zm2 2a1 1 0 100 2 1 1 0 000-2z" /></svg>
-          Minigame
-        </button>
-      </div>
+      <button onClick={onSearch} aria-label="Cari" style={{ background: 'none', border: 0, color: '#fff', padding: 8 }}>
+        <svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round"><circle cx={11} cy={11} r={7.5} /><line x1={21} y1={21} x2={16.5} y2={16.5} /></svg>
+      </button>
+      <button onClick={() => { window.location.assign('/notifikasi'); }} aria-label="Notifikasi" style={{ position: 'relative', background: 'none', border: 0, color: '#fff', padding: 8, marginLeft: 6 }}>
+        <svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 01-3.4 0" /></svg>
+        {hasGift && <span style={{ position: 'absolute', top: 6, right: 7, width: 9, height: 9, borderRadius: '50%', background: ACCENT }} />}
+      </button>
     </div>
   );
 }
 
-// ─── Banner geser: video promo + 3 papan peringkat otomatis ───────────────────
-// Semua datanya dihitung sendiri dari aktivitas user (tidak perlu diisi manual):
-//   Top Premium  = pengguna dengan sisa hari premium terbanyak
-//   Top Charisma = pengguna yang komentarnya paling banyak dapat hati (ALL / bulan ini / minggu ini)
-//   Top Pembaca  = poin baca terbanyak musim ini
-// Papan yang belum punya data otomatis disembunyikan.
-const BANNERS = [
-  { id: 'mancing', video: '/banner/komikita-fish.mp4', poster: '/banner/komikita-fish.jpg', href: '/komikstore/mancing' },
-];
-
-type BoardRow = { name: string; photo?: string; value: number; sub?: string };
-type BoardTheme = {
-  id: 'giveaway' | 'charisma' | 'reader'; title: string; href: string; tabs: boolean; tabLabels?: [string, string, string];
-  border: string; bg: string; accent: string; accentText: string; glow: string; unit: string; fmt: (n: number) => string;
-};
-const nf = (n: number) => Math.round(n).toLocaleString('id-ID');
-const BOARDS: BoardTheme[] = [
-  { id: 'giveaway', title: 'TOP PREMIUM', href: '/ranking?board=premium', tabs: false, border: '#1F6F86', bg: 'linear-gradient(160deg, #0E3446 0%, #115063 55%, #0B2C3C 100%)', accent: '#2DD4E8', accentText: '#06303A', glow: 'rgba(45,212,232,.25)', unit: 'hari premium', fmt: nf },
-  { id: 'charisma', title: 'TOP CHARISMA', href: '/ranking?board=charisma', tabs: true, tabLabels: ['ALL', 'BULAN', 'MINGGU'], border: '#8E2F66', bg: 'linear-gradient(160deg, #4A1636 0%, #6B1F4C 55%, #3F1230 100%)', accent: '#FF5C9A', accentText: '#3A0B22', glow: 'rgba(255,92,154,.25)', unit: 'hati diterima', fmt: nf },
-  { id: 'reader', title: 'TOP PEMBACA', href: '/ranking?board=reader', tabs: false, border: '#55545C', bg: 'linear-gradient(160deg, #2E2E34 0%, #4A4A52 55%, #28282D 100%)', accent: '#F5C451', accentText: '#2A2208', glow: 'rgba(255,255,255,.14)', unit: 'poin musim ini', fmt: nf },
-];
-
-// Cahaya latar di balik banner: berubah halus mengikuti slide yang aktif
-const GLOW: Record<string, string> = {
-  banner: 'rgba(59,155,255,.20)',
-  giveaway: 'rgba(45,212,232,.36)',
-  charisma: 'rgba(255,92,154,.34)',
-  reader: 'rgba(190,196,210,.24)',
-};
-
-const BOARD_CACHE = 'komikita_boards_v2';
-const BOARD_TTL = 10 * 60 * 1000;
-
-async function loadBoards(): Promise<Record<string, Record<string, BoardRow[]>>> {
-  const { db } = await getFirebase();
-  const now = Date.now();
-  const out: Record<string, Record<string, BoardRow[]>> = {};
-  const season = db.ref(`leaderboard/s${currentSeason().id}`);
-
-  // Top Premium: sisa hari premium terbanyak (kolom prem = premiumUntil, diisi tiap user buka aplikasi)
-  try {
-    const snap = await season.orderByChild('prem').limitToLast(5).get();
-    const rows: BoardRow[] = [];
-    snap.forEach((c: any) => {
-      const v = c.val() || {};
-      const left = Math.ceil(((Number(v.prem) || 0) - now) / 86400000);
-      if (left > 0) rows.push({ name: v.name || 'User', photo: v.photo || '', value: left });
-    });
-    out.giveaway = { all: rows.sort((a, b) => b.value - a.value) };
-  } catch {}
-
-  // Top Pembaca: poin musim ini (hanya akun aktif 14 hari terakhir)
-  try {
-    const snap = await season.orderByChild('points').limitToLast(12).get();
-    const rows: BoardRow[] = [];
-    snap.forEach((c: any) => {
-      const v = c.val() || {};
-      if ((Number(v.t) || 0) >= now - 14 * 86400000 && Number(v.points) > 0) rows.push({ name: v.name || 'User', photo: v.photo || '', value: Number(v.points) });
-    });
-    out.reader = { all: rows.sort((a, b) => b.value - a.value).slice(0, 5) };
-  } catch {}
-
-  // Top Charisma: hati yang diterima komentar (nama/foto diambil dari profil)
-  try {
-    const b = charismaBuckets();
-    const byTab: Record<string, BoardRow[]> = {};
-    const names: Record<string, { name: string; photo: string }> = {};
-    for (const [tab, key] of [['all', b.all], ['d30', b.d30], ['d7', b.d7]] as const) {
-      const snap = await db.ref(`charisma/${key}`).orderByValue().limitToLast(5).get();
-      const list: { uid: string; value: number }[] = [];
-      snap.forEach((c: any) => { const n = Number(c.val()) || 0; if (n > 0) list.push({ uid: String(c.key), value: n }); });
-      list.sort((a, b) => b.value - a.value);
-      for (const it of list) {
-        if (!names[it.uid]) {
-          const [n, p] = await Promise.all([db.ref(`users/${it.uid}/displayName`).get(), db.ref(`users/${it.uid}/photoURL`).get()]);
-          names[it.uid] = { name: String(n.val() || 'User'), photo: String(p.val() || '') };
-        }
-      }
-      byTab[tab] = list.map((it) => ({ name: names[it.uid].name, photo: names[it.uid].photo, value: it.value }));
-    }
-    out.charisma = byTab;
-  } catch {}
-  return out;
-}
-
-// Muat papan sekali (di-cache 10 menit supaya hemat kuota & cepat).
-function useBoards() {
-  const [data, setData] = useState<Record<string, Record<string, BoardRow[]>>>({});
-  useEffect(() => {
-    let dead = false;
-    try {
-      const raw = localStorage.getItem(BOARD_CACHE);
-      if (raw) {
-        const { d, ts } = JSON.parse(raw);
-        if (d) setData(d);
-        if (Date.now() - ts < BOARD_TTL) return;
-      }
-    } catch {}
-    const t = setTimeout(() => {
-      loadBoards().then((d) => {
-        if (dead) return;
-        setData(d);
-        try { localStorage.setItem(BOARD_CACHE, JSON.stringify({ d, ts: Date.now() })); } catch {}
-      }).catch(() => {});
-    }, 800);
-    return () => { dead = true; clearTimeout(t); };
-  }, []);
-  return data;
-}
-
-function Sparkles({ color }: { color: string }) {
-  const dots: [number, number, number][] = [[12, 8, 10], [38, 4, 6], [66, 10, 8], [92, 22, 5], [84, 86, 6], [8, 70, 5], [52, 92, 7], [26, 46, 5], [74, 58, 6], [96, 62, 5]];
-  return (
-    <>
-      {dots.slice(0, 6).map(([l, t, z], i) => (
-        <svg key={i} aria-hidden className="bs-twk" width={z} height={z} viewBox="0 0 24 24" style={{ position: 'absolute', left: l + '%', top: t + '%', opacity: 0.55, pointerEvents: 'none', animation: `bsTwk ${2.4 + (i % 4) * 0.45}s ease-in-out ${(i * 0.37) % 2.2}s infinite` }}><path d="M12 0l2.6 9.4L24 12l-9.4 2.6L12 24l-2.6-9.4L0 12l9.4-2.6z" fill={color} /></svg>
-      ))}
-    </>
-  );
-}
-
-function BoardAvatar({ row, size, ring, rank, crown }: { row: BoardRow; size: number; ring: string; rank: number; crown?: boolean }) {
-  return (
-    <div style={{ position: 'relative', width: size, height: size, flex: `0 0 ${size}px` }}>
-      {crown && <svg aria-hidden width={size * 0.42} height={size * 0.3} viewBox="0 0 24 18" style={{ position: 'absolute', left: '50%', top: -size * 0.2, transform: 'translateX(-50%)', zIndex: 2 }}><path d="M1 5l5 4 6-8 6 8 5-4-2 12H3z" fill="#FFC53D" /></svg>}
-      <div style={{ width: '100%', height: '100%', borderRadius: '50%', border: `${Math.max(2, size * 0.05)}px solid ${ring}`, overflow: 'hidden', background: '#2A2931', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: size * 0.36 }}>
-        {row.photo
-          // eslint-disable-next-line @next/next/no-img-element
-          ? <img decoding="async" src={row.photo} alt="" referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          : row.name.slice(0, 2).toUpperCase()}
-      </div>
-      <span style={{ position: 'absolute', right: -2, bottom: -2, width: size * 0.34, height: size * 0.34, minWidth: 18, minHeight: 18, borderRadius: '50%', background: '#FBBF24', color: '#2A2208', border: '2px solid #14131A', fontSize: Math.max(10, size * 0.2), fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{rank}</span>
-    </div>
-  );
-}
-
-const Heart = ({ size = 14, color = '#FF5C9A' }: { size?: number; color?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill={color} aria-hidden><path d="M12 21s-8-5-8-11a4.6 4.6 0 018-3 4.6 4.6 0 018 3c0 6-8 11-8 11z" /></svg>
-);
-
-function BoardSlide({ theme, rowsByTab, onOpen }: { theme: BoardTheme; rowsByTab: Record<string, BoardRow[]>; onOpen: (tab: string) => void }) {
-  const [tab, setTab] = useState<'all' | 'd30' | 'd7'>('all');
-  const [shown, setShown] = useState<'all' | 'd30' | 'd7'>('all'); // isi yang tampil (menyusul tab setelah fade-out)
-  const [fading, setFading] = useState(false);
-  const swapTimer = useRef<any>(null);
-  const btnRefs = useRef<Record<string, HTMLButtonElement | null>>({});
-  const [pill, setPill] = useState({ l: 0, w: 0 });
-  useEffect(() => () => { if (swapTimer.current) clearTimeout(swapTimer.current); }, []);
-  useEffect(() => {
-    const b = btnRefs.current[tab];
-    if (b) setPill({ l: b.offsetLeft, w: b.offsetWidth });
-  }, [tab, theme.tabs]);
-  const pick = (k: 'all' | 'd30' | 'd7') => {
-    if (k === tab) return;
-    setTab(k);
-    setFading(true);
-    if (swapTimer.current) clearTimeout(swapTimer.current);
-    swapTimer.current = setTimeout(() => { setShown(k); setFading(false); }, 170);
-  };
-  const labels = theme.tabLabels || ['ALL', '30D', '7D'];
-  const rows = (theme.tabs ? rowsByTab[shown] : rowsByTab.all) || [];
-  const [r1, r2, r3, r4, r5] = rows;
-  const val = (r: BoardRow) => (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: theme.accent, fontWeight: 800 }}>
-      {theme.id === 'charisma' && <Heart />}{theme.fmt(r.value)}
-    </span>
-  );
-  const tabBtn = (k: 'all' | 'd30' | 'd7', label: string) => (
-    <button key={k} ref={(el) => { btnRefs.current[k] = el; }} onClick={(e) => { e.stopPropagation(); pick(k); }} style={{ position: 'relative', zIndex: 1, border: 0, borderRadius: 99, padding: '5px 11px', fontSize: 11, fontWeight: 800, background: 'transparent', color: tab === k ? theme.accentText : '#9AA6B2', transition: 'color .25s' }}>{label}</button>
-  );
-  const TitleIcon = theme.id === 'charisma' ? <Heart size={15} color={theme.accent} /> : theme.id === 'reader'
-    ? <svg width={15} height={15} viewBox="0 0 24 24" fill={theme.accent} aria-hidden><path d="M7 3h10v3h3v3a4 4 0 01-4 4 5 5 0 01-3 2.9V18h3v3H8v-3h3v-2.1A5 5 0 018 13a4 4 0 01-4-4V6h3z" /></svg>
-    : <svg width={16} height={16} viewBox="0 0 24 24" fill={theme.accent} aria-hidden><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5L3 8z" /></svg>;
-
-  return (
-    <div role="button" onClick={() => onOpen(tab)} style={{ position: 'relative', flex: '0 0 100%', aspectRatio: '984 / 446', borderRadius: 20, overflow: 'hidden', scrollSnapAlign: 'start', cursor: 'pointer', background: theme.bg, border: `2px solid ${theme.border}`, boxSizing: 'border-box', padding: '3.2% 3.4%', display: 'flex', flexDirection: 'column', gap: '3%' }}>
-      <Sparkles color={theme.accent} />
-      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7, color: theme.accent, fontSize: 13, fontWeight: 800, letterSpacing: 1.2 }}>
-          {TitleIcon}{theme.title}
-          <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#9AA6B2" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"><path d="M9 5l7 7-7 7" /></svg>
-        </div>
-        {theme.tabs && (
-          <div style={{ position: 'relative', display: 'flex', background: 'rgba(0,0,0,.28)', borderRadius: 99, padding: 2 }}>
-            <span aria-hidden style={{ position: 'absolute', top: 2, bottom: 2, left: pill.l, width: pill.w, borderRadius: 99, background: theme.accent, transition: pill.w ? 'left .3s cubic-bezier(.3,1.25,.4,1), width .3s ease' : 'none' }} />
-            {tabBtn('all', labels[0])}{tabBtn('d30', labels[1])}{tabBtn('d7', labels[2])}
-          </div>
-        )}
-      </div>
-
-      <div key={shown} style={{ position: 'relative', flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '38% 1fr', gap: '2.5%', opacity: fading ? 0 : 1, transition: 'opacity .17s ease' }}>
-        {r1 ? (
-          <div className="bs-in" style={{ animationDelay: '0s', borderRadius: 16, border: '2px solid #B98B2B', background: 'rgba(0,0,0,.28)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, padding: '6px 4px', minWidth: 0 }}>
-            <BoardAvatar row={r1} size={58} ring={theme.accent} rank={1} crown />
-            <div style={{ fontSize: 14, fontWeight: 800, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 4 }}>{r1.name}</div>
-            <div style={{ fontSize: 20, lineHeight: 1 }}>{val(r1)}</div>
-            <div style={{ fontSize: 11, color: '#9AA6B2', fontWeight: 600 }}>{theme.unit}</div>
-          </div>
-        ) : <div />}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4%', minWidth: 0 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            {[r2, r3].map((r, i) => r ? (
-              <div key={i} className="bs-in" style={{ animationDelay: `${0.12 + i * 0.1}s`, borderRadius: 14, border: `2px solid ${i === 0 ? '#C9D1DA' : '#B98B2B'}`, background: 'rgba(0,0,0,.24)', padding: '6px 8px', minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
-                  <BoardAvatar row={r} size={30} ring={i === 0 ? '#C9D1DA' : '#B98B2B'} rank={i + 2} />
-                  <span style={{ fontSize: 14 }}>{val(r)}</span>
-                </div>
-                <div style={{ fontSize: 12, fontWeight: 800, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</div>
-              </div>
-            ) : <div key={i} />)}
-          </div>
-          {[r4, r5].map((r, i) => r ? (
-            <div key={i} className="bs-in" style={{ animationDelay: `${0.34 + i * 0.1}s`, display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, borderTop: i === 1 ? '1px solid rgba(255,255,255,.12)' : 0, paddingTop: i === 1 ? 4 : 0 }}>
-              <span style={{ width: 14, color: '#9AA6B2', fontWeight: 800 }}>{i + 4}</span>
-              <div style={{ width: 22, height: 22, flex: '0 0 22px', borderRadius: '50%', overflow: 'hidden', background: '#2A2931', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800 }}>
-                {r.photo
-                  // eslint-disable-next-line @next/next/no-img-element
-                  ? <img decoding="async" src={r.photo} alt="" referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  : r.name.slice(0, 2).toUpperCase()}
-              </div>
-              <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</span>
-              <span style={{ color: '#fff' }}>{theme.id === 'charisma' ? <><Heart size={11} /> </> : null}{theme.fmt(r.value)}</span>
-            </div>
-          ) : null)}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Hero({ onGlow }: { onGlow?: (id: string) => void }) {
-  const router = useRouter();
+// ─── Banner geser: teks kiri, cover kanan, tombol "Baca sekarang" ────────────
+function Hero({ items }: { items: any[] }) {
   const ref = useRef<HTMLDivElement>(null);
-  const idx = useRef(0);
-  const lastTouch = useRef(0);
-  const boards = useBoards();
-  const [active, setActive] = useState(0);
+  const slides = items.slice(0, 5);
 
-  // Papan yang punya data saja yang jadi slide.
-  const boardSlides = BOARDS.map((t) => {
-    const raw = boards[t.id] || {};
-    const rowsByTab: Record<string, BoardRow[]> = t.tabs
-      ? { all: raw.all || [], d30: raw.d30 || [], d7: raw.d7 || [] }
-      : { all: raw.all || [] };
-    const has = Object.values(rowsByTab).some((r) => r.length > 0);
-    return has ? { t, rowsByTab } : null;
-  }).filter(Boolean) as { t: BoardTheme; rowsByTab: Record<string, BoardRow[]> }[];
-
-  const total = BANNERS.length + boardSlides.length;
-  const slideIds = [...BANNERS.map(() => 'banner'), ...boardSlides.map(({ t }) => t.id)];
-  const slideKey = slideIds.join('|');
-  useEffect(() => { onGlow?.(slideIds[active] || 'banner'); }, [active, slideKey]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const goTo = (i: number) => {
-    const el = ref.current;
-    const child = el?.children[i] as HTMLElement | undefined;
-    if (!el || !child) return;
-    el.scrollTo({ left: child.offsetLeft, behavior: 'smooth' });
-  };
-
-  // Geser otomatis tiap 5 detik. Kalau user baru menggeser sendiri, tunggu 8 detik dulu.
   useEffect(() => {
-    if (total < 2) return;
+    if (slides.length < 2) return;
+    let i = 0;
     const t = setInterval(() => {
-      if (Date.now() - lastTouch.current < 8000) return;
-      idx.current = (idx.current + 1) % total;
-      setActive(idx.current);
-      goTo(idx.current);
+      const el = ref.current;
+      if (!el) return;
+      i = (i + 1) % slides.length;
+      el.scrollTo({ left: i * (el.scrollWidth / slides.length), behavior: 'smooth' });
     }, 5000);
     return () => clearInterval(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [total]);
-
-  const raf = useRef(0);
-  const onScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const el = e.currentTarget;
-    if (raf.current) return;
-    raf.current = requestAnimationFrame(() => {
-      raf.current = 0;
-      let best = 0, bd = Infinity;
-      Array.from(el.children).forEach((c, i) => { const d = Math.abs((c as HTMLElement).offsetLeft - el.scrollLeft); if (d < bd) { bd = d; best = i; } });
-      if (best !== idx.current) { idx.current = best; setActive(best); }
-    });
-  };
-
-  // video banner hanya diputar saat slide-nya tampil (hemat CPU/baterai, scroll lebih halus)
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    el.querySelectorAll('video').forEach((v, i) => { if (i === active) v.play().catch(() => {}); else v.pause(); });
-  }, [active, total]);
-
-  const play = (href: string) => { primeGameFullscreen(); router.push(href); };
+  }, [slides.length]);
 
   return (
-    <>
-    {/* Satu kotak banner: slide berikutnya tersembunyi sampai digeser (tidak ada potongan yang mengintip) */}
-    <div style={{ padding: '12px 20px 4px' }}>
-      <div ref={ref} onScroll={onScroll} onTouchStart={() => { lastTouch.current = Date.now(); }} className="no-scrollbar" style={{ position: 'relative', display: 'flex', gap: 12, overflowX: 'auto', scrollSnapType: 'x mandatory', borderRadius: 20 }}>
-        {BANNERS.map((b) => (
-          <div key={b.id} role="button" onClick={() => play(b.href)} style={{ position: 'relative', flex: '0 0 100%', aspectRatio: '984 / 446', borderRadius: 20, overflow: 'hidden', scrollSnapAlign: 'start', cursor: 'pointer', background: '#16151A' }}>
-            <video src={b.video} poster={b.poster} autoPlay muted loop playsInline preload="metadata" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }} />
+    <div ref={ref} className="no-scrollbar" style={{ display: 'flex', gap: 10, overflowX: 'auto', scrollSnapType: 'x mandatory', padding: '4px 14px' }}>
+      {slides.map((m, i) => {
+        const rating = m.score && m.score !== 'N/A' ? m.score : getRating(m.desc);
+        const desc = (m.desc || '').replace(/^Score:\s*[\d.]+\s*/i, '');
+        return (
+          <div key={i} style={{ position: 'relative', flex: '0 0 94%', height: 215, borderRadius: 28, overflow: 'hidden', scrollSnapAlign: 'center', background: '#16151A' }}>
+            <img src={m.thumb} alt="" referrerPolicy="no-referrer" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(18px) brightness(.35)', transform: 'scale(1.3)' }} />
+            <img src={m.thumb} alt={m.title} referrerPolicy="no-referrer" style={{ position: 'absolute', right: 14, top: 14, bottom: -20, width: '36%', objectFit: 'cover', borderRadius: 18, transform: 'rotate(6deg)', boxShadow: '0 6px 24px rgba(0,0,0,.6)' }} />
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(20,19,24,.92) 45%, transparent 75%)' }} />
+            <div style={{ position: 'absolute', left: 18, top: 16, bottom: 16, width: '60%', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ letterSpacing: 0.3 }}>{typeLabel(m).toUpperCase()}</span>
+                {rating && <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><span style={{ color: '#FBBF24' }}>★</span>{rating}</span>}
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.2, letterSpacing: -1, marginTop: 4, ...clamp(2) }}>{m.title}</div>
+              <div style={{ fontSize: 12.5, fontWeight: 700, lineHeight: 1.35, marginTop: 6, color: '#E8E6EF', ...clamp(2) }}>{desc}</div>
+              <Link href={`/manga?url=${encodeURIComponent(m.link)}`} style={{ marginTop: 'auto', alignSelf: 'flex-start', background: ACCENT, color: '#fff', fontWeight: 800, fontSize: 14, padding: '10px 22px', borderRadius: 99 }}>
+                Baca sekarang
+              </Link>
+            </div>
           </div>
-        ))}
-        {boardSlides.map(({ t, rowsByTab }) => (
-          <BoardSlide key={t.id} theme={t} rowsByTab={rowsByTab} onOpen={(tb) => router.push(t.tabs ? `${t.href}&tab=${tb}` : t.href)} />
-        ))}
-      </div>
+        );
+      })}
     </div>
-    {total > 1 && (
-      <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 8 }}>
-        {Array.from({ length: total }).map((_, i) => <span key={i} style={{ width: i === active ? 20 : 7, height: 7, borderRadius: 99, background: i === active ? '#3B9BFF' : '#4A4953', transition: 'width .25s' }} />)}
-      </div>
-    )}
-    </>
   );
 }
 
 // ─── Judul section: judul besar + link koral ─────────────────────────────────
-function SectionTitle({ title, sub, action, onAction, href, pill }: { title: string; sub?: string; action: string; onAction?: () => void; href?: string; pill?: boolean }) {
-  const col = pill ? '#B9B7C4' : ACCENT;
+function SectionTitle({ title, sub, action, onAction, href }: { title: string; sub?: string; action: string; onAction?: () => void; href?: string }) {
   const inner = (
-    <span style={pill
-      ? { color: col, fontWeight: 800, fontSize: 14, display: 'flex', alignItems: 'center', gap: 4, background: CARD, border: '1px solid rgba(255,255,255,.08)', borderRadius: 99, padding: '9px 16px', whiteSpace: 'nowrap' }
-      : { color: col, fontWeight: 800, fontSize: 14, display: 'flex', alignItems: 'center', gap: 2 }}>
+    <span style={{ color: ACCENT, fontWeight: 800, fontSize: 14, display: 'flex', alignItems: 'center', gap: 2 }}>
       {action}
-      <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={col} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="9 6 15 12 9 18" /></svg>
+      <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={ACCENT} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="9 6 15 12 9 18" /></svg>
     </span>
   );
   return (
@@ -525,7 +206,7 @@ function ContinueReading() {
           const ch = (h.chapterNumber || h.chapterTitle || '').toString().replace(/^ch(apter)?\.?\s*/i, '');
           return (
             <Link key={i} href={`/chapter?url=${encodeURIComponent(h.chapterLink)}&thumb=${encodeURIComponent(h.mangaThumb||'')}&mangaTitle=${encodeURIComponent(h.mangaTitle||'')}`} style={{ flex: '0 0 82%', maxWidth: 330, display: 'flex', gap: 14, background: CARD, borderRadius: 22, padding: 12 }}>
-              <img decoding="async" src={h.mangaThumb} alt="" referrerPolicy="no-referrer" style={{ width: 62, height: 84, borderRadius: 10, objectFit: 'cover', background: '#222' }} />
+              <img src={h.mangaThumb} alt="" referrerPolicy="no-referrer" style={{ width: 62, height: 84, borderRadius: 10, objectFit: 'cover', background: '#222' }} />
               <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                 <div style={{ fontSize: 15, fontWeight: 800, lineHeight: 1.2, letterSpacing: -0.7, ...clamp(2) }}>{h.mangaTitle}</div>
                 <div>
@@ -549,7 +230,7 @@ const BigCard = memo(function BigCard({ item }: { item: any }) {
   return (
     <Link href={`/manga?url=${encodeURIComponent(item.link)}`} style={{ flex: '0 0 86%', maxWidth: 360, scrollSnapAlign: 'start' }}>
       <div style={{ position: 'relative', height: 215, borderRadius: 28, overflow: 'hidden', background: CARD }}>
-        <img decoding="async" src={item.thumb} alt={item.title} loading="lazy" referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} />
+        <img src={item.thumb} alt={item.title} loading="lazy" referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} />
         <span style={{ position: 'absolute', top: 12, left: 12, background: 'rgba(20,19,24,.8)', fontSize: 13, fontWeight: 800, padding: '4px 10px', borderRadius: 8 }}>{typeLabel(item)}</span>
       </div>
       <div style={{ fontSize: 14, fontWeight: 800, letterSpacing: -0.6, margin: '10px 4px 0', ...clamp(1) }}>{item.title}</div>
@@ -579,7 +260,7 @@ function vnum(m: any): number {
   return /jt|m/.test(s) ? n * 1e6 : /rb|k/.test(s) ? n * 1e3 : n;
 }
 const isFresh = (t?: string) => /detik|menit|jam|baru/i.test(t || '');
-const uniq = (arr: any[]) => { const seen = new Set<any>(); return arr.filter((v) => (seen.has(v.link) ? false : (seen.add(v.link), true))); };
+const uniq = (arr: any[]) => arr.filter((v, i, a) => a.findIndex(t => t.link === v.link) === i);
 const mangaHref = (m: any) => `/manga?url=${encodeURIComponent(m.link)}`;
 
 const Eye = () => (
@@ -592,38 +273,38 @@ const NewBadge = ({ size = 11 }: { size?: number }) => (
   <span style={{ background: ACCENT, color: '#fff', fontSize: size, fontWeight: 800, padding: '3px 8px', borderRadius: 7 }}>BARU</span>
 );
 const Cover = ({ src, alt = '' }: { src: string; alt?: string }) => (
-  <img decoding="async" src={src} alt={alt} loading="lazy" referrerPolicy="no-referrer" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+  <img src={src} alt={alt} loading="lazy" referrerPolicy="no-referrer" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
 );
 
-// ─── Pembaruan terbaru: grid 3 kolom (badge New + rating + chapter di poster) ─
+// ─── Pembaruan terbaru: daftar vertikal ──────────────────────────────────────
 const LatestList = memo(function LatestList({ items }: { items: any[] }) {
   return (
-    <div style={{ padding: '0 14px', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '18px 10px' }}>
+    <div style={{ padding: '0 14px', display: 'flex', flexDirection: 'column', gap: 18 }}>
       {items.map((m, i) => {
         const views = fmtViews(m.views);
         const ch = chNum(m.chapter);
-        const fresh = isFresh(m.time);
         return (
-          <Link key={i} href={mangaHref(m)} style={{ minWidth: 0 }}>
-            <div style={{ position: 'relative', paddingTop: '138%', borderRadius: 20, overflow: 'hidden', background: CARD }}>
+          <Link key={i} href={mangaHref(m)} style={{ display: 'flex', gap: 14 }}>
+            <div style={{ position: 'relative', flex: '0 0 76px', height: 112, borderRadius: 14, overflow: 'hidden', background: CARD }}>
               <Cover src={m.thumb} alt={m.title} />
-              <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '38%', background: 'linear-gradient(to top, rgba(0,0,0,.72), rgba(0,0,0,0))' }} />
-              {fresh && (
-                <span style={{ position: 'absolute', top: 0, left: 0, background: '#2196F3', color: '#fff', fontSize: 14, fontWeight: 800, padding: '7px 14px', borderRadius: '20px 0 14px 0' }}>New</span>
-              )}
-              <span style={{ position: 'absolute', top: 0, right: 0, display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(20,19,24,.78)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '6px 9px', borderRadius: '0 20px 0 14px' }}>
-                <span style={{ color: '#FBBF24' }}>★</span>{ratingId(m, true)}
-              </span>
+              <span style={{ position: 'absolute', top: 6, left: 6 }}><TypeBadge item={m} size={10} /></span>
+            </div>
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontSize: 17, fontWeight: 800, letterSpacing: -0.8, lineHeight: 1.15, ...clamp(2) }}>{m.title}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 5, fontSize: 13, fontWeight: 800 }}>
+                  <span><span style={{ color: '#FBBF24' }}>★</span> {ratingId(m, true)}</span>
+                  {views && <span style={{ color: MUTED, display: 'flex', alignItems: 'center', gap: 4 }}><Eye /> {views}</span>}
+                  {isFresh(m.time) && <NewBadge />}
+                </div>
+              </div>
               {ch && (
-                <span style={{ position: 'absolute', left: 9, bottom: 8, fontSize: 17, fontWeight: 800, letterSpacing: -0.5, color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,.6)' }}>{ch}</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: CARD, borderRadius: 14, padding: '10px 14px', marginTop: 8 }}>
+                  <span style={{ fontSize: 14, fontWeight: 800 }}>{ch}</span>
+                  {m.time && <span style={{ fontSize: 11.5, fontWeight: 700, color: MUTED }}>{m.time}</span>}
+                </div>
               )}
             </div>
-            {views && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 8, fontSize: 12.5, fontWeight: 700, color: MUTED }}>
-                <Eye /> <span style={ell}>{views}</span>
-              </div>
-            )}
-            <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: -0.6, lineHeight: 1.2, marginTop: views ? 4 : 8, ...clamp(2) }}>{m.title}</div>
           </Link>
         );
       })}
@@ -631,20 +312,22 @@ const LatestList = memo(function LatestList({ items }: { items: any[] }) {
   );
 });
 
-// ─── Kartu Premium (strip biru: pill Premium + harga + panah) ────────────────
+// ─── Kartu Premium ───────────────────────────────────────────────────────────
 function PremiumCard() {
   return (
-    <Link href="/premium" style={{ position: 'relative', overflow: 'hidden', margin: '14px 20px 0', padding: '14px 16px', borderRadius: 22, border: '1.5px solid #2B5A9E', background: 'linear-gradient(90deg, #0F2547 0%, #14325E 55%, #0F2547 100%)', display: 'flex', alignItems: 'center', gap: 12 }}>
-      <span aria-hidden style={{ position: 'absolute', right: -18, top: -30, width: 130, height: 130, background: 'rgba(59,155,255,.14)', transform: 'rotate(35deg)' }} />
-      <span style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 6, background: 'linear-gradient(180deg, #3FA2FF, #1E7BEA)', color: '#fff', fontWeight: 800, fontSize: 17, padding: '10px 16px', borderRadius: 14, whiteSpace: 'nowrap' }}>
-        <svg width={22} height={22} viewBox="0 0 24 24" fill="#FFC53D"><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5L3 8z" /></svg>
-        Premium
-      </span>
-      <span style={{ position: 'relative', flex: 1, minWidth: 0, fontSize: 15, fontWeight: 600, color: '#B9C7DD', lineHeight: 1.25 }}>
-        Mulai <b style={{ color: '#fff', fontWeight: 800 }}>Rp5.000</b>, tanpa iklan
-      </span>
-      <svg style={{ position: 'relative', flex: '0 0 auto' }} width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="#3B9BFF" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round"><path d="M9 5l7 7-7 7" /></svg>
-    </Link>
+    <div style={{ margin: '30px 14px 0', padding: '18px 18px', borderRadius: 22, border: '1.5px solid #5E4E1C', background: '#272212', display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: GOLD, fontSize: 13, fontWeight: 800 }}>
+          <svg width={16} height={16} viewBox="0 0 24 24" fill={GOLD}><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5L3 8z" /></svg>
+          KOMIKITA PREMIUM
+        </div>
+        <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: -1, marginTop: 6, color: '#FBF3DC' }}>Baca tanpa iklan</div>
+        <div style={{ fontSize: 13, fontWeight: 700, color: '#B7AD8C', marginTop: 2, lineHeight: 1.3 }}>Plus unduh massal untuk baca offline</div>
+      </div>
+      <Link href="/profile" style={{ background: GOLD, color: '#2A2208', fontWeight: 800, fontSize: 14, padding: '12px 18px', borderRadius: 99, whiteSpace: 'nowrap' }}>
+        Coba sekarang
+      </Link>
+    </div>
   );
 }
 
@@ -762,18 +445,11 @@ function SkeletonHome() {
 }
 
 // ─── Halaman utama ───────────────────────────────────────────────────────────
-const HeroM = memo(Hero);
-const PremiumCardM = memo(PremiumCard);
-const ContinueReadingM = memo(ContinueReading);
-const GenreSectionM = memo(GenreSection);
-const OriginSectionM = memo(OriginSection);
-
 export default function Home() {
   const router = useRouter();
   const [categories, setCategories] = useState<{ category: string; items: any[] }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [glow, setGlow] = useState('');
 
   // Firebase di-load setelah halaman siap (defer supaya tidak memblok render)
   useEffect(() => {
@@ -820,15 +496,13 @@ export default function Home() {
   const goSearch = useCallback(() => router.push('/search'), [router]);
   const seeAll = useCallback((c: string) => router.push(`/search?genre=${encodeURIComponent(c)}`), [router]);
 
-  const all = useMemo(() => uniq(categories.flatMap(c => c.items)), [categories]);
-  const latest = useMemo(() => {
-    const withCh = all.filter(m => m.chapter);
-    return (withCh.length >= 6 ? withCh : all).slice(0, 9);
-  }, [all]);
-  const popular = useMemo(() => {
-    const rate = (x: any) => parseFloat(ratingOf(x) ?? '0') || 0;
-    return [...all].sort((a, b) => (vnum(b) - vnum(a)) || (rate(b) - rate(a))).slice(0, 12);
-  }, [all]);
+  const all = uniq(categories.flatMap(c => c.items));
+  const rate = (x: any) => parseFloat(ratingOf(x) ?? '0') || 0;
+  const hero = all.slice(0, 5);
+  const recommended = all.slice(5, 15);
+  const withCh = all.filter(m => m.chapter);
+  const latest = (withCh.length >= 4 ? withCh : all).slice(0, 4);
+  const popular = [...all].sort((a, b) => (vnum(b) - vnum(a)) || (rate(b) - rate(a))).slice(0, 12);
 
   return (
     <>
@@ -837,19 +511,9 @@ export default function Home() {
         button { font-family: inherit; cursor: pointer; }
         ::-webkit-scrollbar { display: none; }
         @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-        @keyframes bsTwk { 0%, 100% { opacity: .1; transform: scale(.55) rotate(0deg); } 50% { opacity: .95; transform: scale(1.2) rotate(20deg); } }
-        @keyframes bsIn { from { opacity: 0; transform: translateY(8px) scale(.94); } to { opacity: 1; transform: none; } }
-        .bs-in { animation: bsIn .42s cubic-bezier(.2,.8,.2,1) both; }
-        @media (prefers-reduced-motion: reduce) { .bs-glow { transition: none !important; } }
-        @media (prefers-reduced-motion: reduce) { .bs-in, .bs-twk { animation: none !important; } }
       `}</style>
 
-      <div style={{ position: 'relative', isolation: 'isolate', background: '#1B1A20', color: '#fff', minHeight: '100vh', paddingBottom: 24 }}>
-        <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 600, zIndex: -1, pointerEvents: 'none' }}>
-          {Object.entries(GLOW).map(([id, c]) => (
-            <div key={id} className="bs-glow" style={{ position: 'absolute', inset: 0, willChange: 'opacity', opacity: glow === id ? 1 : 0, transition: 'opacity .8s ease', background: `radial-gradient(130% 62% at 50% 40%, ${c} 0%, transparent 72%)` }} />
-          ))}
-        </div>
+      <div style={{ background: '#1B1A20', color: '#fff', minHeight: '100vh', paddingBottom: 24 }}>
         <Header onSearch={goSearch} />
         {loading ? (
           <SkeletonHome />
@@ -857,19 +521,25 @@ export default function Home() {
           <div style={{ padding: 20, textAlign: 'center', color: MUTED }}>{error}</div>
         ) : (
           <>
-            <HeroM onGlow={setGlow} />
-            <PremiumCardM />
-            <ContinueReadingM />
+            <Hero items={hero} />
+            <ContinueReading />
 
-            <SectionTitle title="Pembaruan terbaru" action="Lihat semua" onAction={() => seeAll('Update')} pill />
+            <SectionTitle title="Rekomendasi" sub="Pilihan tim Komikita" action="Lihat semua" onAction={() => seeAll('Rekomendasi')} />
+            <div className="no-scrollbar" style={{ display: 'flex', gap: 12, overflowX: 'auto', scrollSnapType: 'x mandatory', scrollPaddingLeft: 14, padding: '0 14px' }}>
+              {recommended.map((m, i) => <BigCard key={i} item={m} />)}
+            </div>
+
+            <SectionTitle title="Pembaruan terbaru" action="Lihat semua" onAction={() => seeAll('Update')} />
             <LatestList items={latest} />
+
+            <PremiumCard />
 
             <SectionTitle title="Terpopuler sepanjang masa" sub="Paling banyak dibaca di Komikita" action="Lihat semua" onAction={() => seeAll('Popular')} />
             <Ranked items={popular} />
 
-            <GenreSectionM categories={categories} />
+            <GenreSection categories={categories} />
 
-            <OriginSectionM all={all} />
+            <OriginSection all={all} />
           </>
         )}
       </div>
