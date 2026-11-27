@@ -9,9 +9,6 @@ import { useUserStats } from '@/lib/store';
 import { currentSeason, RANKS, rankFor, fmt, fmtC, targetsFor, POINTS_PER_CHAPTER, NIGHT_BONUS, DAILY_BONUS } from '@/lib/season';
 import { fetchTop, pushSeasonScore, getUser, getFirebase } from '@/lib/leaderboard';
 import { charismaBuckets } from '@/lib/charisma';
-import { findLencana, heldLencana, TRACK_COLOR } from '@/lib/lencana';
-import type { Lencana } from '@/lib/lencana';
-import { LencanaIcon } from '@/components/LencanaBadge';
 import WallpaperBg from '@/components/WallpaperBg';
 import PremiumName from '@/components/PremiumName';
 import VerifiedBadge from '@/components/VerifiedBadge';
@@ -67,7 +64,7 @@ const BOARD_SUB: Record<BoardId, string> = { reader: 'Poin baca musim ini', prem
 // ───────────────────────── data ─────────────────────────
 type BRow = { uid: string; name: string; photo: string; value: number; points?: number };
 type Extra = { displayName?: string; photoURL?: string; role?: string; premiumUntil?: number; activeBorder?: string; activeWallpaper?: string; level?: number; lencana?: string; shortId?: number };
-const XF = ['displayName', 'photoURL', 'role', 'premiumUntil', 'activeBorder', 'activeWallpaper', 'level', 'lencana', 'shortId'];
+const XF = ['displayName', 'photoURL', 'role', 'premiumUntil', 'activeBorder', 'activeWallpaper', 'level', 'shortId'];
 
 // Ambil detail profil (role, border, wallpaper, nama, foto, level, lencana, ID) per kelompok kecil supaya tidak membanjiri jaringan.
 async function fetchExtras(uids: string[], put: (o: Record<string, Extra>) => void, have: Record<string, Extra>) {
@@ -151,12 +148,6 @@ const LvPill = ({ lv }: { lv: number }) => {
     </span>
   );
 };
-const LChip = ({ l }: { l: Lencana }) => (
-  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '0 8px 0 2px', height: F(3.7, 18), maxWidth: '100%', borderRadius: 6, background: TRACK_COLOR[l.track], fontSize: F(2.1, 9.5), fontWeight: 800, letterSpacing: 0.2, color: '#fff', whiteSpace: 'nowrap' }}>
-    <LencanaIcon l={l} size={15} /><span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.name.toUpperCase()}</span>
-  </span>
-);
-
 function Ava({ name, photo, size, ring, ringW = 2, borderKey }: { name: string; photo?: string; size: string; ring: string; ringW?: number | string; borderKey?: string }) {
   const bg = AVATAR_COLORS[(name.charCodeAt(0) || 0) % AVATAR_COLORS.length];
   const b: any = borderKey ? (BORDER_CATALOG as any)[borderKey] : null;
@@ -187,15 +178,6 @@ function NameLine({ name, ex, size = '16px', weight = 700, prefix, center }: { n
       {verified && <VerifiedBadge size={14} />}
       {dev && <DevBadge size={15} />}
     </div>
-  );
-}
-
-function RankPill({ points }: { points: number }) {
-  const { rank } = rankFor(points);
-  return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: rank.bg, padding: '3px 12px 3px 5px', borderRadius: 99, fontSize: 14, fontWeight: 800, letterSpacing: -0.3, alignSelf: 'flex-start' }}>
-      <Shield color={rank.bg} size={17} />{rank.name}
-    </span>
   );
 }
 
@@ -232,12 +214,6 @@ function Valtxt({ b, v, size, unit, color }: { b: BoardId; v: number; size: stri
   );
 }
 
-function Lenc({ r, ex, b }: { r: BRow; ex?: Extra; b: BoardId }) {
-  const eq = findLencana(ex?.lencana);
-  const l = eq || (b === 'reader' && r.points !== undefined ? heldLencana(r.points) : null);
-  return l ? <LChip l={l} /> : null;
-}
-
 type FavProps = { favs: string[]; onFav: (uid: string) => void };
 
 function PodiumCol({ r, pos, ex, theme, favs, onFav }: { r?: BRow; pos: 1 | 2 | 3; ex?: Extra } & { theme: Theme } & FavProps) {
@@ -265,7 +241,6 @@ function PodiumCol({ r, pos, ex, theme, favs, onFav }: { r?: BRow; pos: 1 | 2 | 
       {info}
       {r && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: U(1.2), margin: `${U(1.2)} 0 ${U(1.6)}`, maxWidth: '100%' }}>
-          <div style={{ minWidth: 0, display: 'flex' }}><Lenc r={r} ex={ex} b={theme.id} /></div>
           <FavBtn round on={favs.includes(r.uid)} onToggle={() => onFav(r.uid)} />
         </div>
       )}
@@ -516,7 +491,6 @@ a{text-decoration:none;color:inherit} button{font-family:inherit;cursor:pointer}
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: U(1.3), overflow: 'hidden', flexWrap: 'nowrap' }}>
                             {e?.level !== undefined && <span style={{ flex: '0 0 auto' }}><LvPill lv={Number(e.level) || 1} /></span>}
-                            <span style={{ minWidth: 0, display: 'flex', flex: '0 1 auto' }}><Lenc r={r} ex={e} b={theme.id} /></span>
                             <span style={{ flex: '0 0 auto', fontSize: F(2.3, 10), fontWeight: 600, color: MUTED }}>{formatShortId(e?.shortId, r.uid)}</span>
                           </div>
                         </div>
@@ -539,7 +513,10 @@ a{text-decoration:none;color:inherit} button{font-family:inherit;cursor:pointer}
             <Ava name={meName} photo={meEx?.photoURL || me.photoURL} size="38px" ring={theme.accent} ringW={2} borderKey={meEx?.activeBorder} />
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
               <NameLine name={meName} ex={meEx} size="15px" weight={700} prefix="Kamu · " />
-              {board === 'reader' ? <RankPill points={pts} /> : <span style={{ fontSize: 12, fontWeight: 600, color: MUTED }}>{BOARD_SUB[board || 'reader']}</span>}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                {meEx?.level !== undefined && <LvPill lv={Number(meEx.level) || 1} />}
+                <span style={{ fontSize: 11, fontWeight: 600, color: MUTED }}>{me ? formatShortId(meEx?.shortId, me.uid) : ''}</span>
+              </div>
             </div>
             <div style={{ textAlign: 'right' }}>
               <Valtxt b={theme.id} v={myVal} size="17px" unit={theme.unit} color="#fff" />
