@@ -4,8 +4,9 @@ import { useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { GACHA_ODDS, GACHA_PITY, GACHA_PRICE, GACHA_RODS, RARITY, RODS, formatNum } from '@/lib/fishing';
 import PixelRod from './RodArt';
+import ShopBajuLimited from './ShopBajuLimited';
 
-export type ShopTab = 'toko' | 'bajulimited' | 'gacha' | 'gachagaya' | 'gacharumah' | 'gaya' | 'tas';
+export type ShopTab = 'toko' | 'bajulimited' | 'gacha' | 'gachagaya' | 'gacharumah' | 'gaya' | 'pet' | 'aksesoris' | 'setaksesoris' | 'pass' | 'tas';
 
 interface Props {
   px: (n: number) => number;
@@ -29,6 +30,7 @@ interface Props {
   onPack?: (id: 'monthly' | 'monsun' | 'kenalan' | 'buah') => void;
   freeBaitClaimed?: boolean;
   onClaimBait?: () => void;
+  onOpenLimited?: (n: 1 | 10) => void;
 }
 
 const BROWN = '#5a3b1e';
@@ -221,6 +223,39 @@ function Chest({ body, lid, size }: { body: string; lid: string; size: number })
   );
 }
 
+function PawIcon({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden shapeRendering="crispEdges" style={{ flex: 'none' }}>
+      <ellipse cx="12" cy="16" rx="5.5" ry="4.5" fill="#e8873a" />
+      <circle cx="5.5" cy="10" r="2.2" fill="#e8873a" /><circle cx="9.5" cy="6" r="2.2" fill="#e8873a" />
+      <circle cx="14.5" cy="6" r="2.2" fill="#e8873a" /><circle cx="18.5" cy="10" r="2.2" fill="#e8873a" />
+    </svg>
+  );
+}
+function BowIcon({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden shapeRendering="crispEdges" style={{ flex: 'none' }}>
+      <path d="M12 12L3 6v12z" fill="#e0489b" /><path d="M12 12l9-6v12z" fill="#e0489b" />
+      <rect x="10" y="9.500" width="4" height="5" rx="1" fill="#b02a78" />
+    </svg>
+  );
+}
+function CrownIcon({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden shapeRendering="crispEdges" style={{ flex: 'none' }}>
+      <path d="M3 18V7l5 5 4-7 4 7 5-5v11z" fill="#ffc21a" stroke="#c98a00" strokeWidth="1.200" strokeLinejoin="round" />
+    </svg>
+  );
+}
+function PassIcon({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden shapeRendering="crispEdges" style={{ flex: 'none' }}>
+      <path d="M2 7h20v3.500a2 2 0 000 3V17H2v-3.500a2 2 0 000-3z" fill="#f2a53a" stroke="#b86e0e" strokeWidth="1.200" strokeLinejoin="round" />
+      <rect x="9" y="9" width="6" height="6" fill="#ffe08a" />
+    </svg>
+  );
+}
+
 const SIDE: { k: ShopTab; label: string; icon: (s: number) => ReactNode }[] = [
   { k: 'toko', label: 'Promo', icon: (s) => <GiftIcon size={s} /> },
   { k: 'bajulimited', label: 'Baju Limited', icon: (s) => <Chest body="#5a6272" lid="#7b8396" size={s} /> },
@@ -228,6 +263,10 @@ const SIDE: { k: ShopTab; label: string; icon: (s: number) => ReactNode }[] = [
   { k: 'gachagaya', label: 'Gacha Gaya', icon: (s) => <Chest body="#d9609a" lid="#f08abf" size={s} /> },
   { k: 'gacharumah', label: 'Gacha Rumah', icon: (s) => <Chest body="#2f8a6a" lid="#47b088" size={s} /> },
   { k: 'gaya', label: 'Etalase', icon: (s) => <ShirtIcon size={s} /> },
+  { k: 'pet', label: 'Pet', icon: (s) => <PawIcon size={s} /> },
+  { k: 'aksesoris', label: 'Aksesoris', icon: (s) => <BowIcon size={s} /> },
+  { k: 'setaksesoris', label: 'Set Aksesoris', icon: (s) => <CrownIcon size={s} /> },
+  { k: 'pass', label: 'Pass', icon: (s) => <PassIcon size={s} /> },
   { k: 'tas', label: 'Tas', icon: (s) => <BagIcon size={s} /> },
 ];
 
@@ -418,10 +457,14 @@ export default function ShopScreen(p: Props) {
                 );
               })}
             </div>
-    ) : tab === 'bajulimited' ? soon('Baju Limited', 'Baju edisi terbatas segera hadir.')
+    ) : tab === 'bajulimited' ? <ShopBajuLimited px={px} font={font} gems={gems} onOpen={p.onOpenLimited} />
     : tab === 'gachagaya' ? soon('Gacha Gaya', 'Gaya rambut dan aksesori punggung karakter segera hadir.')
     : tab === 'gacharumah' ? soon('Gacha Rumah', 'Isi rumah dan dekorasi segera hadir.')
     : tab === 'gaya' ? soon('Etalase', 'Ganti gaya karakter di sini setelah Gacha Gaya dibuka.')
+    : tab === 'pet' ? soon('Pet', 'Toko pet segera hadir.')
+    : tab === 'aksesoris' ? soon('Aksesoris', 'Aksesoris segera hadir.')
+    : tab === 'setaksesoris' ? soon('Set Aksesoris', 'Set aksesoris segera hadir.')
+    : tab === 'pass' ? soon('Pass', 'Pass segera hadir.')
     : soon('Tas', 'Upgrade ransel dan umpan segera hadir.');
 
   const BTN_SHADOW = `0 ${px(4)}px 0 #164b9c`;
