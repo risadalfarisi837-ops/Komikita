@@ -126,6 +126,15 @@ export default function MancingPage() {
     ref.child('caught/' + item.s).transaction((c: any) => (typeof c === 'number' ? c : 0) + 1).catch(() => {});
   }, [warn]);
 
+  // Dev Tools: set XP langsung (level ikut berubah karena level dihitung dari XP)
+  const onSetXp = useCallback((v: number) => {
+    const nx = Math.max(0, Math.floor(Number(v) || 0));
+    xpRef.current = nx;
+    setXp(nx);
+    if (!uid.current || !fb.current) return;
+    fb.current.db.ref('users/' + uid.current + '/fishing').update({ xp: nx }).catch(() => warn('XP belum tersimpan'));
+  }, [warn]);
+
   // return: Crystal yang didapat, atau -1 kalau belum login
   const onSell = useCallback(async (ids: string[]): Promise<number> => {
     if (!uid.current || !fb.current) return -1;
@@ -263,7 +272,7 @@ export default function MancingPage() {
       <FishingGame
         name={name} photo={photo} crystal={crystal} xp={xp} bag={bag}
         rods={rods} equippedRod={equippedRod} rodLv={rodLv} onUpgradeRod={onUpgradeRod} dev={isDev}
-        onCatch={onCatch} onSell={onSell} onBuyRod={onBuyRod} onEquipRod={onEquipRod} onGacha={onGacha}
+        onCatch={onCatch} onSetXp={onSetXp} onSell={onSell} onBuyRod={onBuyRod} onEquipRod={onEquipRod} onGacha={onGacha}
         room={room} pity={pity} starterClaimed={starter} onClaimStarter={onClaimStarter}
         onExit={() => router.push('/komikstore')}
       />

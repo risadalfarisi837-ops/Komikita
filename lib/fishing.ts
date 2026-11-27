@@ -72,6 +72,14 @@ export function newId(): string {
 // ---- Level & XP ----
 export const xpNeed = (lv: number) => 80 + lv * 40; // XP yang dibutuhkan dari level lv ke lv+1
 
+// Total XP minimum agar tepat berada di awal level lv (dipakai Dev Tools untuk set level)
+export function xpForLevel(lv: number): number {
+  const target = Math.min(MAX_LEVEL, Math.max(1, Math.floor(lv) || 1));
+  let total = 0;
+  for (let i = 1; i < target; i++) total += xpNeed(i);
+  return total;
+}
+
 export function levelFromXp(xp: number) {
   let level = 1;
   let rest = Math.max(0, Math.floor(xp));

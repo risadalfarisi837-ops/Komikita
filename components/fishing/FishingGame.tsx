@@ -34,6 +34,7 @@ interface Props {
   rodLv?: Record<string, number>;
   onUpgradeRod?: (id: string) => Promise<'ok' | 'kurang' | 'gagal' | 'maks'>;
   onCatch: (item: BagItem, xpGain: number) => void;
+  onSetXp?: (xp: number) => void; // Dev Tools: set XP/level langsung
   onSell: (ids: string[]) => Promise<number>;
   onBuyRod: (id: string) => Promise<'ok' | 'kurang' | 'gagal'>;
   onEquipRod: (id: string) => void;
@@ -1033,6 +1034,7 @@ export default function FishingGame(props: Props) {
               speed={speed} setSpeed={setSpeed} instant={instant} setInstant={setInstant}
               force={force} setForce={setForce} forceSize={forceSize} setForceSize={setForceSize}
               stats={dstats} resetStats={() => setDstats({ ...EMPTY_STATS })}
+              xp={xp} onSetXp={(v) => { props.onSetXp?.(v); say('XP diset ke ' + formatNum(v)); }}
               onClose={() => setDevOpen(false)}
             />
           )}

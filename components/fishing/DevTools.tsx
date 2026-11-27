@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, PointerEvent as RPointerEvent, ReactNode } from 'react';
 import type { FishingEngine } from './engine';
-import { RARITY, formatNum } from '@/lib/fishing';
+import { MAX_LEVEL, RARITY, formatNum, levelFromXp, xpForLevel } from '@/lib/fishing';
 import type { Rarity, SizeTier } from '@/lib/fishing';
 
 export type SellMode = 'off' | 'keep' | 'all';
@@ -123,15 +123,19 @@ interface Props {
   setForceSize: (t: SizeTier | '') => void;
   stats: DevStats;
   resetStats: () => void;
+  xp: number;
+  onSetXp: (xp: number) => void;
   onClose: () => void;
 }
 
-type Tab = 'auto' | 'uji' | 'stat';
+type Tab = 'auto' | 'uji' | 'level' | 'stat';
 
 export default function DevTools(p: Props) {
   const { px } = p;
   const [tab, setTab] = useState<Tab>('auto');
   const [min, setMin] = useState(false);
+  const [xpIn, setXpIn] = useState('');
+  const [lvIn, setLvIn] = useState('');
   const [info, setInfo] = useState<ReturnType<FishingEngine['devInfo']> | null>(null);
   const { pos, bind } = useDrag('komikita-dev-panel', { x: 0.27, y: 0.05 }, { x: [0, 0.72], y: [0, 0.8] }, p.rot, p.getWrap);
 
@@ -198,7 +202,7 @@ export default function DevTools(p: Props) {
 
       {!min && (
         <div style={{ overflowY: 'auto', padding: `${px(8)}px ${px(10)}px ${px(12)}px`, WebkitOverflowScrolling: 'touch' }}>
-          {seg<Tab>([{ v: 'auto', label: '🎣 Auto' }, { v: 'uji', label: '🧪 Uji' }, { v: 'stat', label: '📊 Statistik' }], tab, setTab)}
+          {seg<Tab>([{ v: 'auto', label: '🎣 Auto' }, { v: 'uji', label: '🧪 Uji' }, { v: 'level', label: '⭐ Level' }, { v: 'stat', label: '📊 Statistik' }], tab, setTab)}
 
           {tab === 'auto' && (
             <>
@@ -252,6 +256,46 @@ export default function DevTools(p: Props) {
               </div>
             </>
           )}
+
+          {tab === 'level' && (() => {
+            const lv = levelFromXp(p.xp);
+            const pct = Math.min(100, Math.round((lv.into / Math.max(1, lv.need)) * 100));
+            const field: CSSProperties = { flex: 1, minWidth: 0, boxSizing: 'border-box', background: 'rgba(255,255,255,0.08)', border: `${px(1)}px solid rgba(255,255,255,0.18)`, borderRadius: px(10), padding: `${px(7)}px ${px(9)}px`, color: '#fff', fontFamily: HUD, fontWeight: 700, fontSize: px(13) };
+            const setXp = (v: number) => p.onSetXp(Math.max(0, Math.floor(v)));
+            const setLv = (l: number) => setXp(xpForLevel(clamp(Math.floor(l) || 1, 1, MAX_LEVEL)));
+            return (
+              <>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: px(6), marginTop: px(10) }}>
+                  {card('🔰', 'Level', lv.level + ' / ' + MAX_LEVEL)}
+                  {card('✨', 'Total XP', formatNum(p.xp))}
+                  {card('📊', 'Menuju Lv ' + Math.min(MAX_LEVEL, lv.level + 1), lv.level >= MAX_LEVEL ? 'MAKS' : formatNum(lv.into) + ' / ' + formatNum(lv.need))}
+                </div>
+                <div style={{ height: px(7), borderRadius: 99, background: 'rgba(255,255,255,0.1)', marginTop: px(8), overflow: 'hidden' }}>
+                  <div style={{ width: `${pct}%`, height: '100%', background: GRAD }} />
+                </div>
+                {H('Set XP')}
+                <div style={{ display: 'flex', gap: px(6) }}>
+                  <input style={field} inputMode="numeric" placeholder="mis. 5000" value={xpIn} onChange={(e) => setXpIn(e.target.value.replace(/\D/g, ''))} />
+                  <button style={small(true)} onClick={() => { if (xpIn !== '') { setXp(Number(xpIn)); setXpIn(''); } }}>Set</button>
+                </div>
+                <div style={{ display: 'flex', gap: px(5), marginTop: px(6) }}>
+                  {[100, 1000, 10000].map((n) => <button key={n} style={{ ...small(false), flex: 1 }} onClick={() => setXp(p.xp + n)}>+{formatNum(n)}</button>)}
+                </div>
+                {H('Set Level (XP ikut menyesuaikan)')}
+                <div style={{ display: 'flex', gap: px(6) }}>
+                  <input style={field} inputMode="numeric" placeholder={'1 - ' + MAX_LEVEL} value={lvIn} onChange={(e) => setLvIn(e.target.value.replace(/\D/g, ''))} />
+                  <button style={small(true)} onClick={() => { if (lvIn !== '') { setLv(Number(lvIn)); setLvIn(''); } }}>Set</button>
+                </div>
+                <div style={{ display: 'flex', gap: px(5), marginTop: px(6) }}>
+                  <button style={{ ...small(false), flex: 1 }} onClick={() => setLv(lv.level - 1)}>− 1 Lv</button>
+                  <button style={{ ...small(false), flex: 1 }} onClick={() => setLv(lv.level + 1)}>+ 1 Lv</button>
+                  <button style={{ ...small(false), flex: 1 }} onClick={() => setLv(MAX_LEVEL)}>Maks</button>
+                </div>
+                <button style={{ ...small(false), marginTop: px(8) }} onClick={() => { if (window.confirm('Reset XP ke 0 (Level 1)?')) setXp(0); }}>↺ Reset ke Lv 1</button>
+                <div style={{ fontSize: px(10.5), color: '#8a96b8', marginTop: px(5), lineHeight: 1.35 }}>Level dihitung dari total XP, jadi set level = set XP ke awal level itu. Tersimpan ke akun.</div>
+              </>
+            );
+          })()}
 
           {tab === 'stat' && (
             <>
