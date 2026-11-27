@@ -13,11 +13,19 @@ export const openLevelSheet = (level: number) => {
   try { window.dispatchEvent(new CustomEvent(EVT, { detail: { level } })); } catch {}
 };
 
-// Pil berwarna sesuai tier (ikon + teks)
-export function TierPill({ tier, text, fontSize = '12px', iconSize = 13, style }: { tier: LevelTier; text: string; fontSize?: string; iconSize?: number; style?: CSSProperties }) {
+// Pil berwarna sesuai tier (ikon + teks). shine = kilau menyapu (mulai tier Gold), kerlip bintang (mulai tier Eternal)
+export function TierPill({ tier, text, fontSize = '12px', iconSize = 13, style, shine, delay = 0 }: { tier: LevelTier; text: string; fontSize?: string; iconSize?: number; style?: CSSProperties; shine?: boolean; delay?: number }) {
+  const idx = TIERS.indexOf(tier);
+  const sweep = !!shine && idx >= 3;
+  const twinkle = !!shine && idx >= 10;
+  const vars = { '--d': `${delay}s` } as CSSProperties;
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 9px 2px 6px', borderRadius: 99, background: tier.pill, border: tier.border, color: tier.text, fontSize, fontWeight: 700, whiteSpace: 'nowrap', lineHeight: 1.25, boxShadow: 'inset 0 1px 0 rgba(255,255,255,.16)', ...style }}>
+    <span className={sweep ? 'tier-shine' : undefined} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 9px 2px 6px', borderRadius: 99, background: tier.pill, border: tier.border, color: tier.text, fontSize, fontWeight: 700, whiteSpace: 'nowrap', lineHeight: 1.25, boxShadow: 'inset 0 1px 0 rgba(255,255,255,.16)', ...vars, ...style }}>
       <TierIcon k={tier.key} size={iconSize} />{text}
+      {twinkle && (<>
+        <i className="tier-spark" style={{ left: '14%', top: '8%', ...({ '--d': `${delay}s` } as CSSProperties) }} />
+        <i className="tier-spark" style={{ left: '80%', top: '55%', width: 6, height: 6, ...({ '--d': `${delay + 0.9}s` } as CSSProperties) }} />
+      </>)}
     </span>
   );
 }
@@ -41,6 +49,8 @@ function Sheet({ level, onClose }: { level: number; onClose: () => void }) {
   const idx = TIERS.indexOf(t);
   const pct = nx ? Math.min(100, Math.max(0, ((level - t.min) / (nx.min - t.min)) * 100)) : 100;
   const rows: LevelTier[] = [...TIERS, ADMIN_TIER];
+  const [go, setGo] = useState(false); // isi bar naik dari 0 saat lembar terbuka
+  useEffect(() => { const r = requestAnimationFrame(() => setGo(true)); return () => cancelAnimationFrame(r); }, []);
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
       <style>{`@keyframes lvUp{from{transform:translate3d(0,100%,0)}to{transform:none}}@keyframes lvFade{from{opacity:0}to{opacity:1}}`}</style>
@@ -51,7 +61,7 @@ function Sheet({ level, onClose }: { level: number; onClose: () => void }) {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 6 }}>
-          <span style={{ width: 66, height: 66, borderRadius: '50%', background: t.circle, border: `2px solid ${t.ring}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 66px' }}>
+          <span className="lv-pop" style={{ width: 66, height: 66, borderRadius: '50%', background: t.circle, border: `2px solid ${t.ring}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 66px' }}>
             <TierIcon k={t.key} size={38} />
           </span>
           <div style={{ minWidth: 0 }}>
@@ -65,7 +75,7 @@ function Sheet({ level, onClose }: { level: number; onClose: () => void }) {
           <span style={{ fontSize: 12.5, fontWeight: 700, color: '#fff', textAlign: 'right' }}>{nx ? `${nf(nx.min - level)} level lagi ke ${nx.name}` : 'Tier tertinggi'}</span>
         </div>
         <div style={{ height: 8, borderRadius: 4, background: '#2A2B30', marginTop: 8, overflow: 'hidden' }}>
-          <div style={{ width: `${pct}%`, minWidth: 6, height: '100%', borderRadius: 4, background: 'linear-gradient(90deg,#7be08a,#f1e07a)', transition: 'width .6s' }} />
+          <div className="lv-bar-fill" style={{ width: `${go ? pct : 0}%`, minWidth: go ? 6 : 0, height: '100%', borderRadius: 4, background: 'linear-gradient(90deg,#7be08a,#f1e07a)', transition: 'width 1s cubic-bezier(.2,.9,.25,1) .35s' }} />
         </div>
 
         <div style={{ fontSize: 21, fontWeight: 800, letterSpacing: -0.5, marginTop: 26 }}>Semua Tier Level</div>
@@ -78,16 +88,16 @@ function Sheet({ level, onClose }: { level: number; onClose: () => void }) {
             const cur = !isAdmin && i === idx;
             const done = !isAdmin && i < idx;
             return (
-              <div key={r.key} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '10px 12px', borderRadius: 16, background: cur ? 'rgba(246,216,105,.14)' : 'transparent' }}>
+              <div key={r.key} className={cur ? 'lv-row lv-cur' : 'lv-row'} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 10px', borderRadius: 16, background: cur ? 'rgba(246,216,105,.14)' : 'transparent', animationDelay: `${140 + (isAdmin ? TIERS.length : i) * 40}ms` }}>
                 <span style={{ width: 48, height: 48, borderRadius: '50%', background: r.circle, border: `1.5px solid ${r.ring}88`, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 48px' }}>
                   <TierIcon k={r.key} size={26} />
                 </span>
-                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'flex-start' }}>
+                <div style={{ flex: '1 0 auto', display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'flex-start' }}>
                   <span style={{ fontSize: 16, fontWeight: 700, color: r.nameColor, letterSpacing: -0.2 }}>{r.name}</span>
-                  <TierPill tier={r} text={rangeText(r)} fontSize="12px" iconSize={13} />
+                  <TierPill tier={r} text={rangeText(r)} fontSize="12px" iconSize={13} shine delay={((isAdmin ? TIERS.length : i) % 6) * 0.45} />
                 </div>
-                <span style={{ flex: '0 0 auto', textAlign: 'right', fontSize: 13, fontWeight: 700, color: cur ? '#F6D869' : '#8E8E99' }}>
-                  {isAdmin ? 'Khusus Admin' : cur ? 'Sekarang' : done ? '✓ Tercapai' : `${nf(r.min - level)} level lagi`}
+                <span style={{ flex: '0 1 auto', minWidth: 0, textAlign: 'right', fontSize: 12.5, lineHeight: 1.25, fontWeight: 700, color: cur ? '#F6D869' : '#8E8E99' }}>
+                  {isAdmin ? 'Khusus Admin' : cur ? 'Sekarang' : done ? '✓ Tercapai' : (<><span style={{ whiteSpace: 'nowrap' }}>{nf(r.min - level)}</span>{' '}<span style={{ whiteSpace: 'nowrap' }}>level lagi</span></>)}
                 </span>
               </div>
             );

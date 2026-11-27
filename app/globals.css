@@ -1,4 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&display=swap");
 @import "tailwindcss";
 
 :root {
@@ -8,7 +7,10 @@
   --accent: #FF6B6B;
   --muted: #8F8D9B;
 }
-body { font-family: "Plus Jakarta Sans", system-ui, sans-serif; letter-spacing: -0.2px; }
+body { font-family: var(--font-jakarta), "Plus Jakarta Sans", system-ui, sans-serif; letter-spacing: -0.2px; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+html { -webkit-tap-highlight-color: transparent; }
+img, video { image-rendering: auto; }
+.no-scrollbar { -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { scrollbar-width: none; }
 
@@ -30,39 +32,31 @@ html, body {
   80%, 100% { transform: translateX(var(--scroll-dist, -50px)); }
 }
 
-/* ── Badge Level Animations (from Animeku) ── */
-@keyframes shimmerPremium {
-  0%   { background-position: 100% 0; }
-  100% { background-position: -100% 0; }
+/* ── Badge level: animasi hanya opacity (jalan di GPU). Dulu box-shadow/background-position dianimasikan -> memicu repaint tiap frame = patah-patah ── */
+@keyframes glowFade { from { opacity: .25; } to { opacity: 1; } }
+.badge-lvl-diamond, .badge-lvl-master, .badge-lvl-mythic, .badge-dev-anim, .badge-premium-anim { position: relative; }
+.badge-lvl-diamond::after, .badge-lvl-master::after, .badge-lvl-mythic::after, .badge-dev-anim::after, .badge-premium-anim::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  opacity: .25; will-change: opacity; animation: glowFade 1.6s ease-in-out infinite alternate;
 }
-@keyframes devPulse {
-  0%, 100% { transform: scale(1);    box-shadow: 0 0 8px rgba(220,38,38,0.6); }
-  50%       { transform: scale(1.06); box-shadow: 0 0 16px rgba(239,68,68,1); }
-}
-@keyframes pulseGlowCyan {
-  0%   { box-shadow: 0 0 4px rgba(6,182,212,0.4); }
-  100% { box-shadow: 0 0 14px rgba(6,182,212,0.9); }
-}
-@keyframes pulseGlowPink {
-  0%   { box-shadow: 0 0 4px rgba(236,72,153,0.4); }
-  100% { box-shadow: 0 0 16px rgba(236,72,153,0.9); }
-}
-@keyframes mythicPulse {
-  0%   { transform: scale(1);    box-shadow: 0 0 8px rgba(239,68,68,0.5); }
-  100% { transform: scale(1.05); box-shadow: 0 0 18px rgba(239,68,68,1); }
-}
+.badge-lvl-diamond::after { box-shadow: 0 0 12px rgba(6,182,212,.9); }
+.badge-lvl-master::after  { box-shadow: 0 0 14px rgba(236,72,153,.9); }
+.badge-lvl-mythic::after  { box-shadow: 0 0 14px rgba(239,68,68,.95); }
+.badge-dev-anim::after    { box-shadow: 0 0 14px rgba(239,68,68,1); }
+.badge-premium-anim::after{ box-shadow: 0 0 12px rgba(59,130,246,.8); }
 
 .badge-lvl-stone   { background: rgba(168,162,158,0.15) !important; color: #a8a29e !important; border: 1px solid rgba(168,162,158,0.3) !important; }
 .badge-lvl-bronze  { background: rgba(180,83,9,0.15)    !important; color: #d97706 !important; border: 1px solid rgba(180,83,9,0.3) !important; }
 .badge-lvl-silver  { background: rgba(226,232,240,0.15) !important; color: #e2e8f0 !important; border: 1px solid rgba(226,232,240,0.3) !important; }
 .badge-lvl-gold    { background: rgba(251,191,36,0.15)  !important; color: #facc15 !important; border: 1px solid rgba(251,191,36,0.4) !important; }
 .badge-lvl-emerald { background: rgba(16,185,129,0.15)  !important; color: #10b981 !important; border: 1px solid rgba(16,185,129,0.4) !important; }
-.badge-lvl-diamond { background: rgba(6,182,212,0.25)   !important; color: #22d3ee !important; border: 1px solid #06b6d4 !important; animation: pulseGlowCyan 2s infinite alternate !important; }
-.badge-lvl-master  { background: rgba(236,72,153,0.25)  !important; color: #f472b6 !important; border: 1px solid #ec4899 !important; animation: pulseGlowPink 1.5s infinite alternate !important; }
-.badge-lvl-mythic  { background: linear-gradient(90deg,#ef4444,#eab308,#ef4444) !important; background-size: 200% 100% !important; color: #fff !important; border: none !important; animation: shimmerPremium 2s infinite linear, mythicPulse 1s infinite alternate !important; }
+.badge-lvl-diamond { background: rgba(6,182,212,0.25)   !important; color: #22d3ee !important; border: 1px solid #06b6d4 !important; }
+.badge-lvl-master  { background: rgba(236,72,153,0.25)  !important; color: #f472b6 !important; border: 1px solid #ec4899 !important; }
+.badge-lvl-mythic  { background: linear-gradient(90deg,#ef4444,#eab308,#ef4444) !important; color: #fff !important; border: none !important; }
 
-.badge-dev-anim     { background: linear-gradient(90deg,#dc2626,#7f1d1d,#dc2626); background-size: 200% 100%; color: #fff; border: 1px solid #fca5a5; animation: devPulse 2s infinite ease-in-out, shimmerPremium 3s infinite linear; box-shadow: 0 0 10px rgba(220,38,38,0.8); text-shadow: 0 0 4px rgba(255,255,255,0.5); }
-.badge-premium-anim { background: linear-gradient(90deg,#2563eb,#06b6d4,#2563eb); background-size: 200% 100%; color: #fff; border: none; animation: shimmerPremium 2.5s infinite linear; box-shadow: 0 0 8px rgba(59,130,246,0.5); }
+.badge-dev-anim     { background: linear-gradient(90deg,#dc2626,#7f1d1d,#dc2626); color: #fff; border: 1px solid #fca5a5; text-shadow: 0 0 4px rgba(255,255,255,0.5); }
+.badge-premium-anim { background: linear-gradient(90deg,#2563eb,#06b6d4,#2563eb); color: #fff; border: none; }
+@media (prefers-reduced-motion: reduce) { .badge-lvl-diamond::after, .badge-lvl-master::after, .badge-lvl-mythic::after, .badge-dev-anim::after, .badge-premium-anim::after { animation: none; opacity: .7; } }
 
 /* ── Wallpaper komentar (gacha) ───────────────────────────── */
 /* Hanya transform/opacity yang dianimasikan (jalan di GPU, tidak menggambar ulang kartu) */
@@ -81,3 +75,65 @@ html, body {
 
 /* Halaman yang dikecilkan lewat PageScale: lebar maksimum bawaan halaman dilepas supaya tetap penuh */
 .ui-scale .max-w-md { max-width: none; }
+
+/* ── Level & poin mengkilap (emas metalik). Kilau digerakkan lewat transform saja = ringan ── */
+@keyframes goldSheen { 0%, 35% { transform: translateX(-130%) skewX(-20deg); } 100% { transform: translateX(380%) skewX(-20deg); } }
+.gold-pill {
+  position: relative; display: inline-flex; align-items: center; gap: 6px; overflow: hidden;
+  font-size: 13px; font-weight: 800; letter-spacing: .2px; color: #fff6cf; padding: 3px 12px 3px 9px; border-radius: 99px;
+  background: linear-gradient(135deg, #7d5a12 0%, #c99a2e 28%, #f6dc84 50%, #c99a2e 72%, #8a6416 100%);
+  border: 1px solid rgba(255, 233, 160, .65);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.55), inset 0 -2px 3px rgba(90,60,5,.45), 0 0 10px rgba(245,196,81,.35);
+  text-shadow: 0 1px 1px rgba(80,50,0,.7), 0 0 6px rgba(255,220,120,.6);
+}
+.gold-pill::after, .gold-fill::after {
+  content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 38%; pointer-events: none;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,.75) 50%, transparent);
+  transform: translateX(-130%) skewX(-20deg); animation: goldSheen 3.2s ease-in-out infinite; will-change: transform;
+}
+.gold-fill {
+  position: relative; overflow: hidden; border-radius: 99px;
+  background: linear-gradient(90deg, #8f6a14 0%, #d9a93a 35%, #fbe28a 60%, #e0b042 100%);
+  box-shadow: 0 0 10px rgba(245,196,81,.55), inset 0 -1px 2px rgba(90,60,5,.5);
+}
+.gold-fill::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 0; height: 45%; pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,.55), rgba(255,255,255,0));
+}
+@media (prefers-reduced-motion: reduce) { .gold-pill::after, .gold-fill::after { animation: none; } }
+
+
+/* ── Lembar "Semua Tier Level": kilau pil, kerlip, baris muncul bergantian, bar terisi ──
+   Hanya transform/opacity yang dianimasikan (ringan, tidak repaint) */
+@keyframes tierShine { 0%, 30% { transform: translateX(-140%) skewX(-20deg); } 100% { transform: translateX(420%) skewX(-20deg); } }
+@keyframes tierTwinkle { 0%, 100% { opacity: 0; transform: scale(.2) rotate(0deg); } 50% { opacity: 1; transform: scale(1) rotate(45deg); } }
+@keyframes lvRow { from { opacity: 0; transform: translate3d(0, 14px, 0); } to { opacity: 1; transform: none; } }
+@keyframes lvPop { 0% { opacity: 0; transform: scale(.55); } 70% { opacity: 1; transform: scale(1.08); } 100% { transform: scale(1); } }
+@keyframes lvCurGlow { from { opacity: .15; } to { opacity: 1; } }
+.tier-shine { position: relative; overflow: hidden; }
+.tier-shine::after {
+  content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 38%; pointer-events: none;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,.6) 50%, transparent);
+  transform: translateX(-140%) skewX(-20deg); animation: tierShine 2.6s ease-in-out infinite; animation-delay: var(--d, 0s); will-change: transform;
+}
+.tier-spark {
+  position: absolute; width: 8px; height: 8px; pointer-events: none; background: #fff; opacity: 0;
+  clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+  animation: tierTwinkle 1.9s ease-in-out infinite; animation-delay: var(--d, 0s);
+}
+.lv-row { position: relative; animation: lvRow .45s cubic-bezier(.2,.9,.25,1) both; }
+.lv-cur::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  box-shadow: 0 0 18px rgba(246,216,105,.22); opacity: .15; animation: lvCurGlow 1.4s ease-in-out infinite alternate;
+}
+.lv-pop { animation: lvPop .55s cubic-bezier(.2,.9,.25,1) .12s both; }
+.lv-bar-fill { position: relative; overflow: hidden; }
+.lv-bar-fill::after {
+  content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 40%; pointer-events: none;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,.7) 50%, transparent);
+  transform: translateX(-130%) skewX(-20deg); animation: goldSheen 2.8s ease-in-out 1.4s infinite; will-change: transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tier-shine::after, .tier-spark, .lv-cur::after, .lv-bar-fill::after { animation: none; }
+  .lv-row, .lv-pop { animation: none; }
+}
