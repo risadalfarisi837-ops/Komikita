@@ -1,4 +1,5 @@
 'use client';
+import type React from 'react';
 
 // Profil pemain Mancing (diketuk dari kartu pemain di kiri atas): statistik, ikan terbaik, Lemari (ganti baju), dan Title.
 import { useEffect, useRef, useState } from 'react';
@@ -224,11 +225,36 @@ export default function ProfileModal(p: Props) {
     ];
     const idx = o.ttl >= 0 && lv.level >= (TITLES[o.ttl]?.[0] ?? 99) ? o.ttl : TITLES.findIndex(([n], i) => lv.level >= n && !(TITLES[i + 1] && lv.level >= TITLES[i + 1][0]));
     const cur = Math.max(0, idx);
+    // tema plakat: [atas, tengah, bawah, warna teks]
+    const THEME: [string, string, string, string][] = [
+      ['#ffffff', '#e1e6eb', '#8f9ba8', '#2b3440'], ['#ffffff', '#d3eaff', '#5f9fd6', '#0f3b5e'], ['#ffffff', '#d3eaff', '#5f9fd6', '#0f3b5e'],
+      ['#ffffff', '#eadcff', '#9a74d6', '#3b1f66'], ['#ffffff', '#eadcff', '#9a74d6', '#3b1f66'], ['#fff7d1', '#ffe08a', '#d19a1f', '#5a3a00'], ['#ffe9e9', '#ffb3b3', '#d95a5a', '#6b1414'],
+    ];
+    const LOCKED: [string, string, string, string] = ['#e6e6ec', '#b3b3be', '#6d6d79', '#26262e'];
+    const OUT = '#1c1c2a';
     const plaque = (text: string, lock: boolean, r: number, size = 15) => {
-      const c = RAR[Math.min(r, RAR.length - 1)];
+      const th = lock ? LOCKED : THEME[Math.min(r, THEME.length - 1)];
+      const ornate = lock || size >= 20;
+      const h = px(size * 1.45);
+      const bar: React.CSSProperties = {
+        padding: `${px(size * 0.12)}px ${px(ornate ? size * 1.0 : size * 0.9)}px`, fontWeight: 900, fontSize: px(size), color: th[3], whiteSpace: 'nowrap',
+        background: `linear-gradient(180deg,${th[0]} 0%,${th[1]} 55%,${th[2]} 100%)`, border: `${px(2)}px solid ${OUT}`, borderRadius: ornate ? px(3) : px(7),
+        boxShadow: '0 2px 0 rgba(0,0,0,.35)', textShadow: '0 1px 0 rgba(255,255,255,.7)', position: 'relative', zIndex: 0,
+      };
+      if (!ornate) return <span style={bar}>{text}</span>;
       return (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: px(5), padding: `${px(2)}px ${px(14)}px`, borderRadius: px(6), fontWeight: 900, fontSize: px(size), color: lock ? '#2b2b33' : '#10315f', background: lock ? 'linear-gradient(180deg,#d4d4da,#8f8f99)' : `linear-gradient(180deg,${c[1]},${c[3]})`, border: `${px(2)}px solid ${lock ? '#3a3a44' : '#10315f'}`, boxShadow: '0 2px 0 rgba(0,0,0,.25)', whiteSpace: 'nowrap' }}>
-          {text}
+        <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+          <svg width={h} height={h} viewBox="0 0 24 24" style={{ marginRight: -px(size * 0.4), zIndex: 1, flex: 'none' }}>
+            <polygon points="12,1 23,12 12,23 1,12" fill={th[1]} stroke={OUT} strokeWidth="1.8" />
+            <polygon points="12,5 14,10 19,12 14,14 12,19 10,14 5,12 10,10" fill="#fff" />
+            <circle cx="12" cy="12" r="1.7" fill={th[2]} />
+          </svg>
+          <span style={bar}>{text}</span>
+          <svg width={h * 1.15} height={h} viewBox="0 0 28 24" style={{ marginLeft: -px(size * 0.3), zIndex: 1, flex: 'none' }}>
+            <path d="M2,14 L14,2 L18,6 L8,16Z" fill={th[1]} stroke={OUT} strokeWidth="1.5" strokeLinejoin="round" />
+            <path d="M4,18 L20,8 L25,12 L10,21Z" fill={th[0]} stroke={OUT} strokeWidth="1.5" strokeLinejoin="round" />
+            <path d="M9,23 L22,15 L27,19 L15,24Z" fill={th[2]} stroke={OUT} strokeWidth="1.5" strokeLinejoin="round" />
+          </svg>
         </span>
       );
     };
