@@ -73,6 +73,11 @@ export default function ProfileModal(p: Props) {
   const title = titleOf(lv.level, o.ttl);
   const best = [...p.bag].sort((a, b) => b.w - a.w).slice(0, 4);
   const pct = lv.level >= MAX_LEVEL ? 100 : Math.min(100, (lv.into / Math.max(1, lv.need)) * 100);
+  const styleLists = [SKINS, HAIRS, SHIRTS, TOPS, PANTS, HATS, HAT_COLORS];
+  const koleksi: [string, string, number, number][] = [
+    ['🎣', 'Rod', p.rods.length, RODS.length],
+    ['👕', 'Gaya', styleLists.reduce((n, l) => n + l.filter((x) => open(x.lv)).length, 0), styleLists.reduce((n, l) => n + l.length, 0)],
+  ];
   const avScale = Math.max(2, Math.round(px(5)));
 
   const card: CSSProperties = { background: '#fff8e8', border: `${px(3)}px solid ${EDGE}`, borderRadius: px(20), boxShadow: `0 ${px(3)}px 0 #e0cb97`, boxSizing: 'border-box' };
@@ -187,6 +192,23 @@ export default function ProfileModal(p: Props) {
               })}
             </div>
           )}
+          {label('Koleksi')}
+          <div style={{ display: 'flex', gap: px(8) }}>
+            <span style={{ ...btn(true), padding: `${px(7)}px ${px(16)}px`, fontSize: px(16) }}>🏝️ Rumah</span>
+          </div>
+          <div style={{ ...card, padding: `${px(10)}px ${px(14)}px`, display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: px(22), rowGap: px(10) }}>
+            {koleksi.map(([ic, nm, got, tot]) => (
+              <div key={nm} style={{ display: 'flex', alignItems: 'center', gap: px(8), minWidth: 0 }}>
+                <span style={{ fontSize: px(22), width: px(28), textAlign: 'center' }}>{ic}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: px(15), fontWeight: 800, display: 'flex', justifyContent: 'space-between' }}><span>{nm}</span><span>{got}/{tot}</span></div>
+                  <div style={{ height: px(8), borderRadius: 99, background: '#eadfc4', overflow: 'hidden' }}>
+                    <div style={{ width: Math.min(100, (got / Math.max(1, tot)) * 100) + '%', height: '100%', background: '#1f6fd0', borderRadius: 99 }} />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </>,
     );
