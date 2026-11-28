@@ -9,6 +9,7 @@ import { currentSeason } from '@/lib/season';
 import { charismaBuckets } from '@/lib/charisma';
 import { LevelPill } from '@/components/LevelPill';
 import ExpBar from '@/components/ExpBar';
+import { getFirebase } from '@/lib/leaderboard';
 
 // ─── Firebase ────────────────────────────────────────────────────────────────
 declare global { interface Window { firebase: any; _fbReady: boolean; } }
@@ -22,33 +23,7 @@ const FIREBASE_CONFIG = {
   appId: "1:1001217731870:web:2343f4c4aa06496cfcad0f",
   measurementId: "G-LE9NQH23YR"
 };
-function loadFirebaseCDN(): Promise<void> {
-  if (typeof window === 'undefined') return Promise.resolve();
-  if (window._fbReady) return Promise.resolve();
-  return new Promise((resolve) => {
-    const urls = [
-      'https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js',
-      'https://www.gstatic.com/firebasejs/10.14.0/firebase-auth-compat.js',
-      'https://www.gstatic.com/firebasejs/10.14.0/firebase-database-compat.js',
-    ];
-    let done = 0;
-    urls.forEach(src => {
-      const s = document.createElement('script');
-      s.src = src;
-      s.onload = () => { done++; if (done === urls.length) { window._fbReady = true; resolve(); } };
-      document.head.appendChild(s);
-    });
-  });
-}
-let _fbInit2 = false;
-async function getFirebase() {
-  await loadFirebaseCDN();
-  if (!_fbInit2) {
-    if (!window.firebase.apps.length) window.firebase.initializeApp(FIREBASE_CONFIG);
-    _fbInit2 = true;
-  }
-  return { auth: window.firebase.auth(), db: window.firebase.database() };
-}
+// Loader Firebase dipakai bersama dari lib/leaderboard
 
 interface TopUser {
   uid: string; displayName: string; photoURL: string;

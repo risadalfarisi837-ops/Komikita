@@ -10,7 +10,7 @@ import VerifiedBadge from '@/components/VerifiedBadge';
 import DevBadge from '@/components/DevBadge';
 import PremiumName from '@/components/PremiumName';
 import { currentSeason, RANKS, rankFor, fmt, fmtC, TARGETS, Track } from '@/lib/season';
-import { pushSeasonScore, ACTIVE_DAYS } from '@/lib/leaderboard';
+import { pushSeasonScore, ACTIVE_DAYS, getFirebase } from '@/lib/leaderboard';
 import { sendGifts, giftTitle, GiftType } from '@/lib/gifts';
 import ProfileEffect from '@/components/ProfileEffect';
 import ProfileBg from '@/components/ProfileBg';
@@ -41,39 +41,7 @@ declare global {
   interface Window { firebase: any; _fbReady: boolean; }
 }
 
-// Load scripts berurutan agar auth-compat tidak load sebelum app-compat
-function loadFirebaseCDN(): Promise<void> {
-  if (typeof window === 'undefined') return Promise.resolve();
-  if (window._fbReady) return Promise.resolve();
-  const scripts = [
-    'https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js',
-    'https://www.gstatic.com/firebasejs/10.14.0/firebase-auth-compat.js',
-    'https://www.gstatic.com/firebasejs/10.14.0/firebase-database-compat.js',
-  ];
-  return scripts.reduce((chain, src) => chain.then(() => new Promise<void>((resolve, reject) => {
-    if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
-    const s = document.createElement('script');
-    s.src = src;
-    s.onload = () => resolve();
-    s.onerror = () => reject(new Error(`Gagal load: ${src}`));
-    document.head.appendChild(s);
-  })), Promise.resolve()).then(() => { window._fbReady = true; });
-}
-
-let _fbInit = false;
-let _fbPromise: Promise<{ auth: any; db: any }> | null = null;
-async function getFirebase() {
-  if (_fbPromise) return _fbPromise;
-  _fbPromise = (async () => {
-    await loadFirebaseCDN();
-    if (!_fbInit) {
-      if (!window.firebase.apps.length) window.firebase.initializeApp(FIREBASE_CONFIG);
-      _fbInit = true;
-    }
-    return { auth: window.firebase.auth(), db: window.firebase.database() };
-  })();
-  return _fbPromise;
-}
+// Loader Firebase dipakai bersama dari lib/leaderboard (satu pemuat, urutan skrip aman)
 
 // ─── Rename Modal ─────────────────────────────────────────────────────────────
 function RenameModal({ open, onClose, currentName, freeRenameUsed, koin, onRename }: {
@@ -967,6 +935,7 @@ export default function ProfilePage() {
   const [user, setUser]                 = useState<UserState | null>(null);
   const [userData, setUserData]         = useState<any>(null);
   const [loadingAuth, setLoadingAuth]   = useState(true);
+  const [authFailed, setAuthFailed]     = useState(false);
 
   // Refresh: browser mengembalikan posisi scroll lama saat konten belum siap -> halaman nyangkut di tengah.
   useEffect(() => {
@@ -998,30 +967,39 @@ export default function ProfilePage() {
   useEffect(() => {
     let unsub: any = null;
     let graced = false;
-    (async () => { for (let i = 0; i < 4; i++) { try { return await getFirebase(); } catch (e) { if (i === 3) throw e; await new Promise((r) => setTimeout(r, 800 * (i + 1))); } } })().then(async (fb: any) => {
+    let alive = true;
+    let settled = false;   // sudah tahu status login (masuk / belum)
+    const settle = () => { settled = true; if (alive) setLoadingAuth(false); };
+    // Jaring pengaman: jangan pernah spinner selamanya
+    const safety = setTimeout(() => { if (!settled && alive) { setAuthFailed(true); settle(); } }, 15000);
+    getFirebase().then(async (fb: any) => {
       const { auth, db } = fb;
       dbRef.current = db;
-      try { await auth.getRedirectResult(); } catch (_) { /* abaikan error redirect */ }
+      // Pasang listener DULU. getRedirectResult tidak boleh ditunggu: di beberapa browser mobile ia bisa menggantung.
       unsub = auth.onAuthStateChanged(async (fu: any) => {
+        if (!alive) return;
         if (!fu) {
-          if (!graced) { graced = true; await new Promise((r) => setTimeout(r, 1200)); if (auth.currentUser) return; }
-          setLoadingAuth(false); setUser(null); setUserData(null); return;
+          if (!graced) { graced = true; await new Promise((r) => setTimeout(r, 1200)); if (auth.currentUser || !alive) return; }
+          settle(); setUser(null); setUserData(null); return;
         }
-        setLoadingAuth(false);
+        settle();
         setUser({ uid: fu.uid, displayName: fu.displayName, photoURL: fu.photoURL });
-        const snap = await db.ref(`users/${fu.uid}`).get();
-        if (snap.exists()) {
-          setUserData(snap.val());
-        } else {
-          const nd = { displayName: fu.displayName || 'User', photoURL: fu.photoURL || '', email: fu.email || '', role: 'Member', level: 1, exp: 0, koin: 0, menitMenonton: 0, joinedAt: Date.now(), activeBorder: '', ownedBorders: [] };
-          await db.ref(`users/${fu.uid}`).set(nd);
-          setUserData(nd);
-        }
-        // ID urut: ditetapkan sekali per akun, lalu disimpan ke state begitu selesai
-        ensureShortId(db, fu.uid).then((id) => { if (id) setUserData((prev: any) => (prev ? { ...prev, shortId: id } : prev)); });
+        try {
+          const snap = await db.ref(`users/${fu.uid}`).get();
+          if (snap.exists()) {
+            setUserData(snap.val());
+          } else {
+            const nd = { displayName: fu.displayName || 'User', photoURL: fu.photoURL || '', email: fu.email || '', role: 'Member', level: 1, exp: 0, koin: 0, menitMenonton: 0, joinedAt: Date.now(), activeBorder: '', ownedBorders: [] };
+            await db.ref(`users/${fu.uid}`).set(nd);
+            setUserData(nd);
+          }
+          // ID urut: ditetapkan sekali per akun, lalu disimpan ke state begitu selesai
+          ensureShortId(db, fu.uid).then((id) => { if (id && alive) setUserData((prev: any) => (prev ? { ...prev, shortId: id } : prev)); });
+        } catch { /* data profil gagal dimuat; akun tetap dianggap login */ }
       });
-    }).catch(() => setLoadingAuth(false));
-    return () => { if (unsub) unsub(); };
+      Promise.race([auth.getRedirectResult(), new Promise((r) => setTimeout(r, 8000))]).catch(() => {});
+    }).catch(() => { if (alive) { setAuthFailed(true); settle(); } });
+    return () => { alive = false; clearTimeout(safety); if (unsub) unsub(); };
   }, []);
 
   const pts      = mounted && mine.id === season.id ? mine.points + (mine.bonus || 0) : 0;
@@ -1172,6 +1150,14 @@ export default function ProfilePage() {
   if (loadingAuth) return (
     <div className="min-h-screen bg-[#1B1A20] flex items-center justify-center">
       <div className="w-8 h-8 border-2 border-white/20 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+
+  if (!user && authFailed) return (
+    <div className="min-h-screen bg-[#1B1A20] flex flex-col items-center justify-center px-8 text-center gap-5">
+      <div className="text-white text-xl font-black">Gagal memuat akun</div>
+      <p className="text-gray-400 text-sm font-medium leading-relaxed">Koneksi ke server login bermasalah. Coba muat ulang.</p>
+      <button onClick={() => window.location.reload()} className="bg-white text-black px-6 py-3 rounded-2xl font-bold text-sm active:scale-95 transition-transform">Muat ulang</button>
     </div>
   );
 

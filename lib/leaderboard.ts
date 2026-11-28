@@ -15,29 +15,46 @@ const FIREBASE_CONFIG = {
   measurementId: "G-LE9NQH23YR"
 };
 
-function loadFirebaseCDN(): Promise<void> {
-  if (typeof window === 'undefined') return Promise.resolve();
-  if (window._fbReady) return Promise.resolve();
-  return new Promise((resolve) => {
-    const urls = [
-      'https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js',
-      'https://www.gstatic.com/firebasejs/10.14.0/firebase-auth-compat.js',
-      'https://www.gstatic.com/firebasejs/10.14.0/firebase-database-compat.js',
-    ];
-    let done = 0;
-    urls.forEach((src) => {
-      const s = document.createElement('script');
-      s.src = src;
-      s.onload = () => { done++; if (done === urls.length) { window._fbReady = true; resolve(); } };
-      document.head.appendChild(s);
-    });
+// Muat satu skrip. Skrip yang gagal/timeout dibuang supaya bisa dicoba lagi (dulu: tidak pernah selesai → spinner abadi).
+function loadScript(src: string, timeoutMs = 15000): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    const t = setTimeout(() => { s.remove(); reject(new Error('timeout ' + src)); }, timeoutMs);
+    s.src = src;
+    s.onload = () => { clearTimeout(t); resolve(); };
+    s.onerror = () => { clearTimeout(t); s.remove(); reject(new Error('gagal memuat ' + src)); };
+    document.head.appendChild(s);
   });
 }
 
+// Satu promise bersama untuk semua pemanggil (BottomNav, Profil, dll) supaya skrip tidak dimuat dobel.
+// Urutan wajib: app dulu, baru auth + database (kalau auth jalan duluan, window.firebase.auth tidak ada).
+let fbLoading: Promise<void> | null = null;
+function loadFirebaseCDN(): Promise<void> {
+  if (typeof window === 'undefined') return Promise.resolve();
+  if (window._fbReady) return Promise.resolve();
+  if (!fbLoading) {
+    const base = 'https://www.gstatic.com/firebasejs/10.14.0/';
+    fbLoading = (async () => {
+      await loadScript(base + 'firebase-app-compat.js');
+      await Promise.all([loadScript(base + 'firebase-auth-compat.js'), loadScript(base + 'firebase-database-compat.js')]);
+      if (!window.firebase?.auth || !window.firebase?.database) throw new Error('firebase tidak lengkap');
+      window._fbReady = true;
+    })().catch((e) => { fbLoading = null; throw e; });
+  }
+  return fbLoading;
+}
+
 export async function getFirebase() {
-  await loadFirebaseCDN();
-  if (!window.firebase.apps.length) window.firebase.initializeApp(FIREBASE_CONFIG);
-  return { auth: window.firebase.auth(), db: window.firebase.database() };
+  let err: any;
+  for (let i = 0; i < 3; i++) {
+    try {
+      await loadFirebaseCDN();
+      if (!window.firebase.apps.length) window.firebase.initializeApp(FIREBASE_CONFIG);
+      return { auth: window.firebase.auth(), db: window.firebase.database() };
+    } catch (e) { err = e; await new Promise((r) => setTimeout(r, 700 * (i + 1))); }
+  }
+  throw err;
 }
 
 export async function getUser(): Promise<any> {
