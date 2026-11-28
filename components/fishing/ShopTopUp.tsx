@@ -3,11 +3,18 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 
+import { getFirebase } from '@/lib/firebase-client';
 import { TOPUP_PACKS as PACKS } from '@/lib/topupPacks';
 import type { QrOrder, TopUpCurrency, TopUpPoll } from '@/lib/topupPacks';
+import { PROMO_QRIS_NAME, PROMO_TTL, PROMO_WA, uniqueAmount } from '@/lib/promoPacks';
 export type { TopUpCurrency };
 
 type BuyResult = string | QrOrder | void | Promise<string | QrOrder | void>;
+
+const WA_READY = /^\d{9,15}$/.test(PROMO_WA);
+
+// Pesanan top up manual (sama seperti Premium): QRIS statis /qris.png + nominal unik, admin menyetujui di Panel Developer.
+type ManualOrder = { id: string; amount: number; createdAt: number; claimed: boolean; cur: TopUpCurrency; total: number; ls: string };
 
 interface Props {
   px: (n: number) => number;
@@ -18,11 +25,11 @@ interface Props {
   gemIcon: (size: number) => ReactNode;
   crystalIcon: (size: number) => ReactNode;
   onClose: () => void;
-  /** Dipanggil saat tombol harga ditekan. Kembalikan teks error kalau gagal; kosong = berhasil (halaman pindah ke pembayaran). */
+  /** Tidak dipakai lagi (top up sekarang manual via QRIS + persetujuan admin). Dibiarkan supaya pemanggil lama tetap valid. */
   onBuy?: (currency: TopUpCurrency, packId: string, amount: number, bonus: number, rupiah: number) => BuyResult;
-  /** Cek status pembayaran QRIS. */
+  /** Tidak dipakai lagi. */
   onPoll?: (orderId: string) => Promise<TopUpPoll>;
-  /** Dipanggil saat pembayaran lunas (muat ulang saldo). */
+  /** Dipanggil saat admin menyetujui pembayaran (muat ulang saldo). */
   onPaid?: () => void;
 }
 
@@ -48,47 +55,106 @@ const idn = (n: number) => n.toLocaleString('id-ID');
 const rupiah = (n: number) => 'Rp' + idn(n);
 const BROWN = '#5a3b1e';
 
-export default function ShopTopUp({ px, font, initial = 'gems', gems, crystal, gemIcon, crystalIcon, onClose, onBuy, onPoll, onPaid }: Props) {
+export default function ShopTopUp({ px, font, initial = 'gems', gems, crystal, gemIcon, crystalIcon, onClose, onPaid }: Props) {
   const [cur, setCur] = useState<TopUpCurrency>(initial);
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState('');
-  const [qr, setQr] = useState<(QrOrder & { cur: TopUpCurrency; total: number }) | null>(null);
+  const [qr, setQr] = useState<ManualOrder | null>(null);
   const [paid, setPaid] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [qrMissing, setQrMissing] = useState(false);
+  const [name, setName] = useState('');
   const paidRef = useRef(false);
   const t = THEME[cur];
 
-  // cek status QRIS tiap 3 detik selama kode QR tampil
+  // pantau pesanan tiap 4 detik: saat admin menyetujui, layar berubah sendiri dan saldo dimuat ulang
   useEffect(() => {
-    if (!qr || paid || !onPoll) return;
-    let stop = false;
+    if (!qr || paid) return;
+    let alive = true;
     const tick = async () => {
       try {
-        const st = await onPoll(qr.orderId);
-        if (stop) return;
-        if (st === 'paid' && !paidRef.current) { paidRef.current = true; setPaid(true); onPaid?.(); }
-        else if (st === 'failed') { setQr(null); setMsg('Pembayaran dibatalkan atau kedaluwarsa. Coba lagi.'); }
-      } catch { /* abaikan, coba lagi di putaran berikutnya */ }
+        if (Date.now() - qr.createdAt > PROMO_TTL) {
+          try { localStorage.removeItem(qr.ls); } catch { /* abaikan */ }
+          if (alive) { setQr(null); setMsg('Pesanan kedaluwarsa. Pilih paket lagi untuk membuat pesanan baru.'); }
+          return;
+        }
+        const f: any = await getFirebase();
+        const o = (await f.db.ref('topupOrders/' + qr.id).get()).val();
+        if (!alive || !o) return;
+        if (o.status === 'approved') {
+          try { localStorage.removeItem(qr.ls); } catch { /* abaikan */ }
+          if (!paidRef.current) { paidRef.current = true; setPaid(true); onPaid?.(); }
+        } else if (o.status === 'rejected') {
+          try { localStorage.removeItem(qr.ls); } catch { /* abaikan */ }
+          setQr(null);
+          setMsg('Pembayaran belum ditemukan oleh admin. Kalau kamu sudah bayar, hubungi admin lewat WhatsApp.');
+        }
+      } catch { /* coba lagi di putaran berikutnya */ }
     };
-    const id = setInterval(tick, 3000);
-    return () => { stop = true; clearInterval(id); };
-  }, [qr, paid, onPoll, onPaid]);
+    const id = setInterval(tick, 4000);
+    return () => { alive = false; clearInterval(id); };
+  }, [qr, paid, onPaid]);
   const icon = (c: TopUpCurrency, s: number) => (c === 'gems' ? gemIcon(s) : crystalIcon(s));
 
+  // buat pesanan baru (atau lanjutkan yang masih menunggu), lalu tampilkan QRIS
   const buy = async (pk: (typeof PACKS)[TopUpCurrency][number]) => {
     if (busy) return;
     setMsg('');
-    if (!onBuy) { setMsg('Pembayaran Rupiah belum tersedia'); return; }
     setBusy(pk.id);
     try {
-      const err = await onBuy(cur, pk.id, pk.amount, pk.bonus, pk.rupiah);
-      if (typeof err === 'string' && err) { setMsg(err); setBusy(''); return; }
-      if (err && typeof err === 'object' && 'qrUrl' in err) { paidRef.current = false; setPaid(false); setQr({ ...err, cur, total: pk.amount + pk.bonus }); setBusy(''); return; }
-      // berhasil: halaman akan pindah ke Midtrans. Kalau tidak pindah, buka lagi tombolnya.
-      setTimeout(() => setBusy(''), 10000);
-    } catch {
-      setMsg('Gagal membuat pembayaran');
-      setBusy('');
+      const f: any = await getFirebase();
+      const u = f.auth.currentUser;
+      if (!u) { setMsg('Masuk dulu lewat halaman Profil untuk top up.'); setBusy(''); return; }
+      const nm = u.displayName || 'User';
+      setName(nm);
+      const total = pk.amount + pk.bonus;
+      const LS = `komikita-topup-order-${cur}-${pk.id}`;
+      let order: { id: string; amount: number; createdAt: number; claimed: boolean } | null = null;
+      try {
+        const oid = localStorage.getItem(LS);
+        if (oid) {
+          const o = (await f.db.ref('topupOrders/' + oid).get()).val();
+          if (o && o.uid === u.uid && o.currency === cur && o.packId === pk.id && o.status === 'pending' && Date.now() - o.createdAt < PROMO_TTL) {
+            order = { id: oid, amount: o.amount, createdAt: o.createdAt, claimed: !!o.claimed };
+          } else localStorage.removeItem(LS);
+        }
+      } catch { /* lanjut buat pesanan baru */ }
+      if (!order) {
+        const amount = uniqueAmount(pk.rupiah);
+        const ref = f.db.ref('topupOrders').push();
+        const createdAt = Date.now();
+        await ref.set({ uid: u.uid, name: nm, currency: cur, packId: pk.id, gain: total, amount, base: pk.rupiah, status: 'pending', createdAt });
+        try { localStorage.setItem(LS, String(ref.key)); } catch { /* abaikan */ }
+        order = { id: String(ref.key), amount, createdAt, claimed: false };
+      }
+      paidRef.current = false;
+      setPaid(false);
+      setQrMissing(false);
+      setQr({ ...order, cur, total, ls: LS });
+    } catch (e: any) {
+      setMsg('Gagal membuat pesanan: ' + (e?.message || 'coba lagi'));
     }
+    setBusy('');
+  };
+
+  const waUrl = () => {
+    if (!qr || !WA_READY) return '';
+    const teks = `Halo, saya sudah bayar top up ${THEME[qr.cur].name} di Komikita.\n\nJumlah: ${idn(qr.total)} ${THEME[qr.cur].name}\nNominal: Rp ${idn(qr.amount)}\nNama: ${name || 'User'}\nID pesanan: ${qr.id}\n\nBukti pembayaran saya kirim di chat ini.`;
+    return `https://wa.me/${PROMO_WA}?text=${encodeURIComponent(teks)}`;
+  };
+  const bukaWa = () => { const url = waUrl(); if (url) window.open(url, '_blank'); };
+  const sudahBayar = async () => {
+    if (!qr) return;
+    bukaWa(); // dibuka sebelum proses async supaya tidak diblokir browser
+    try {
+      const f: any = await getFirebase();
+      await f.db.ref(`topupOrders/${qr.id}/claimed`).set(true);
+      setQr({ ...qr, claimed: true });
+    } catch { setMsg('Gagal mengirim konfirmasi. Coba lagi.'); }
+  };
+  const salin = () => {
+    if (!qr) return;
+    try { navigator.clipboard.writeText(String(qr.amount)); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch { /* abaikan */ }
   };
 
   const tabBtn = (c: TopUpCurrency): CSSProperties => {
@@ -112,7 +178,7 @@ export default function ShopTopUp({ px, font, initial = 'gems', gems, crystal, g
           </button>
         </div>
 
-        {msg && !qr && <div style={{ flex: 'none', background: '#fde4df', color: '#9c2a18', borderBottom: '2px solid #f3b4a8', textAlign: 'center', fontWeight: 800, fontSize: px(15), padding: `${px(8)}px ${px(12)}px` }}>{msg}</div>}
+        {msg && <div style={{ flex: 'none', background: '#fde4df', color: '#9c2a18', borderBottom: '2px solid #f3b4a8', textAlign: 'center', fontWeight: 800, fontSize: px(15), padding: `${px(8)}px ${px(12)}px` }}>{msg}</div>}
         <div className="kk-scroll" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: px(14) }}>
           {qr ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: px(8), textAlign: 'center' }}>
@@ -124,17 +190,38 @@ export default function ShopTopUp({ px, font, initial = 'gems', gems, crystal, g
                   <button onClick={onClose} style={{ marginTop: px(8), border: 0, cursor: 'pointer', fontFamily: font, fontWeight: 800, fontSize: px(19), color: '#fff', padding: `${px(8)}px ${px(40)}px`, borderRadius: px(12), background: 'linear-gradient(180deg,#58e89a,#1fa85a)', boxShadow: `0 ${px(3)}px 0 #167a40` }}>Selesai</button>
                 </>
               ) : (
-                <>
-                  <div style={{ fontWeight: 800, fontSize: px(22), color: THEME[qr.cur].main }}>Scan QRIS · {rupiah(qr.rupiah)}</div>
-                  <div style={{ fontWeight: 700, fontSize: px(14), color: '#8a7a68' }}>{idn(qr.total)} {THEME[qr.cur].name}</div>
-                  <div style={{ background: '#fff', borderRadius: px(14), padding: px(8), border: `${px(3)}px solid ${THEME[qr.cur].card}` }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={qr.qrUrl} alt="QRIS" style={{ width: px(250), height: px(250), display: 'block', imageRendering: 'pixelated' }} />
+                <div style={{ display: 'flex', gap: px(18), alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center', textAlign: 'left', width: '100%' }}>
+                  <div style={{ flex: 'none', textAlign: 'center' }}>
+                    <div style={{ background: '#fff', borderRadius: px(14), padding: px(8), border: `${px(3)}px solid ${THEME[qr.cur].card}`, width: px(250), height: px(250), display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'content-box' }}>
+                      {qrMissing
+                        ? <span style={{ color: '#333', fontWeight: 700, fontSize: px(13) }}>Gambar QRIS belum dipasang (public/qris.png)</span>
+                        // eslint-disable-next-line @next/next/no-img-element
+                        : <img src="/qris.png" alt="QRIS" onError={() => setQrMissing(true)} style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />}
+                    </div>
+                    <div style={{ fontWeight: 800, fontSize: px(14), color: '#8a6d4a', marginTop: px(6) }}>QRIS · {PROMO_QRIS_NAME}</div>
                   </div>
-                  <div style={{ fontWeight: 700, fontSize: px(13), color: '#8a7a68', maxWidth: px(520) }}>Buka GoPay, Dana, ShopeePay, OVO atau m-banking lalu scan. Kalau satu HP, screenshot kode ini dan pilih dari galeri di aplikasi pembayarannya.</div>
-                  <div style={{ fontWeight: 800, fontSize: px(14), color: '#a8691f' }}>Menunggu pembayaran… saldo masuk otomatis</div>
-                  <button onClick={() => { setQr(null); setMsg(''); }} style={{ border: 0, cursor: 'pointer', fontFamily: font, fontWeight: 800, fontSize: px(16), color: BROWN, padding: `${px(6)}px ${px(28)}px`, borderRadius: px(12), background: '#f5e6c8', boxShadow: 'inset 0 0 0 2px #e6d4b0' }}>Batal</button>
-                </>
+                  <div style={{ flex: '1 1 340px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: px(6) }}>
+                    <div style={{ fontWeight: 800, fontSize: px(14), color: '#8a6d4a' }}>Bayar TEPAT sebesar</div>
+                    <button onClick={salin} style={{ background: 'none', border: 0, padding: 0, textAlign: 'left', cursor: 'pointer', fontFamily: font, color: '#c47f10', fontWeight: 800, fontSize: px(40), lineHeight: 1.05 }}>Rp {idn(qr.amount)}</button>
+                    <div style={{ fontWeight: 700, fontSize: px(13), color: '#8a7a68', lineHeight: 1.35 }}>{copied ? 'Nominal disalin ✓' : 'Tap nominal untuk menyalin. 3 digit terakhir dipakai admin untuk mencocokkan pembayaranmu.'}</div>
+                    <div style={{ fontWeight: 800, fontSize: px(15), marginTop: px(2), display: 'flex', alignItems: 'center', gap: px(8) }}>Dapat: <span style={{ color: '#1f7a30', display: 'inline-flex', alignItems: 'center', gap: px(6) }}>{idn(qr.total)} {THEME[qr.cur].name} {icon(qr.cur, px(22))}</span></div>
+                    <div style={{ fontWeight: 700, fontSize: px(14), lineHeight: 1.5, color: '#6a5a48', marginTop: px(2) }}>
+                      1. Scan QRIS dengan DANA atau e-wallet apa saja<br />
+                      2. Isi nominal persis seperti di atas<br />
+                      {WA_READY ? <>3. Tap “Saya sudah bayar”, WhatsApp admin terbuka, kirim screenshot bukti bayarnya<br /></> : <>3. Tap “Saya sudah bayar”<br /></>}
+                      Admin mengecek lalu menambah saldo. Layar ini berubah sendiri.
+                    </div>
+                    {qr.claimed ? (
+                      <>
+                        <div style={{ fontWeight: 800, fontSize: px(16), color: '#1f7a30', marginTop: px(4) }}>✓ Menunggu persetujuan admin</div>
+                        {WA_READY && <button onClick={bukaWa} style={{ width: '100%', border: 0, cursor: 'pointer', fontFamily: font, fontWeight: 800, fontSize: px(18), color: '#06301a', padding: `${px(9)}px 0`, borderRadius: px(12), background: 'linear-gradient(180deg,#3ee07a,#1fa85a)', boxShadow: `0 ${px(3)}px 0 #167a40` }}>Kirim bukti ke WhatsApp</button>}
+                      </>
+                    ) : (
+                      <button onClick={sudahBayar} style={{ width: '100%', marginTop: px(4), border: 0, cursor: 'pointer', fontFamily: font, fontWeight: 800, fontSize: px(20), color: '#4a2f00', padding: `${px(9)}px 0`, borderRadius: px(12), background: 'linear-gradient(180deg,#ffd45a,#f5a623)', boxShadow: `0 ${px(3)}px 0 #b97a12` }}>Saya sudah bayar</button>
+                    )}
+                    <button onClick={() => { setQr(null); setMsg(''); }} style={{ width: '100%', border: 0, cursor: 'pointer', fontFamily: font, fontWeight: 800, fontSize: px(16), color: BROWN, padding: `${px(7)}px 0`, borderRadius: px(12), background: '#f5e6c8', boxShadow: 'inset 0 0 0 2px #e6d4b0' }}>Kembali (pesanan tetap tersimpan)</button>
+                  </div>
+                </div>
               )}
             </div>
           ) : (<>
@@ -172,7 +259,7 @@ export default function ShopTopUp({ px, font, initial = 'gems', gems, crystal, g
                   disabled={!!busy}
                   style={{ width: '100%', border: 0, cursor: busy ? 'default' : 'pointer', fontFamily: font, fontWeight: 800, fontSize: px(busy === pk.id ? 15 : 19), color: '#4a2f00', padding: `${px(7)}px 0`, borderRadius: px(10), background: 'linear-gradient(180deg,#ffd45a,#f5a623)', boxShadow: `0 ${px(3)}px 0 #b97a12`, opacity: busy && busy !== pk.id ? 0.55 : 1 }}
                 >
-                  {busy === pk.id ? 'Membuka pembayaran…' : rupiah(pk.rupiah)}
+                  {busy === pk.id ? 'Membuat pesanan…' : rupiah(pk.rupiah)}
                 </button>
               </div>
             ))}

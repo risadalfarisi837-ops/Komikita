@@ -186,14 +186,14 @@ const DEV_ITEMS = {
 } as const;
 type ItemCat = keyof typeof DEV_ITEMS;
 type DevUser = { uid: string; name: string; photo: string; level: number; koin: number; role: string };
-const DEV_ACTS = [['koin', 'Crystal'], ['poin', 'XP'], ['role', 'Role'], ['item', 'Item'], ['reset', 'Reset']] as const;
+const DEV_ACTS = [['koin', 'Crystal'], ['gems', 'Gems'], ['poin', 'XP'], ['role', 'Role'], ['item', 'Item'], ['reset', 'Reset']] as const;
 type DevAct = typeof DEV_ACTS[number][0];
 const DEV_MODES = [['add', 'Tambah'], ['sub', 'Kurangi'], ['set', 'Set jadi']] as const;
 type DevMode = typeof DEV_MODES[number][0];
-const DEV_PRESETS: Record<'koin' | 'poin', number[]> = { koin: [100, 500, 1000, 5000, 10000], poin: [100, 300, 700, 1500, 5000, 8000] };
-const DEV_UNIT: Record<'koin' | 'poin', string> = { koin: 'Crystal', poin: 'XP musim ini' };
+const DEV_PRESETS: Record<'koin' | 'gems' | 'poin', number[]> = { koin: [100, 500, 1000, 5000, 10000], gems: [100, 300, 700, 1500, 5000, 10000], poin: [100, 300, 700, 1500, 5000, 8000] };
+const DEV_UNIT: Record<'koin' | 'gems' | 'poin', string> = { koin: 'Crystal', gems: 'Gems', poin: 'XP musim ini' };
 const DEV_ROLES = ['Member', 'Komikita Premium', 'Admin', 'Developer'];
-const DEV_RESETS = [['poin', 'XP musim'], ['koin', 'Crystal'], ['hapus', 'Hapus data user']] as const;
+const DEV_RESETS = [['poin', 'XP musim'], ['koin', 'Crystal'], ['gems', 'Gems'], ['hapus', 'Hapus data user']] as const;
 type DevReset = typeof DEV_RESETS[number][0];
 type GType = 'koin' | 'level' | 'exp' | 'poin' | 'border' | 'wallpaper' | 'effect';
 const GIFT_TYPES: [GType, string][] = [['koin', 'Crystal'], ['poin', 'XP musim'], ['border', 'Border'], ['wallpaper', 'Wallpaper'], ['effect', 'Efek']];
@@ -312,6 +312,11 @@ function DevPanel({ open, onClose, uid, db, userData, onUpdate }: {
         const ps = await db.ref('promoOrders').orderByChild('status').equalTo('pending').get();
         ps.forEach((c: any) => { arr.push({ id: String(c.key), kind: 'promo', ...(c.val() || {}) }); });
       } catch (e: any) { showToast('Pesanan promo gagal dimuat: ' + e.message + ' (cek aturan promoOrders)', 'error'); }
+      // pesanan Top Up Gems/Crystal di Toko mancing (aturan topupOrders harus sudah dipasang)
+      try {
+        const ts = await db.ref('topupOrders').orderByChild('status').equalTo('pending').get();
+        ts.forEach((c: any) => { arr.push({ id: String(c.key), kind: 'topup', ...(c.val() || {}) }); });
+      } catch (e: any) { showToast('Pesanan top up gagal dimuat: ' + e.message + ' (cek aturan topupOrders)', 'error'); }
       setOrders(arr.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)));
     } catch (e: any) { showToast('Gagal memuat pesanan: ' + e.message + ' (cek aturan premiumOrders)', 'error'); setOrders([]); }
   };
@@ -351,8 +356,36 @@ function DevPanel({ open, onClose, uid, db, userData, onUpdate }: {
     setSaving(false);
   };
 
+  // Top Up Gems / Crystal dari Toko mancing: saldo langsung ditambah sebesar jumlah + bonus paket
+  const approveTopup = async (o: any) => {
+    const field = o.currency === 'gems' ? 'gems' : o.currency === 'crystal' ? 'koin' : '';
+    const gain = Number(o.gain) || 0;
+    const nama = o.currency === 'gems' ? 'Gems' : 'Crystal';
+    if (!field || gain <= 0) { showToast('Data top up tidak valid.', 'error'); return; }
+    if (!window.confirm(`Setujui ${o.name} · ${gain.toLocaleString('id-ID')} ${nama} · Rp ${Number(o.amount).toLocaleString('id-ID')}? Pastikan dana sudah masuk di DANA.`)) return;
+    setSaving(true);
+    try {
+      const u = (await db.ref('users/' + o.uid).get()).val() || {};
+      const now = Date.now();
+      const upd: Record<string, any> = {};
+      upd[`users/${o.uid}/${field}`] = (Number(u[field]) || 0) + gain;
+      upd[`topupOrders/${o.id}/status`] = 'approved';
+      upd[`topupOrders/${o.id}/approvedAt`] = now;
+      const ikey = db.ref(`users/${o.uid}/inbox`).push().key;
+      upd[`users/${o.uid}/inbox/${ikey}`] = {
+        jenis: 'promo_ok', judul: `Top up ${nama} diterima!`, waktu: now,
+        isi: `Pembayaran Rp ${Number(o.amount).toLocaleString('id-ID')} diterima. ${gain.toLocaleString('id-ID')} ${nama} sudah masuk ke akunmu. Terima kasih sudah mendukung Komikita!`,
+      };
+      await db.ref().update(upd);
+      setOrders(prev => prev && prev.filter(x => x.id !== o.id));
+      showToast(`Top up ${o.name} terkirim: ${gain.toLocaleString('id-ID')} ${nama}.`, 'success');
+    } catch (e: any) { showToast('Gagal: ' + e.message, 'error'); }
+    setSaving(false);
+  };
+
   const approveOrder = async (o: any) => {
     if (o.kind === 'promo') return approvePromo(o);
+    if (o.kind === 'topup') return approveTopup(o);
     const plan = DEV_PLAN_DAYS[o.plan];
     if (!plan) { showToast('Paket tidak dikenal.', 'error'); return; }
     if (!window.confirm(`Setujui ${o.name} · Rp ${Number(o.amount).toLocaleString('id-ID')}? Pastikan dana sudah masuk di DANA.`)) return;
@@ -389,8 +422,8 @@ function DevPanel({ open, onClose, uid, db, userData, onUpdate }: {
       const now = Date.now();
       const ikey = db.ref(`users/${o.uid}/inbox`).push().key;
       await db.ref().update({
-        [`${o.kind === 'promo' ? 'promoOrders' : 'premiumOrders'}/${o.id}/status`]: 'rejected',
-        [`${o.kind === 'promo' ? 'promoOrders' : 'premiumOrders'}/${o.id}/rejectedAt`]: now,
+        [`${o.kind === 'promo' ? 'promoOrders' : o.kind === 'topup' ? 'topupOrders' : 'premiumOrders'}/${o.id}/status`]: 'rejected',
+        [`${o.kind === 'promo' ? 'promoOrders' : o.kind === 'topup' ? 'topupOrders' : 'premiumOrders'}/${o.id}/rejectedAt`]: now,
         [`users/${o.uid}/inbox/${ikey}`]: {
           jenis: 'premium_no', judul: 'Pembayaran belum ditemukan', waktu: now,
           isi: `Pesanan Rp ${Number(o.amount).toLocaleString('id-ID')} tidak kami temukan di mutasi. Kalau kamu sudah bayar, hubungi admin atau buat pesanan baru.`,
@@ -433,9 +466,16 @@ function DevPanel({ open, onClose, uid, db, userData, onUpdate }: {
   };
 
   const applyNumber = () => {
-    if (act !== 'koin' && act !== 'poin') return;
+    if (act !== 'koin' && act !== 'poin' && act !== 'gems') return;
     const n = parseInt(amount);
     if (isNaN(n) || n < 0) { showToast('Isi angka yang benar.', 'error'); return; }
+    // Gems: langsung diterapkan ke saldo user (Tambah / Kurangi / Set jadi), tanpa lewat notifikasi hadiah
+    if (act === 'gems') {
+      if (mode !== 'set' && n <= 0) { showToast('Isi angka lebih dari 0.', 'error'); return; }
+      const calcG = (c: number) => (mode === 'add' ? c + n : mode === 'sub' ? c - n : n);
+      run((cur) => ({ gems: Math.max(0, calcG(Number(cur.gems) || 0)) }), 'Gems berhasil diterapkan.', mode === 'add' ? { title: 'Gems terkirim!', sub: '+' + n.toLocaleString('id-ID') + ' Gems untuk ' + (target?.name || 'user') } : undefined);
+      return;
+    }
     if ((mode as string) === 'add') {
       if (n <= 0) { showToast('Isi angka lebih dari 0.', 'error'); return; }
       sendToTarget({ type: act as GiftType, amount: n, itemName: giftTitle(act as GiftType, n) });
@@ -452,6 +492,7 @@ function DevPanel({ open, onClose, uid, db, userData, onUpdate }: {
     if (!target) { showToast('Pilih user dulu.', 'error'); return; }
     const lbRef = db.ref(`leaderboard/s${currentSeason().id}/${target.uid}`);
     if (resetPick === 'koin') { run(() => ({ koin: 0 }), 'Crystal direset.'); return; }
+    if (resetPick === 'gems') { run(() => ({ gems: 0 }), 'Gems direset.'); return; }
     if (resetPick === 'poin') {
       setSaving(true);
       try {
@@ -571,7 +612,7 @@ function DevPanel({ open, onClose, uid, db, userData, onUpdate }: {
   const ql = q.trim().replace('#', '').toLowerCase();
   const matches = (users || []).filter(u => !ql || u.name.toLowerCase().includes(ql) || u.uid.toLowerCase().startsWith(ql) || formatShortId((u as any).shortId, u.uid).replace('#', '').includes(ql.replace(/^#/, ''))).slice(0, 6);
   const cnt = (o: any) => Object.keys(o || {}).length;
-  const numAct = act === 'koin' || act === 'poin';
+  const numAct = act === 'koin' || act === 'poin' || act === 'gems';
   const modeLabel = DEV_MODES.find(m => m[0] === mode)![1];
   const catDef = DEV_ITEMS[itemCat];
   const nameOf = (cat: ItemCat, key: string) => DEV_ITEMS[cat].items.find(i => i.key === key)?.nama || '';
@@ -632,7 +673,7 @@ function DevPanel({ open, onClose, uid, db, userData, onUpdate }: {
                   </div>
                 </div>
                 <div style={{ display: 'flex', marginTop: 10, textAlign: 'center' }}>
-                  {[['Crystal', (Number(tData.koin) || 0).toLocaleString('id-ID')], ['Level', String(Number(tData.level) || 1)], ['EXP', (Number(tData.exp) || 0).toLocaleString('id-ID')], ['Role', tData.role || 'Member']].map(([l, v], i) => (
+                  {[['Crystal', (Number(tData.koin) || 0).toLocaleString('id-ID')], ['Gems', (Number(tData.gems) || 0).toLocaleString('id-ID')], ['Level', String(Number(tData.level) || 1)], ['EXP', (Number(tData.exp) || 0).toLocaleString('id-ID')], ['Role', tData.role || 'Member']].map(([l, v], i) => (
                     <div key={l} style={{ flex: 1, minWidth: 0, borderLeft: i ? '1px solid rgba(255,255,255,.08)' : 'none' }}>
                       <div style={{ fontSize: 14, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 2px' }}>{v}</div>
                       <div style={{ fontSize: 11, fontWeight: 700, color: '#8F8D9B' }}>{l}</div>
@@ -658,13 +699,13 @@ function DevPanel({ open, onClose, uid, db, userData, onUpdate }: {
                 {DEV_MODES.map(([k, l]) => <button key={k} onClick={() => setMode(k)} style={chip(mode === k)}>{l}</button>)}
               </div>
               <div style={ROW}>
-                {DEV_PRESETS[act as 'koin' | 'poin'].map(n => (
+                {DEV_PRESETS[act as 'koin' | 'gems' | 'poin'].map(n => (
                   <button key={n} onClick={() => setAmount(String(n))} style={chip(amount === String(n))}>{n.toLocaleString('id-ID')}</button>
                 ))}
               </div>
               <input style={FIELD} value={amount} onChange={e => setAmount(e.target.value)} type="number" inputMode="numeric" placeholder="Atau ketik jumlah sendiri" />
               <button onClick={applyNumber} disabled={saving || !target} style={{ ...BTN, background: '#0E8A6A', color: '#fff', opacity: saving || !target ? 0.5 : 1 }}>
-                {saving ? 'Memproses...' : `${modeLabel} ${amount || '…'} ${DEV_UNIT[act as 'koin' | 'poin']}`}
+                {saving ? 'Memproses...' : `${modeLabel} ${amount || '…'} ${DEV_UNIT[act as 'koin' | 'gems' | 'poin']}`}
               </button>
             </div>
           )}
@@ -680,7 +721,7 @@ function DevPanel({ open, onClose, uid, db, userData, onUpdate }: {
             </div>
           )}
 
-          {(act === 'item' || (numAct && mode === 'add')) && (
+          {(act === 'item' || (numAct && act !== 'gems' && mode === 'add')) && (
             <div style={{ marginTop: 10 }}>
               <label style={LABEL}>Pesan untuk penerima (opsional)</label>
               <input style={FIELD} value={gMsg} onChange={e => setGMsg(e.target.value)} placeholder="Contoh: Selamat ya!" />
@@ -723,7 +764,7 @@ function DevPanel({ open, onClose, uid, db, userData, onUpdate }: {
             <button onClick={loadOrders} style={{ ...chip(false), padding: '6px 14px' }}>Muat ulang</button>
           </div>
           {orders === null && <div style={{ color: '#8F8D9B', fontWeight: 700, padding: 10 }}>Memuat...</div>}
-          {orders && orders.length === 0 && <div style={{ color: '#8F8D9B', fontWeight: 700, lineHeight: 1.4, padding: 10 }}>Belum ada pesanan. Pesanan muncul di sini saat user memilih paket Premium atau Paket Promo di Toko mancing.</div>}
+          {orders && orders.length === 0 && <div style={{ color: '#8F8D9B', fontWeight: 700, lineHeight: 1.4, padding: 10 }}>Belum ada pesanan. Pesanan muncul di sini saat user memilih paket Premium, Paket Promo, atau Top Up Gems/Crystal di Toko mancing.</div>}
           {orders && orders.map(o => {
             const kembar = orders.filter(x => x.amount === o.amount).length > 1;
             const mnt = Math.max(0, Math.round((Date.now() - (o.createdAt || 0)) / 60000));
@@ -734,7 +775,7 @@ function DevPanel({ open, onClose, uid, db, userData, onUpdate }: {
                   {o.claimed && <span style={{ background: 'rgba(111,214,178,.15)', color: '#6FD6B2', fontSize: 11.5, fontWeight: 800, padding: '3px 10px', borderRadius: 99, whiteSpace: 'nowrap' }}>Sudah bayar ✓</span>}
                 </div>
                 <div style={{ fontSize: 25, fontWeight: 800, letterSpacing: -1, color: '#F5C84B', marginTop: 4 }}>Rp {Number(o.amount).toLocaleString('id-ID')}</div>
-                <div style={{ color: '#8F8D9B', fontSize: 13, fontWeight: 700, marginTop: 2 }}>{o.kind === 'promo' ? `Promo · ${PROMO_PACKS[o.pack as PromoPackId]?.nama || o.pack} → ${PROMO_PACKS[o.pack as PromoPackId] ? rewardText(PROMO_PACKS[o.pack as PromoPackId]) : '?'}` : (DEV_PLAN_DAYS[o.plan]?.nama || o.plan)} · {mnt < 60 ? `${mnt} menit lalu` : `${Math.floor(mnt / 60)} jam lalu`}</div>
+                <div style={{ color: '#8F8D9B', fontSize: 13, fontWeight: 700, marginTop: 2 }}>{o.kind === 'promo' ? `Promo · ${PROMO_PACKS[o.pack as PromoPackId]?.nama || o.pack} → ${PROMO_PACKS[o.pack as PromoPackId] ? rewardText(PROMO_PACKS[o.pack as PromoPackId]) : '?'}` : o.kind === 'topup' ? `Top up ${o.currency === 'gems' ? 'Gems' : 'Crystal'} → ${(Number(o.gain) || 0).toLocaleString('id-ID')} ${o.currency === 'gems' ? 'Gems' : 'Crystal'}` : (DEV_PLAN_DAYS[o.plan]?.nama || o.plan)} · {mnt < 60 ? `${mnt} menit lalu` : `${Math.floor(mnt / 60)} jam lalu`}</div>
                 {kembar && <div style={{ color: '#FF7A7A', fontSize: 12.5, fontWeight: 800, marginTop: 6 }}>Ada pesanan lain dengan nominal sama. Cocokkan dengan nama pengirim di DANA.</div>}
                 <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                   <button onClick={() => approveOrder(o)} disabled={saving} style={{ ...BTN, flex: 1, width: 'auto', background: '#0E8A6A', color: '#fff', opacity: saving ? 0.5 : 1 }}>Setujui</button>
