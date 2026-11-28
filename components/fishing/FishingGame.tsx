@@ -47,7 +47,7 @@ interface Props {
   pity?: number;
   starterClaimed?: boolean;
   gems?: number;
-  onTopUp?: (currency: 'gems' | 'crystal', packId: string) => void;
+  onTopUp?: (currency: 'gems' | 'crystal', packId: string) => string | void | Promise<string | void>;
   onClaimStarter?: () => Promise<boolean>;
   onExit: () => void;
   room?: string; // kode pulau dari lobi (kosong = pulau utama)

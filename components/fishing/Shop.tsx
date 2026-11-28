@@ -34,10 +34,14 @@ interface Props {
   /** Opsional: waktu berakhir Paket Lanjut (ms). Kosong = akhir bulan. */
   lanjutEndsAt?: number;
   /** Dipanggil saat paket top up dibeli (Gems atau Crystal). */
-  onTopUp?: (currency: TopUpCurrency, packId: string, amount: number, bonus: number, rupiah: number) => void;
+  onTopUp?: (currency: TopUpCurrency, packId: string, amount: number, bonus: number, rupiah: number) => string | void | Promise<string | void>;
   freeBaitClaimed?: boolean;
   onClaimBait?: () => void;
   onOpenLimited?: (n: 1 | 10) => void;
+  /** Baju Limited: peti sejak Mythic terakhir, baju yang dimiliki ('night' | 'flame'), waktu banner berakhir (ms). */
+  limitedPity?: number;
+  limitedOwned?: string[];
+  limitedEndsAt?: number;
 }
 
 const BROWN = '#5a3b1e';
@@ -472,7 +476,7 @@ export default function ShopScreen(p: Props) {
                 );
               })}
             </div>
-    ) : tab === 'bajulimited' ? <ShopBajuLimited px={px} font={font} gems={gems} onOpen={p.onOpenLimited} />
+    ) : tab === 'bajulimited' ? <ShopBajuLimited px={px} font={font} gems={gems} onOpen={p.onOpenLimited} pity={p.limitedPity} owned={p.limitedOwned} endsAt={p.limitedEndsAt} />
     : tab === 'gachagaya' ? soon('Gacha Gaya', 'Gaya rambut dan aksesori punggung karakter segera hadir.')
     : tab === 'gacharumah' ? soon('Gacha Rumah', 'Isi rumah dan dekorasi segera hadir.')
     : tab === 'gaya' ? soon('Etalase', 'Ganti gaya karakter di sini setelah Gacha Gaya dibuka.')

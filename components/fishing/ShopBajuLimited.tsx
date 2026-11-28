@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { Sprite } from './ShopSprites';
 import type { SpriteKey } from './ShopSprites';
@@ -12,7 +12,15 @@ interface Props {
   onOpen?: (n: 1 | 10) => void;
   /** Opsional: URL gambar banner asli (ilustrasi malam). Kalau kosong dipakai adegan SVG bawaan. */
   banner?: string;
+  /** Jumlah peti yang sudah dibuka sejak Mythic terakhir. Dipakai untuk "Mythic dijamin dalam N peti". */
+  pity?: number;
+  /** Baju yang sudah dimiliki: 'night' (Setelan Pemburu Malam) / 'flame' (Jubah Kilat Bara). Muncul tag "Punyamu". */
+  owned?: string[];
+  /** Waktu banner berakhir (ms). Kosong = akhir bulan. */
+  endsAt?: number;
 }
+
+const MYTHIC_PITY = 1000;
 
 const BROWN = '#5a3b1e';
 const C = { mythic: '#e0529c', legend: '#c9961f', epic: '#8e44ad', rare: '#1f64cc', common: '#7a6a58' };
@@ -107,8 +115,17 @@ function NightScene() {
   );
 }
 
-export default function ShopBajuLimited({ px, font, gems, onOpen, banner }: Props) {
+export default function ShopBajuLimited({ px, font, gems, onOpen, banner, pity = 0, owned = [], endsAt }: Props) {
   const [odds, setOdds] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 60000); return () => clearInterval(t); }, []);
+  const d0 = new Date(now);
+  const endMs = endsAt ?? new Date(d0.getFullYear(), d0.getMonth() + 1, 1).getTime();
+  const leftMs = Math.max(0, endMs - now);
+  const leftD = Math.floor(leftMs / 86400000);
+  const leftH = Math.floor((leftMs % 86400000) / 3600000);
+  const sisaPeti = Math.max(1, MYTHIC_PITY - Math.max(0, Math.floor(pity)));
+  const pityPct = Math.min(100, (Math.max(0, pity) / MYTHIC_PITY) * 100);
 
   const btn = (bg: string, edge: string, color: string): CSSProperties => ({
     border: 0, background: bg, boxShadow: `0 ${px(4)}px 0 ${edge}`, color, fontFamily: font, fontWeight: 800, borderRadius: px(12),
@@ -130,12 +147,12 @@ export default function ShopBajuLimited({ px, font, gems, onOpen, banner }: Prop
 
   const label = (t: string) => <div style={{ fontSize: px(15), fontWeight: 800, color: '#6a5a48', margin: `${px(10)}px 0 ${px(4)}px` }}>{t}</div>;
   const panel: CSSProperties = { borderRadius: px(16), border: `${px(2)}px solid #e6d4b0`, background: '#fffdf7', overflow: 'hidden', marginBottom: px(8) };
-  const row = (i: number, k: SpriteKey, name: string, rarity: string, color: string, pct: string, right: ReactNode) => (
+  const row = (i: number, k: SpriteKey, name: string, rarity: string, color: string, pct: string, right: ReactNode, own?: boolean) => (
     <div key={name} style={{ display: 'flex', alignItems: 'center', gap: px(14), padding: `${px(9)}px ${px(16)}px`, borderTop: i ? '1px solid #ecdfc4' : 'none' }}>
       <span style={{ width: px(52), display: 'flex', justifyContent: 'center', flex: 'none' }}><Sprite k={k} size={px(44)} /></span>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 800, fontSize: px(18), color: BROWN }}>{name}</div>
-        <div style={{ fontWeight: 800, fontSize: px(13), color: '#8a7a68' }}><span style={{ color }}>{rarity}</span> · {pct}</div>
+        <div style={{ fontWeight: 800, fontSize: px(13), color: '#8a7a68' }}><span style={{ color }}>{rarity}</span> · {pct}{own && <> · <span style={{ color: '#2a8a3a' }}>Punyamu</span></>}</div>
       </div>
       <div style={{ display: 'flex', gap: px(6), alignItems: 'center' }}>{right}</div>
     </div>
@@ -154,7 +171,7 @@ export default function ShopBajuLimited({ px, font, gems, onOpen, banner }: Prop
           )}
           <div style={{ position: 'absolute', top: px(8), left: 0, right: 0, textAlign: 'center' }}>
             <div style={{ fontSize: px(28), fontWeight: 800, textShadow: '0 2px 6px rgba(0,0,0,.7)' }}>Baju Secret Hunter</div>
-            <span style={{ display: 'inline-block', background: '#e0245e', borderRadius: 99, fontWeight: 800, fontSize: px(13), padding: `${px(1)}px ${px(14)}px` }}>Berakhir 7 hari 22 jam lagi</span>
+            <span style={{ display: 'inline-block', background: '#e0245e', borderRadius: 99, fontWeight: 800, fontSize: px(13), padding: `${px(1)}px ${px(14)}px` }}>{leftMs > 0 ? `Berakhir ${leftD} hari ${leftH} jam lagi` : 'Banner sudah berakhir'}</span>
           </div>
           <button onClick={() => setOdds(true)} style={{ position: 'absolute', top: px(10), right: px(10), background: 'rgba(10,14,40,.55)', border: '1.5px solid rgba(255,255,255,.6)', color: '#fff', fontFamily: font, fontWeight: 800, fontSize: px(14), borderRadius: px(14), padding: `${px(6)}px ${px(14)}px`, cursor: 'pointer' }}>Lihat peluang</button>
           {infoCard(OUTFITS[0], false)}
@@ -163,8 +180,8 @@ export default function ShopBajuLimited({ px, font, gems, onOpen, banner }: Prop
         <div style={{ display: 'flex', alignItems: 'center', gap: px(12), padding: `${px(12)}px ${px(14)}px`, background: 'linear-gradient(90deg,#0f1238,#2a1250 60%,#4a1648)' }}>
           <Sprite k="chest" size={px(50)} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: px(17), marginBottom: px(6) }}>Mythic dijamin dalam <b style={{ color: '#ff8fc8', fontSize: px(20) }}>1.000</b> peti</div>
-            <div style={{ height: px(9), borderRadius: 99, background: 'rgba(255,255,255,.2)', overflow: 'hidden' }}><div style={{ width: '0%', height: '100%', background: 'linear-gradient(90deg,#a259ff,#ff6fb1)' }} /></div>
+            <div style={{ fontWeight: 700, fontSize: px(17), marginBottom: px(6) }}>Mythic dijamin dalam <b style={{ color: '#ff8fc8', fontSize: px(20) }}>{sisaPeti.toLocaleString('id-ID')}</b> peti</div>
+            <div style={{ height: px(9), borderRadius: 99, background: 'rgba(255,255,255,.2)', overflow: 'hidden' }}><div style={{ width: pityPct + '%', height: '100%', background: 'linear-gradient(90deg,#a259ff,#ff6fb1)' }} /></div>
           </div>
           <button onClick={() => onOpen?.(1)} disabled={gems < 320} style={{ ...btn('linear-gradient(180deg,#2f86f0,#1458b8)', '#0d3f8a', '#fff'), opacity: gems < 320 ? 0.6 : 1 }}>
             <span style={{ fontSize: px(16) }}>Buka 1×</span>{price(320)}
@@ -178,7 +195,7 @@ export default function ShopBajuLimited({ px, font, gems, onOpen, banner }: Prop
 
       {label('Baju limited · 2,5%')}
       <div style={panel}>
-        {OUTFITS.map((o, i) => row(i, o.sprite, o.name, o.rarity, o.color, o.pct, o.bonus.map(([k, v]) => <Chip key={k} px={px} kind={k} v={v} />)))}
+        {OUTFITS.map((o, i) => row(i, o.sprite, o.name, o.rarity, o.color, o.pct, o.bonus.map(([k, v]) => <Chip key={k} px={px} kind={k} v={v} />), owned.includes(o.sprite)))}
       </div>
       {label('Selain baju · 97,5%')}
       <div style={panel}>

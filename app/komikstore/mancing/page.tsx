@@ -297,10 +297,10 @@ export default function MancingPage() {
   }, [refreshWallet]);
 
   // top up: server membuat transaksi Midtrans, lalu kita arahkan ke halaman bayar
-  const onTopUp = useCallback(async (currency: 'gems' | 'crystal', packId: string) => {
+  const onTopUp = useCallback(async (currency: 'gems' | 'crystal', packId: string): Promise<string | void> => {
     try {
       const user = fb.current?.auth?.currentUser;
-      if (!user) { warn('Login dulu untuk top up'); return; }
+      if (!user) return 'Login dulu untuk top up';
       const token = await user.getIdToken();
       const res = await fetch('/api/topup/create', {
         method: 'POST',
@@ -308,10 +308,21 @@ export default function MancingPage() {
         body: JSON.stringify({ currency, packId }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.redirectUrl) { warn(data.error || 'Gagal membuat pembayaran'); return; }
+      if (!res.ok || !data.redirectUrl) {
+        if (res.status === 503) return isDevRef.current ? 'Server belum diatur: isi MIDTRANS_SERVER_KEY & FIREBASE_SERVICE_ACCOUNT di Vercel (lihat TOPUP_SETUP.txt)' : 'Top up belum aktif, coba lagi nanti';
+        return data.error || 'Gagal membuat pembayaran';
+      }
       window.location.href = data.redirectUrl;
-    } catch { warn('Gagal membuat pembayaran'); }
-  }, [warn]);
+    } catch { return 'Gagal membuat pembayaran'; }
+  }, []);
+
+  // balik dari halaman bayar (Midtrans menambah ?order_id=...): saldo masuk lewat webhook, jadi cek ulang beberapa kali
+  useEffect(() => {
+    if (typeof window === 'undefined' || !new URLSearchParams(window.location.search).get('order_id')) return;
+    let n = 0;
+    const timer = setInterval(() => { refreshWallet(); if (++n >= 8) clearInterval(timer); }, 3000);
+    return () => clearInterval(timer);
+  }, [refreshWallet]);
 
   const LABELS = ['Lagi bangunin pulaunya...', 'Nyambung ke pulau...', 'Baca peta pulau...', 'Lagi nyiapin pulau...', 'Masuk ke pulau...'];
   if (!ready || !shown) {
