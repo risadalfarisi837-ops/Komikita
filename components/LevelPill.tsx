@@ -19,9 +19,10 @@ export function TierPill({ tier, text, fontSize = '12px', iconSize = 13, style, 
   const isAdm = tier.key === 'admin';
   const sweep = !!shine && (idx >= 3 || isAdm);
   const twinkle = !!shine && (idx >= 10 || isAdm);
+  const glow = !!shine && idx >= 5; // cahaya mulai tier Diamond, sama seperti bar EXP
   const vars = { '--d': `${delay}s` } as CSSProperties;
   return (
-    <span className={sweep ? 'tier-shine' : undefined} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 10px 3px 6px', borderRadius: 99, background: tier.pill, border: tier.border, color: tier.text, fontSize, fontWeight: 800, whiteSpace: 'nowrap', lineHeight: 1.25, fontFamily: ''Montserrat', var(--font-jakarta), sans-serif', ...vars, ...style }}>
+    <span className={sweep ? 'tier-shine' : undefined} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 10px 3px 6px', borderRadius: 99, background: tier.pill, border: tier.border, color: tier.text, fontSize, fontWeight: 800, whiteSpace: 'nowrap', lineHeight: 1.25, fontFamily: ''Montserrat', var(--font-jakarta), sans-serif', boxShadow: glow ? `0 0 ${idx >= 10 ? 14 : 9}px ${tier.ring}aa` : undefined, ...vars, ...style }}>
       <TierIcon k={tier.key} size={iconSize} />{text}
       {twinkle && (<>
         <i className="tier-spark" style={{ left: '14%', top: '8%', ...({ '--d': `${delay}s` } as CSSProperties) }} />
