@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 
 import { TOPUP_PACKS as PACKS } from '@/lib/topupPacks';
-import type { TopUpCurrency } from '@/lib/topupPacks';
+import type { QrOrder, TopUpCurrency, TopUpPoll } from '@/lib/topupPacks';
 export type { TopUpCurrency };
 
-type BuyResult = string | void | Promise<string | void>;
+type BuyResult = string | QrOrder | void | Promise<string | QrOrder | void>;
 
 interface Props {
   px: (n: number) => number;
@@ -20,6 +20,10 @@ interface Props {
   onClose: () => void;
   /** Dipanggil saat tombol harga ditekan. Kembalikan teks error kalau gagal; kosong = berhasil (halaman pindah ke pembayaran). */
   onBuy?: (currency: TopUpCurrency, packId: string, amount: number, bonus: number, rupiah: number) => BuyResult;
+  /** Cek status pembayaran QRIS. */
+  onPoll?: (orderId: string) => Promise<TopUpPoll>;
+  /** Dipanggil saat pembayaran lunas (muat ulang saldo). */
+  onPaid?: () => void;
 }
 
 // Gems = ungu, Crystal = biru. Seluruh jendela (bingkai, header, kartu, tombol tab) ikut berganti warna.
@@ -44,11 +48,30 @@ const idn = (n: number) => n.toLocaleString('id-ID');
 const rupiah = (n: number) => 'Rp' + idn(n);
 const BROWN = '#5a3b1e';
 
-export default function ShopTopUp({ px, font, initial = 'gems', gems, crystal, gemIcon, crystalIcon, onClose, onBuy }: Props) {
+export default function ShopTopUp({ px, font, initial = 'gems', gems, crystal, gemIcon, crystalIcon, onClose, onBuy, onPoll, onPaid }: Props) {
   const [cur, setCur] = useState<TopUpCurrency>(initial);
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState('');
+  const [qr, setQr] = useState<(QrOrder & { cur: TopUpCurrency; total: number }) | null>(null);
+  const [paid, setPaid] = useState(false);
+  const paidRef = useRef(false);
   const t = THEME[cur];
+
+  // cek status QRIS tiap 3 detik selama kode QR tampil
+  useEffect(() => {
+    if (!qr || paid || !onPoll) return;
+    let stop = false;
+    const tick = async () => {
+      try {
+        const st = await onPoll(qr.orderId);
+        if (stop) return;
+        if (st === 'paid' && !paidRef.current) { paidRef.current = true; setPaid(true); onPaid?.(); }
+        else if (st === 'failed') { setQr(null); setMsg('Pembayaran dibatalkan atau kedaluwarsa. Coba lagi.'); }
+      } catch { /* abaikan, coba lagi di putaran berikutnya */ }
+    };
+    const id = setInterval(tick, 3000);
+    return () => { stop = true; clearInterval(id); };
+  }, [qr, paid, onPoll, onPaid]);
   const icon = (c: TopUpCurrency, s: number) => (c === 'gems' ? gemIcon(s) : crystalIcon(s));
 
   const buy = async (pk: (typeof PACKS)[TopUpCurrency][number]) => {
@@ -59,6 +82,7 @@ export default function ShopTopUp({ px, font, initial = 'gems', gems, crystal, g
     try {
       const err = await onBuy(cur, pk.id, pk.amount, pk.bonus, pk.rupiah);
       if (typeof err === 'string' && err) { setMsg(err); setBusy(''); return; }
+      if (err && typeof err === 'object' && 'qrUrl' in err) { paidRef.current = false; setPaid(false); setQr({ ...err, cur, total: pk.amount + pk.bonus }); setBusy(''); return; }
       // berhasil: halaman akan pindah ke Midtrans. Kalau tidak pindah, buka lagi tombolnya.
       setTimeout(() => setBusy(''), 10000);
     } catch {
@@ -88,7 +112,32 @@ export default function ShopTopUp({ px, font, initial = 'gems', gems, crystal, g
           </button>
         </div>
 
+        {msg && !qr && <div style={{ flex: 'none', background: '#fde4df', color: '#9c2a18', borderBottom: '2px solid #f3b4a8', textAlign: 'center', fontWeight: 800, fontSize: px(15), padding: `${px(8)}px ${px(12)}px` }}>{msg}</div>}
         <div className="kk-scroll" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: px(14) }}>
+          {qr ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: px(8), textAlign: 'center' }}>
+              {paid ? (
+                <>
+                  <div style={{ fontSize: px(46) }}>✅</div>
+                  <div style={{ fontWeight: 800, fontSize: px(24), color: '#1f7a30' }}>Pembayaran berhasil!</div>
+                  <div style={{ fontWeight: 800, fontSize: px(18), display: 'inline-flex', alignItems: 'center', gap: px(8) }}>+{idn(qr.total)} {THEME[qr.cur].name} {icon(qr.cur, px(26))}</div>
+                  <button onClick={onClose} style={{ marginTop: px(8), border: 0, cursor: 'pointer', fontFamily: font, fontWeight: 800, fontSize: px(19), color: '#fff', padding: `${px(8)}px ${px(40)}px`, borderRadius: px(12), background: 'linear-gradient(180deg,#58e89a,#1fa85a)', boxShadow: `0 ${px(3)}px 0 #167a40` }}>Selesai</button>
+                </>
+              ) : (
+                <>
+                  <div style={{ fontWeight: 800, fontSize: px(22), color: THEME[qr.cur].main }}>Scan QRIS · {rupiah(qr.rupiah)}</div>
+                  <div style={{ fontWeight: 700, fontSize: px(14), color: '#8a7a68' }}>{idn(qr.total)} {THEME[qr.cur].name}</div>
+                  <div style={{ background: '#fff', borderRadius: px(14), padding: px(8), border: `${px(3)}px solid ${THEME[qr.cur].card}` }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={qr.qrUrl} alt="QRIS" style={{ width: px(250), height: px(250), display: 'block', imageRendering: 'pixelated' }} />
+                  </div>
+                  <div style={{ fontWeight: 700, fontSize: px(13), color: '#8a7a68', maxWidth: px(520) }}>Buka GoPay, Dana, ShopeePay, OVO atau m-banking lalu scan. Kalau satu HP, screenshot kode ini dan pilih dari galeri di aplikasi pembayarannya.</div>
+                  <div style={{ fontWeight: 800, fontSize: px(14), color: '#a8691f' }}>Menunggu pembayaran… saldo masuk otomatis</div>
+                  <button onClick={() => { setQr(null); setMsg(''); }} style={{ border: 0, cursor: 'pointer', fontFamily: font, fontWeight: 800, fontSize: px(16), color: BROWN, padding: `${px(6)}px ${px(28)}px`, borderRadius: px(12), background: '#f5e6c8', boxShadow: 'inset 0 0 0 2px #e6d4b0' }}>Batal</button>
+                </>
+              )}
+            </div>
+          ) : (<>
           <div style={{ display: 'flex', gap: px(12) }}>
             {(['gems', 'crystal'] as TopUpCurrency[]).map((c) => (
               <button key={c} onClick={() => { if (busy) return; setCur(c); setMsg(''); }} style={tabBtn(c)}>
@@ -129,8 +178,8 @@ export default function ShopTopUp({ px, font, initial = 'gems', gems, crystal, g
             ))}
           </div>
 
-          {msg && <div style={{ marginTop: px(12), textAlign: 'center', fontWeight: 800, fontSize: px(15), color: '#b3402a' }}>{msg}</div>}
           <div style={{ marginTop: px(12), textAlign: 'center', fontWeight: 700, fontSize: px(12.5), color: '#8a7a68' }}>Gems dan Crystal dibeli terpisah, saldonya tidak bisa saling ditukar.</div>
+          </>)}
         </div>
       </div>
     </div>

@@ -3,7 +3,12 @@ import { PAL_PLAYER } from './art';
 import type { Pal } from './art';
 import { TITLES, titleFor } from '@/lib/fishing';
 
-export interface Outfit { skin: number; hair: number; shirt: number; top: number; pants: number; hat: number; hatCol: number; ttl: number }
+// limited = baju dari Gacha Baju Limited yang sedang dipakai (0 = tidak ada, 1 = Setelan Pemburu Malam, 2 = Jubah Kilat Bara)
+export interface Outfit { skin: number; hair: number; shirt: number; top: number; pants: number; hat: number; hatCol: number; ttl: number; limited: number }
+export const LIMITED_OUTFITS = [
+  { key: 'night', name: 'Setelan Pemburu Malam', pal: { shirt: '#10141f', shirtD: '#060910', top: '#1c2a3f', pants: '#0a0d15', boot: '#0a0d15', band: '#35e6ff', hat: '#10141f', hatD: '#060910' } },
+  { key: 'flame', name: 'Jubah Kilat Bara', pal: { shirt: '#f6efe4', shirtD: '#cbbfae', top: '#ff7a1a', pants: '#3a2a22', boot: '#2a1c16', band: '#ff9b3a', hat: '#ff7a1a', hatD: '#c4570a' } },
+] as const;
 
 // lv = level minimal agar item terbuka (akun Developer membuka semuanya)
 export const SKINS = [
@@ -31,7 +36,7 @@ export const HAT_COLORS = [
   { c: '#f2f2f2', lv: 12 }, { c: '#8a5ad0', lv: 16 }, { c: '#ff7a1a', lv: 22 },
 ];
 
-export const DEFAULT_OUTFIT: Outfit = { skin: 0, hair: 0, shirt: 0, top: 0, pants: 0, hat: 0, hatCol: 1, ttl: -1 };
+export const DEFAULT_OUTFIT: Outfit = { skin: 0, hair: 0, shirt: 0, top: 0, pants: 0, hat: 0, hatCol: 1, ttl: -1, limited: 0 };
 
 const clampI = (v: unknown, n: number, min = 0) => {
   const x = Math.floor(Number(v));
@@ -43,7 +48,7 @@ export function sanitizeOutfit(raw: any): Outfit {
   return {
     skin: clampI(r.skin, SKINS.length), hair: clampI(r.hair, HAIRS.length), shirt: clampI(r.shirt, SHIRTS.length),
     top: clampI(r.top, TOPS.length), pants: clampI(r.pants, PANTS.length), hat: clampI(r.hat, HATS.length),
-    hatCol: clampI(r.hatCol, HAT_COLORS.length), ttl: clampI(r.ttl, TITLES.length, -1),
+    hatCol: clampI(r.hatCol, HAT_COLORS.length), ttl: clampI(r.ttl, TITLES.length, -1), limited: clampI(r.limited, LIMITED_OUTFITS.length + 1),
   };
 }
 
@@ -57,7 +62,8 @@ export function palFromOutfit(o: Outfit): Pal {
   const sk = SKINS[o.skin] || SKINS[0];
   const shirt = (SHIRTS[o.shirt] || SHIRTS[0]).c;
   const hat = (HAT_COLORS[o.hatCol] || HAT_COLORS[0]).c;
-  return {
+  const lim = o.limited > 0 ? LIMITED_OUTFITS[o.limited - 1] : null;
+  const base: Pal = {
     ...PAL_PLAYER,
     skin: sk.c, skinD: sk.d,
     hair: (HAIRS[o.hair] || HAIRS[0]).c,
@@ -67,10 +73,11 @@ export function palFromOutfit(o: Outfit): Pal {
     hat, hatD: shade(hat, -0.3),
     nohat: o.hat === 0, cap: o.hat === 2,
   };
+  return lim ? { ...base, ...lim.pal } : base;
 }
 
 // kode ringkas untuk dikirim ke pemain lain (tanpa title)
-export const encodeOutfit = (o: Outfit) => [o.skin, o.hair, o.shirt, o.top, o.pants, o.hat, o.hatCol].join('.');
+export const encodeOutfit = (o: Outfit) => [o.skin, o.hair, o.shirt, o.top, o.pants, o.hat, o.hatCol, o.limited || 0].join('.');
 const palCache = new Map<string, Pal | null>();
 export function palFromCode(code: unknown): Pal | null {
   if (typeof code !== 'string' || code.length > 40) return null;
@@ -78,8 +85,8 @@ export function palFromCode(code: unknown): Pal | null {
   if (hit !== undefined) return hit;
   const a = code.split('.').map(Number);
   let pal: Pal | null = null;
-  if (a.length === 7 && a.every((n) => Number.isFinite(n))) {
-    pal = palFromOutfit(sanitizeOutfit({ skin: a[0], hair: a[1], shirt: a[2], top: a[3], pants: a[4], hat: a[5], hatCol: a[6] }));
+  if ((a.length === 7 || a.length === 8) && a.every((n) => Number.isFinite(n))) {
+    pal = palFromOutfit(sanitizeOutfit({ skin: a[0], hair: a[1], shirt: a[2], top: a[3], pants: a[4], hat: a[5], hatCol: a[6], limited: a[7] ?? 0 }));
   }
   if (palCache.size > 200) palCache.clear();
   palCache.set(code, pal);

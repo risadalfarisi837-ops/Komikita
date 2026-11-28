@@ -15,6 +15,7 @@ import { DEFAULT_OUTFIT, sanitizeOutfit } from '@/components/fishing/outfit';
 import type { Outfit } from '@/components/fishing/outfit';
 import { DUP_REFUND, LIMITED_PRICE, rollLimited, sanitizeLimited } from '@/lib/limitedGacha';
 import type { LimitedDrop } from '@/lib/limitedGacha';
+import type { QrOrder, TopUpPoll } from '@/lib/topupPacks';
 
 export default function MancingPage() {
   const router = useRouter();
@@ -355,7 +356,7 @@ export default function MancingPage() {
   }, [refreshWallet]);
 
   // top up: server membuat transaksi Midtrans, lalu kita arahkan ke halaman bayar
-  const onTopUp = useCallback(async (currency: 'gems' | 'crystal', packId: string): Promise<string | void> => {
+  const onTopUp = useCallback(async (currency: 'gems' | 'crystal', packId: string): Promise<string | QrOrder | void> => {
     try {
       const user = fb.current?.auth?.currentUser;
       if (!user) return 'Login dulu untuk top up';
@@ -366,12 +367,22 @@ export default function MancingPage() {
         body: JSON.stringify({ currency, packId }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.redirectUrl) {
-        if (res.status === 503) return isDevRef.current ? 'Server belum diatur: isi MIDTRANS_SERVER_KEY & FIREBASE_SERVICE_ACCOUNT di Vercel (lihat TOPUP_SETUP.txt)' : 'Top up belum aktif, coba lagi nanti';
-        return data.error || 'Gagal membuat pembayaran';
-      }
-      window.location.href = data.redirectUrl;
-    } catch { return 'Gagal membuat pembayaran'; }
+      if (res.ok && data.qrUrl) return { orderId: data.orderId, qrUrl: data.qrUrl, rupiah: Number(data.rupiah) || 0, expiresAt: data.expiresAt };
+      if (res.ok && data.redirectUrl) { window.location.href = data.redirectUrl; return; }
+      if (res.status === 503) return isDevRef.current ? (data.error || 'Server belum diatur (lihat TOPUP_SETUP.txt)') : 'Top up belum aktif, coba lagi nanti';
+      return data.error || 'Gagal membuat pembayaran';
+    } catch { return 'Gagal membuat pembayaran, cek koneksi'; }
+  }, []);
+
+  // cek status QRIS (server menanyakan ke Midtrans dan menambah saldo kalau lunas)
+  const onTopUpPoll = useCallback(async (orderId: string): Promise<TopUpPoll> => {
+    try {
+      const user = fb.current?.auth?.currentUser;
+      if (!user) return 'pending';
+      const res = await fetch('/api/topup/status?orderId=' + encodeURIComponent(orderId), { headers: { Authorization: 'Bearer ' + (await user.getIdToken()) } });
+      const data = await res.json().catch(() => ({}));
+      return data.status === 'paid' || data.status === 'failed' ? data.status : 'pending';
+    } catch { return 'pending'; }
   }, []);
 
   // balik dari halaman bayar (Midtrans menambah ?order_id=...): saldo masuk lewat webhook, jadi cek ulang beberapa kali
@@ -392,7 +403,7 @@ export default function MancingPage() {
   return (
     <>
       <FishingGame
-        name={name} photo={photo} crystal={crystal} gems={gems} onTopUp={onTopUp} onOpenLimited={onOpenLimited} limitedPity={limited.pity} limitedOwned={limited.owned} xp={xp} bag={bag}
+        name={name} photo={photo} crystal={crystal} gems={gems} onTopUp={onTopUp} onTopUpPoll={onTopUpPoll} onTopUpPaid={refreshWallet} onOpenLimited={onOpenLimited} limitedPity={limited.pity} limitedOwned={limited.owned} xp={xp} bag={bag}
         rods={rods} equippedRod={equippedRod} rodLv={rodLv} onUpgradeRod={onUpgradeRod} dev={isDev}
         onCatch={onCatch} onSetXp={onSetXp} outfit={outfit} onSaveOutfit={onSaveOutfit} onSell={onSell} onBuyRod={onBuyRod} onEquipRod={onEquipRod} onGacha={onGacha}
         room={room} pity={pity} starterClaimed={starter} onClaimStarter={onClaimStarter}

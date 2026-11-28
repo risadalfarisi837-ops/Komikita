@@ -122,14 +122,14 @@ export default function ShopBajuLimited({ px, font, gems, onOpen, free, banner, 
   const [odds, setOdds] = useState(false);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState('');
-  const [results, setResults] = useState<LimitedDrop[] | null>(null);
   const open = async (n: 1 | 10) => {
     if (busy) return;
     if (!onOpen) { setNote('Gacha belum tersambung'); return; }
     setBusy(true); setNote('');
     try {
       const r = await onOpen(n);
-      if (Array.isArray(r)) setResults(r);
+      // hasil ditampilkan oleh animasi buka peti di layar game (LimitedSpin)
+      if (Array.isArray(r)) { /* ok */ }
       else if (r === 'kurang') setNote('Gems kurang, top up dulu');
       else setNote('Gagal membuka peti, coba lagi');
     } catch { setNote('Gagal membuka peti, coba lagi'); }
@@ -222,30 +222,6 @@ export default function ShopBajuLimited({ px, font, gems, onOpen, free, banner, 
       <div style={panel}>
         {OTHERS.map((o, i) => row(i, o.sprite, o.name, o.rarity, o.color, o.pct, <span style={{ display: 'inline-flex', alignItems: 'center', gap: px(5) }}>{o.crystal && <Sprite k="crystal" size={px(22)} />}<b style={{ fontSize: px(19), color: BROWN }}>{o.qty}</b></span>))}
       </div>
-
-      {results && (
-        <div onClick={() => setResults(null)} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(40,20,0,.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: px(14) }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ width: px(440), maxWidth: '100%', maxHeight: '100%', overflowY: 'auto', borderRadius: px(22), border: `${px(4)}px solid #1a74e4`, background: '#fff5e1', padding: px(14), boxShadow: `0 ${px(6)}px 0 #0b3f8f`, color: BROWN, fontFamily: font }}>
-            <div style={{ textAlign: 'center', fontWeight: 800, fontSize: px(22), marginBottom: px(8) }}>Hasil buka {results.length}× peti</div>
-            <div style={{ background: '#fffdf7', borderRadius: px(10), border: '1px solid #ecdfc4' }}>
-              {results.map((d, i) => {
-                const col = d.rarity === 'Mythic' ? C.mythic : d.rarity === 'Legendary' ? C.legend : d.rarity === 'Epic' ? C.epic : d.rarity === 'Rare' ? C.rare : C.common;
-                return (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: px(10), padding: `${px(6)}px ${px(10)}px`, borderTop: i ? '1px solid #ecdfc4' : 'none' }}>
-                    <span style={{ width: px(44), display: 'flex', justifyContent: 'center', flex: 'none' }}><Sprite k={d.key as SpriteKey} size={px(36)} /></span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 800, fontSize: px(16) }}>{d.name}</div>
-                      <div style={{ fontWeight: 800, fontSize: px(12), color: col }}>{d.rarity}{d.outfit ? (d.duplicate ? ` · Dobel +${d.refund} Gems` : ' · Baju baru!') : ''}</div>
-                    </div>
-                    {!d.outfit && <b style={{ fontSize: px(17) }}>{d.crystal ? `${d.crystal} Crystal` : `×${d.qty}`}</b>}
-                  </div>
-                );
-              })}
-            </div>
-            <button onClick={() => setResults(null)} style={{ ...btn('linear-gradient(180deg,#3b8cf0,#1f64cc)', '#164b9c', '#fff'), width: '100%', marginTop: px(12), fontSize: px(18) }}>Tutup</button>
-          </div>
-        </div>
-      )}
 
       {odds && (
         <div onClick={() => setOdds(false)} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(40,20,0,.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: px(14) }}>

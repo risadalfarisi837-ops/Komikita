@@ -19,7 +19,9 @@ import { startFishingNet } from '@/lib/fishingNet';
 import { MAIN_ROOM, islandName } from '@/lib/fishingIslands';
 import { getFirebase } from '@/lib/firebase-client';
 import ShopScreen from './Shop';
+import LimitedSpin from './LimitedSpin';
 import type { LimitedDrop } from '@/lib/limitedGacha';
+import type { QrOrder, TopUpPoll } from '@/lib/topupPacks';
 import PixelRod from './RodArt';
 import GachaSpin from './GachaSpin';
 import RodScreen from './RodScreen';
@@ -48,7 +50,9 @@ interface Props {
   pity?: number;
   starterClaimed?: boolean;
   gems?: number;
-  onTopUp?: (currency: 'gems' | 'crystal', packId: string) => string | void | Promise<string | void>;
+  onTopUp?: (currency: 'gems' | 'crystal', packId: string) => string | QrOrder | void | Promise<string | QrOrder | void>;
+  onTopUpPoll?: (orderId: string) => Promise<TopUpPoll>;
+  onTopUpPaid?: () => void;
   onOpenLimited?: (n: 1 | 10, free?: boolean) => Promise<LimitedDrop[] | 'kurang' | 'gagal'>;
   limitedPity?: number;
   limitedOwned?: string[];
@@ -386,6 +390,7 @@ export default function FishingGame(props: Props) {
   const [pulling, setPulling] = useState(false);
   const [gachaResult, setGachaResult] = useState<{ rod: Rod; duplicate: boolean } | null>(null);
   const [gachaMulti, setGachaMulti] = useState<{ rod: Rod; duplicate: boolean }[] | null>(null);
+  const [limitedDrops, setLimitedDrops] = useState<LimitedDrop[] | null>(null); // hasil buka Gacha Baju Limited
   const [knob, setKnob] = useState({ x: 0, y: 0 });
   const [u, setU] = useState(1);
   const [status, setStatus] = useState<EngineStatus>({ shoal: null, inShoal: false });
@@ -1239,7 +1244,7 @@ export default function FishingGame(props: Props) {
       {profileOpen && (
         <ProfileModal
           px={(n: number) => px(n * 0.64)} font={HUD} name={name || 'Tamu'} photo={photo} xp={xp} crystal={crystal} bag={bag} rods={rods}
-          outfit={outfit} dev={!!props.dev} onSave={(o) => props.onSaveOutfit?.(o)} onClose={() => setProfileOpen(false)}
+          outfit={outfit} limitedOwned={props.limitedOwned} dev={!!props.dev} onSave={(o) => props.onSaveOutfit?.(o)} onClose={() => setProfileOpen(false)}
         />
       )}
 
@@ -1255,7 +1260,7 @@ export default function FishingGame(props: Props) {
       {/* Toko & Gacha */}
       {shopOpen && (
         <ShopScreen
-          px={(n: number) => px(n * 0.64)} font={HUD} crystal={crystal} gems={props.gems ?? 0} onTopUp={props.onTopUp} onOpenLimited={props.onOpenLimited ? (n) => props.onOpenLimited!(n, !!props.dev && gachaFree) : undefined} limitedFree={!!props.dev && gachaFree} limitedPity={props.limitedPity} limitedOwned={props.limitedOwned} onPack={() => say('Pembelian pakai Rupiah belum tersedia')} rods={rods} equippedRod={equippedRod}
+          px={(n: number) => px(n * 0.64)} font={HUD} crystal={crystal} gems={props.gems ?? 0} onTopUp={props.onTopUp} onTopUpPoll={props.onTopUpPoll} onTopUpPaid={props.onTopUpPaid} onOpenLimited={props.onOpenLimited ? async (n) => { const r = await props.onOpenLimited!(n, !!props.dev && gachaFree); if (Array.isArray(r)) setLimitedDrops(r); return r; } : undefined} limitedFree={!!props.dev && gachaFree} limitedPity={props.limitedPity} limitedOwned={props.limitedOwned} onPack={() => say('Pembelian pakai Rupiah belum tersedia')} rods={rods} equippedRod={equippedRod}
           tab={shopTab} onTab={setShopTab} buying={buying} pulling={pulling}
           onClose={() => setShopOpen(false)} onBuy={buyRod} onEquip={props.onEquipRod} onPull={pullGachaN}
           pity={props.pity ?? 0} starterClaimed={!!props.starterClaimed} onClaimStarter={claimStarter}
@@ -1269,6 +1274,13 @@ export default function FishingGame(props: Props) {
           items={gachaResult ? [gachaResult] : gachaMulti!}
           px={px} font={HUD}
           onClose={() => { setGachaResult(null); setGachaMulti(null); }}
+        />
+      )}
+      {limitedDrops && (
+        <LimitedSpin
+          key={'lim-' + limitedDrops.map((d) => d.key).join('')}
+          items={limitedDrops} px={px} font={HUD}
+          onClose={() => setLimitedDrops(null)}
         />
       )}
     </div>

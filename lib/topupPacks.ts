@@ -1,6 +1,8 @@
 // Daftar paket top up. Dipakai layar Top Up (klien) DAN server (harga selalu dicek ulang di server).
 // Harga & bonus contoh, sesuaikan dengan ekonomi game.
 export type TopUpCurrency = 'gems' | 'crystal';
+export interface QrOrder { orderId: string; qrUrl: string; rupiah: number; expiresAt?: string }
+export type TopUpPoll = 'paid' | 'failed' | 'pending';
 export interface TopUpPack { id: string; amount: number; bonus: number; rupiah: number; tag?: string }
 
 export const TOPUP_PACKS: Record<TopUpCurrency, TopUpPack[]> = {

@@ -8,6 +8,7 @@ import ShopBajuLimited from './ShopBajuLimited';
 import { Sprite } from './ShopSprites';
 import ShopTopUp from './ShopTopUp';
 import type { LimitedDrop } from '@/lib/limitedGacha';
+import type { QrOrder, TopUpPoll } from '@/lib/topupPacks';
 import type { TopUpCurrency } from './ShopTopUp';
 
 export type ShopTab = 'toko' | 'bajulimited' | 'gacha' | 'gachagaya' | 'gacharumah' | 'gaya' | 'pet' | 'aksesoris' | 'setaksesoris' | 'pass' | 'tas';
@@ -35,7 +36,9 @@ interface Props {
   /** Opsional: waktu berakhir Paket Lanjut (ms). Kosong = akhir bulan. */
   lanjutEndsAt?: number;
   /** Dipanggil saat paket top up dibeli (Gems atau Crystal). */
-  onTopUp?: (currency: TopUpCurrency, packId: string, amount: number, bonus: number, rupiah: number) => string | void | Promise<string | void>;
+  onTopUp?: (currency: TopUpCurrency, packId: string, amount: number, bonus: number, rupiah: number) => string | QrOrder | void | Promise<string | QrOrder | void>;
+  onTopUpPoll?: (orderId: string) => Promise<TopUpPoll>;
+  onTopUpPaid?: () => void;
   freeBaitClaimed?: boolean;
   onClaimBait?: () => void;
   onOpenLimited?: (n: 1 | 10) => Promise<LimitedDrop[] | 'kurang' | 'gagal'>;
@@ -561,7 +564,7 @@ export default function ShopScreen(p: Props) {
           </div>
         </div>
       )}
-      {topup && <ShopTopUp px={px} font={font} initial={topup} gems={gems} crystal={crystal} gemIcon={(z) => <PermataIcon size={z} />} crystalIcon={(z) => <CrystalIcon size={z} />} onClose={() => setTopup(null)} onBuy={p.onTopUp} />}
+      {topup && <ShopTopUp px={px} font={font} initial={topup} gems={gems} crystal={crystal} gemIcon={(z) => <PermataIcon size={z} />} crystalIcon={(z) => <CrystalIcon size={z} />} onClose={() => setTopup(null)} onBuy={p.onTopUp} onPoll={p.onTopUpPoll} onPaid={p.onTopUpPaid} />}
     </div>
   );
 }

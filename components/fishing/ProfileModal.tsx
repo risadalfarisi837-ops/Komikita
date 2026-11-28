@@ -8,7 +8,7 @@ import { BAG_MAX, MAX_LEVEL, RARITY, RODS, SPECIES_BY_ID, TITLES, formatNum, for
 import type { BagItem } from '@/lib/fishing';
 import { FISH_H, FISH_W, drawFish, drawPlayer } from './art';
 import type { Dir } from './art';
-import { HATS, HAT_COLORS, HAIRS, PANTS, SHIRTS, SKINS, TOPS, palFromOutfit, randomOutfit, titleOf } from './outfit';
+import { HATS, HAT_COLORS, HAIRS, LIMITED_OUTFITS, PANTS, SHIRTS, SKINS, TOPS, palFromOutfit, randomOutfit, titleOf } from './outfit';
 import type { Outfit } from './outfit';
 
 interface Props {
@@ -21,13 +21,15 @@ interface Props {
   bag: BagItem[];
   rods: string[];
   outfit: Outfit;
+  /** Baju dari Gacha Baju Limited yang dimiliki ('night' | 'flame'). */
+  limitedOwned?: string[];
   dev: boolean;
   onSave: (o: Outfit) => void;
   onClose: () => void;
 }
 
 type View = 'profil' | 'lemari' | 'title';
-type Tab = 'tubuh' | 'baju' | 'topi';
+type Tab = 'tubuh' | 'baju' | 'topi' | 'limited';
 
 const BROWN = '#5a3b1e';
 const EDGE = '#ead9b0';
@@ -115,7 +117,7 @@ export default function ProfileModal(p: Props) {
   const grid = (kids: ReactNode) => <div style={{ display: 'flex', flexWrap: 'wrap', gap: px(10) }}>{kids}</div>;
   const count = (list: { lv: number }[]) => <span style={{ fontSize: px(14), fontWeight: 800, opacity: 0.7 }}>{list.filter((x) => open(x.lv)).length}/{list.length}</span>;
 
-  const tabs: [Tab, string, string][] = [['tubuh', '🙂', 'Tubuh'], ['baju', '👕', 'Baju'], ['topi', '👒', 'Topi']];
+  const tabs: [Tab, string, string][] = [['tubuh', '🙂', 'Tubuh'], ['baju', '👕', 'Baju'], ['topi', '👒', 'Topi'], ['limited', '✨', 'Limited']];
 
   const header = (icon: string, text: string, back: () => void) => (
     <div style={{ display: 'flex', alignItems: 'center', gap: px(16), background: 'linear-gradient(180deg,#3d8ef2,#2069d2)', padding: `${px(6)}px ${px(14)}px`, boxShadow: '0 3px 0 #1559b8', position: 'relative', zIndex: 2 }}>
@@ -331,6 +333,21 @@ export default function ProfileModal(p: Props) {
             {grid(TOPS.map((s, i) => swatch('t' + i, s.c, o.top === i, s.lv, () => set({ top: i }))))}
             {label('Celana', count(PANTS))}
             {grid(PANTS.map((s, i) => swatch('c' + i, s.c, o.pants === i, s.lv, () => set({ pants: i }))))}
+          </>
+        )}
+        {tab === 'limited' && (
+          <>
+            {label('Baju Limited', <span style={{ fontSize: px(13), opacity: 0.6 }}>dari Gacha Baju Limited</span>)}
+            <div style={{ display: 'flex', gap: px(10), flexWrap: 'wrap' }}>
+              <button onClick={() => set({ limited: 0 })} style={btn(o.limited === 0)}>Lepas baju limited</button>
+              {LIMITED_OUTFITS.map((l, i) => {
+                const ok = p.dev || (p.limitedOwned ?? []).includes(l.key);
+                return (
+                  <button key={l.key} onClick={() => { if (ok) set({ limited: i + 1 }); }} style={{ ...btn(o.limited === i + 1), opacity: ok ? 1 : 0.55, cursor: ok ? 'pointer' : 'default' }}>{ok ? '' : '🔒 '}{l.name}</button>
+                );
+              })}
+            </div>
+            {!(p.limitedOwned ?? []).length && !p.dev && <div style={{ marginTop: px(10), fontSize: px(14), fontWeight: 700, color: '#8a6d4a' }}>Belum punya baju limited. Buka peti di Toko &gt; Baju Limited.</div>}
           </>
         )}
         {tab === 'topi' && (
