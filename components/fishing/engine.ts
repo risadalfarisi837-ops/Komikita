@@ -916,7 +916,7 @@ export class FishingEngine {
       drawLine(ctx, geo.tx, geo.ty, bx, by - (showBobber ? 3 : 0), sag, this.profile.rodId || 'default');
     }
     if (ph === 'bite') {
-      drawBubbleAlert(ctx, this.px, this.py - 24, t);
+      drawBubbleAlert(ctx, this.px, this.py - 35, t);
       if (tg) { drawRipple(ctx, tg.wx, tg.wy, (t * 1.6) % 1); drawStarPop(ctx, tg.wx, tg.wy - 11, t); }
     }
 
@@ -1089,7 +1089,7 @@ export class FishingEngine {
     const sxp = this.px * S - ox;
     // ikan yang diangkat: nama, title & gelembung chat naik di atas ikan supaya ikannya kelihatan
     const lift = this.held && this.phase === 'idle' ? Math.max(0, showFishLift(this.held.species, this.held.weight) * S - 10 * u) : 0;
-    const syHead = (this.py - 21) * S - oy - lift;
+    const syHead = (this.py - 32) * S - oy - lift;
     const syFeet = this.py * S - oy;
     if (this.charging && this.phase === 'idle') {
       // bar tenaga lempar: tegak di samping karakter, hijau (dekat) -> merah (jauh)
@@ -1132,7 +1132,7 @@ export class FishingEngine {
     const nowS = performance.now() / 1000;
     for (const r of this.remotes.values()) {
       const rx = r.rx * S - ox;
-      const ry = (r.ry - 21 - (r.p.held && !r.p.casting ? 24 : 0)) * S - oy;
+      const ry = (r.ry - 32 - (r.p.held && !r.p.casting ? 24 : 0)) * S - oy;
       if (rx < -200 || rx > this.canvas.width + 200 || ry < -100 || ry > this.canvas.height + 100) continue;
       this.roleTag(String(r.p.name || 'Tamu'), ' · Lv' + r.p.level, cleanNameRole(r.p.rl), rx, ry - 10 * u, sz * 0.85, u, { bg: 'rgba(18,16,14,0.82)', stroke: 'rgba(110,200,255,0.9)', fg: '#eaf7ff', padX: 7 * u });
       const b = this.bubbles.get(r.p.id);
