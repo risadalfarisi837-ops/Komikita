@@ -26,7 +26,7 @@ const BAR: Record<string, string> = {
  * Bar EXP: isi naik dari 0 saat tampil, warna ikut tier.
  * Efek makin banyak sesuai tier: kilau menyapu (mulai Gold), cahaya (mulai Diamond), kerlip bintang (mulai Eternal).
  */
-export default function ExpBar({ level, exp, max }: { level: number; exp: number; max: number }) {
+export default function ExpBar({ level, exp, max, compact = false }: { level: number; exp: number; max: number; compact?: boolean }) {
   const t = tierFor(level);
   const idx = TIERS.indexOf(t);
   const pct = Math.max(0, Math.min(100, max > 0 ? (exp / max) * 100 : 0));
@@ -38,15 +38,15 @@ export default function ExpBar({ level, exp, max }: { level: number; exp: number
   const twinkle = idx >= 10;
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-      <span style={{ fontSize: 14, fontWeight: 800, letterSpacing: 0.5, color: '#8F8D9B' }}>EXP</span>
-      <div style={{ position: 'relative', flex: 1, height: 10, borderRadius: 99, background: '#3A3942' }}>
+      <span style={compact ? { fontSize: 14, fontWeight: 500, color: '#8F8D9B' } : { fontSize: 14, fontWeight: 800, letterSpacing: 0.5, color: '#8F8D9B' }}>{compact ? 'Exp' : 'EXP'}</span>
+      <div style={{ position: 'relative', flex: 1, height: compact ? 7 : 10, borderRadius: 99, background: '#3A3942' }}>
         <div className={sweep ? 'tier-shine' : undefined} style={{ width: `${w}%`, minWidth: pct > 0 ? 8 : 0, height: '100%', borderRadius: 99, background: BAR[t.key] || BAR.stone, boxShadow: glow ? `0 0 ${idx >= 10 ? 14 : 9}px ${t.ring}aa` : 'none', transition: 'width 1s cubic-bezier(.2,.9,.25,1) .2s' }} />
         {twinkle && pct > 0 && (<>
           <i className="tier-spark" style={{ left: `max(2px, calc(${w}% - 12px))`, top: -4, width: 10, height: 10, transition: 'left 1s cubic-bezier(.2,.9,.25,1) .2s' }} />
           <i className="tier-spark" style={{ left: `${w * 0.45}%`, top: 2, width: 6, height: 6, ['--d' as string]: '.9s', transition: 'left 1s cubic-bezier(.2,.9,.25,1) .2s' }} />
         </>)}
       </div>
-      <span style={{ fontSize: 14, fontWeight: 800, color: '#fff', letterSpacing: -0.2, whiteSpace: 'nowrap' }}>{nf(exp)} / {nf(max)}</span>
+      <span style={compact ? { fontSize: 14, fontWeight: 500, color: '#B4B2BF', whiteSpace: 'nowrap' } : { fontSize: 14, fontWeight: 800, color: '#fff', letterSpacing: -0.2, whiteSpace: 'nowrap' }}>{compact ? `${nf(exp)}/${nf(max)}` : `${nf(exp)} / ${nf(max)}`}</span>
     </div>
   );
 }

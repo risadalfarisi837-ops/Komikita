@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { X, Check, Bell, Pencil, Crown, Gift, Bug, ChevronRight, BookOpen, Flame, Moon, Lock, ShoppingBag, Target, Users, MessageCircle, Trash2, Send } from 'lucide-react';
+import { X, Check, Bell, Pencil, Crown, Gift, Bug, ChevronRight, BookOpen, Flame, Moon, Lock, ShoppingBag, Target, Users, MessageCircle, Trash2, Send, MoreVertical } from 'lucide-react';
 import { useFavorites, useHistory, useUserStats } from '@/lib/store';
 import { numericId, formatShortId } from '@/lib/utils';
 import { ensureShortId } from '@/lib/shortid';
@@ -994,15 +994,15 @@ function Announcements({ uid, role }: { uid: string; role: string }) {
     } catch (e: any) { alert('Gagal menghapus: ' + (e?.message || '')); }
   };
 
-  const FIELD: React.CSSProperties = { width: '100%', boxSizing: 'border-box', background: '#1B1A20', border: '1px solid rgba(255,255,255,.12)', borderRadius: 14, padding: '11px 14px', color: '#fff', fontSize: 16, fontWeight: 700, fontFamily: 'inherit', outline: 'none' };
+  const FIELD: React.CSSProperties = { width: '100%', boxSizing: 'border-box', background: '#1B1A20', border: '1px solid rgba(255,255,255,.12)', borderRadius: 14, padding: '10px 13px', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: 'inherit', outline: 'none' };
 
   return (
     <div style={{ padding: '0 16px' }}>
       {staff && (
         <div style={{ margin: '14px 0 0', background: CARD, borderRadius: 18, padding: open ? 14 : 0, overflow: 'hidden' }}>
           {!open ? (
-            <button onClick={() => setOpen(true)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 0, color: MUTED, padding: '14px 16px', fontSize: 16, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left' }}>
-              <Send size={18} color={ICON} /> Tulis pengumuman untuk semua user…
+            <button onClick={() => setOpen(true)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 0, color: MUTED, padding: '11px 14px', fontSize: 14, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left' }}>
+              <Send size={16} color={ICON} /> Tulis pengumuman untuk semua user…
             </button>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -1010,8 +1010,8 @@ function Announcements({ uid, role }: { uid: string; role: string }) {
               <textarea style={{ ...FIELD, minHeight: 96, resize: 'vertical' }} value={isi} onChange={(e) => setIsi(e.target.value)} maxLength={1000} placeholder="Isi pengumuman…" />
               <input style={FIELD} value={gambar} onChange={(e) => setGambar(e.target.value)} placeholder="Link gambar (opsional)" inputMode="url" />
               <div style={{ display: 'flex', gap: 10 }}>
-                <button onClick={() => setOpen(false)} style={{ flex: 1, height: 42, borderRadius: 99, border: 0, background: 'rgba(255,255,255,.08)', color: '#C8C6D2', fontSize: 16, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' }}>Batal</button>
-                <button onClick={submit} disabled={busy || !isi.trim()} style={{ flex: 1, height: 42, borderRadius: 99, border: 0, background: GOLD, color: '#2E2615', fontSize: 16, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', opacity: busy || !isi.trim() ? 0.5 : 1 }}>{busy ? '…' : 'Kirim'}</button>
+                <button onClick={() => setOpen(false)} style={{ flex: 1, height: 38, borderRadius: 99, border: 0, background: 'rgba(255,255,255,.08)', color: '#C8C6D2', fontSize: 14, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' }}>Batal</button>
+                <button onClick={submit} disabled={busy || !isi.trim()} style={{ flex: 1, height: 38, borderRadius: 99, border: 0, background: GOLD, color: '#2E2615', fontSize: 14, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', opacity: busy || !isi.trim() ? 0.5 : 1 }}>{busy ? '…' : 'Kirim'}</button>
               </div>
             </div>
           )}
@@ -1020,27 +1020,25 @@ function Announcements({ uid, role }: { uid: string; role: string }) {
 
       {posts === null && <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><div className="w-6 h-6 border-2 border-white/20 border-t-transparent rounded-full animate-spin" /></div>}
       {posts && posts.length === 0 && (
-        <div style={{ textAlign: 'center', color: MUTED, fontSize: 16, fontWeight: 700, padding: '56px 8px' }}>Belum ada pengumuman dari admin atau developer.</div>
+        <div style={{ textAlign: 'center', color: MUTED, fontSize: 14, fontWeight: 600, padding: '56px 8px' }}>Belum ada pengumuman dari admin atau developer.</div>
       )}
       {posts && posts.map((p) => {
         const a: PostAuthor = authors[p.uid] || { nama: 'Komikita', foto: '/icon-192.png', role: 'Developer' };
         const canDelete = role === 'Developer' || (role === 'Admin' && p.uid === uid);
         return (
-          <div key={p.id} style={{ padding: '20px 0', borderBottom: '1px solid rgba(255,255,255,.08)' }}>
-            <div style={{ position: 'relative' }}>
-              <StaffHeader nama={a.nama} foto={a.foto} role={a.role} idText={a.idText} waktu={p.waktu ? agoPost(p.waktu) : undefined} />
-              {canDelete && (
-                <button onClick={() => remove(p.id)} aria-label="Hapus pengumuman" style={{ position: 'absolute', top: 0, right: 0, background: 'none', border: 0, padding: 6, cursor: 'pointer', display: 'flex' }}>
-                  <Trash2 size={18} color={MUTED} />
+          <div key={p.id} style={{ padding: '16px 0 6px' }}>
+            <StaffHeader compact nama={a.nama} foto={a.foto} role={a.role} idText={a.idText} waktu={p.waktu ? agoPost(p.waktu) : undefined}
+              menu={canDelete ? (
+                <button onClick={() => remove(p.id)} aria-label="Hapus pengumuman" style={{ background: 'none', border: 0, padding: '0 0 0 4px', cursor: 'pointer', display: 'flex', flex: '0 0 auto' }}>
+                  <MoreVertical size={19} color="#fff" />
                 </button>
-              )}
-            </div>
-            <div style={{ paddingLeft: 68, marginTop: 10 }}>
-              {p.judul && <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: -0.5, lineHeight: 1.3 }}>{p.judul}</div>}
-              <div style={{ fontSize: 17, fontWeight: 600, letterSpacing: -0.3, lineHeight: 1.45, marginTop: p.judul ? 4 : 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{p.isi}</div>
+              ) : undefined} />
+            <div style={{ paddingLeft: 56, marginTop: 10 }}>
+              {p.judul && <div style={{ fontSize: 15.5, fontWeight: 500, letterSpacing: -0.3, lineHeight: 1.3 }}>{p.judul}</div>}
+              <div style={{ fontSize: 15.5, fontWeight: 400, letterSpacing: -0.3, lineHeight: 1.4, marginTop: p.judul ? 6 : 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{p.isi}</div>
               {p.gambar && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={p.gambar} alt="" referrerPolicy="no-referrer" loading="lazy" style={{ display: 'block', width: '100%', maxWidth: 420, marginTop: 12, borderRadius: 22, background: '#2A2931' }} />
+                <img src={p.gambar} alt="" referrerPolicy="no-referrer" loading="lazy" style={{ display: 'block', width: '100%', maxWidth: 280, marginTop: 10, borderRadius: 17, background: '#2A2931' }} />
               )}
             </div>
           </div>
@@ -1321,66 +1319,66 @@ export default function ProfilePage() {
     <div style={{ background: '#1B1A20', color: '#fff', minHeight: '100vh', paddingBottom: 130 }}>
 
       {/* Header: gaya timeline (avatar + nama/ID + pil, Exp, dua kartu) */}
-      <div style={{ padding: '24px 16px 0' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+      <div style={{ padding: '18px 16px 0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ flex: '0 0 auto' }}>
-            <AvatarWithBorder src={photoURL} size={66} borderKey={activeBorder || undefined} onClick={() => { window.location.assign('/profile/edit'); }} />
+            <AvatarWithBorder src={photoURL} size={44} borderKey={activeBorder || undefined} onClick={() => { window.location.assign('/profile/edit'); }} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 19, fontWeight: 800, letterSpacing: -0.7, lineHeight: 1.2 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', fontSize: 15, fontWeight: 800, letterSpacing: -0.4, lineHeight: 1.2 }}>
               <PremiumName premium={isPremium && !isDev} dev={isDev} style={{ wordBreak: 'break-word' }}>{userData?.displayName || user.displayName || 'User'}</PremiumName>
-              <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: -0.2, color: MUTED }}>{formatShortId(userData?.shortId, user.uid)}</span>
-              {isPremium && !isDev && <VerifiedBadge size={20} />}
-              {isDev && <DevBadge size={24} />}
+              <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: -0.2, color: MUTED }}>{formatShortId(userData?.shortId, user.uid)}</span>
+              {isPremium && !isDev && <VerifiedBadge size={17} />}
+              {isDev && <DevBadge size={20} />}
               {isAdmin && (
-                <svg width={20} height={20} viewBox="0 0 24 24" aria-label="Admin" role="img" style={{ flex: '0 0 auto' }}>
+                <svg width={17} height={17} viewBox="0 0 24 24" aria-label="Admin" role="img" style={{ flex: '0 0 auto' }}>
                   <circle cx={12} cy={12} r={10.5} fill="#E5383B" />
                   <path d="M7.6 12.3l3 3 5.8-6.2" fill="none" stroke="#fff" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               )}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '2px 13px 2px 4px', borderRadius: 99, background: rank.bg, fontSize: 14, fontWeight: 800, letterSpacing: -0.2, whiteSpace: 'nowrap' }}>
-                <span style={{ width: 22, height: 22, borderRadius: '50%', background: 'rgba(0,0,0,.28)', border: '1.5px solid #F5C84B', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <svg width={12} height={12} viewBox="0 0 24 24" fill="#F5C84B"><path d="M12 2l3 6.5 7 .9-5.2 4.8 1.4 7L12 17.8 5.8 21.2l1.4-7L2 9.4l7-.9z" /></svg>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '2px 10px 2px 3px', borderRadius: 99, background: rank.bg, fontSize: 12, fontWeight: 800, letterSpacing: -0.2, whiteSpace: 'nowrap' }}>
+                <span style={{ width: 18, height: 18, borderRadius: '50%', background: 'rgba(0,0,0,.28)', border: '1.5px solid #F5C84B', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width={10} height={10} viewBox="0 0 24 24" fill="#F5C84B"><path d="M12 2l3 6.5 7 .9-5.2 4.8 1.4 7L12 17.8 5.8 21.2l1.4-7L2 9.4l7-.9z" /></svg>
                 </span>
                 {rank.name}
               </span>
-              <LevelPill level={level} label="Lvl." fontSize="14px" iconSize={16} style={{ padding: '2px 12px 2px 7px' }} />
+              <LevelPill level={level} label="Lvl." fontSize="12.5px" iconSize={14} style={{ padding: '2px 10px 2px 6px' }} />
               {isDev && (
-                <span style={{ background: 'linear-gradient(90deg,#22d3ee,#818cf8,#e879f9)', color: '#0b0b14', padding: '3px 12px', borderRadius: 99, fontSize: 13, fontWeight: 800 }}>DEVELOPER</span>
+                <span style={{ background: 'linear-gradient(90deg,#22d3ee,#818cf8,#e879f9)', color: '#0b0b14', padding: '3px 10px', borderRadius: 99, fontSize: 11.5, fontWeight: 800 }}>DEVELOPER</span>
               )}
               {isAdmin && (
-                <span style={{ background: 'linear-gradient(90deg,#B91C1C,#7f1d1d)', border: '1.5px solid #F5C84B', color: '#fff', padding: '2px 12px', borderRadius: 99, fontSize: 13, fontWeight: 800 }}>ADMIN</span>
+                <span style={{ background: 'linear-gradient(90deg,#B91C1C,#7f1d1d)', border: '1.5px solid #F5C84B', color: '#fff', padding: '2px 10px', borderRadius: 99, fontSize: 11.5, fontWeight: 800 }}>ADMIN</span>
               )}
               {isPremium && !isDev && (
-                <span style={{ background: GOLD, color: '#2E2615', padding: '3px 12px', borderRadius: 99, fontSize: 13, fontWeight: 800 }}>PREMIUM</span>
+                <span style={{ background: GOLD, color: '#2E2615', padding: '3px 10px', borderRadius: 99, fontSize: 11.5, fontWeight: 800 }}>PREMIUM</span>
               )}
             </div>
           </div>
           <Link href="/settings" aria-label="Pengaturan" style={{ flex: '0 0 auto', padding: 8, display: 'flex' }}>
-            <HexIcon size={28} color="#fff" />
+            <svg width={26} height={26} viewBox="0 0 24 24" fill="#fff"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" /></svg>
           </Link>
         </div>
 
-        <div style={{ marginTop: 16 }}><ExpBar level={level} exp={lvExp} max={200} /></div>
+        <div style={{ marginTop: 14 }}><ExpBar level={level} exp={lvExp} max={200} compact /></div>
 
-        <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+        <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
           {[
-            { icon: <svg width={28} height={28} viewBox="0 0 24 24"><path d="M6 3h12l4 6-10 12L2 9l4-6z" fill="#4cc3f0" /><path d="M2 9h20M9 3l3 18M15 3l-3 18" stroke="rgba(255,255,255,.55)" fill="none" strokeWidth={1} /></svg>, v: fmt(koin), l: 'Crystal' },
-            { icon: <Flame size={28} color="#F59E0B" fill="#F59E0B" />, v: String(streak), l: 'Streak (hari)' },
+            { icon: <svg width={22} height={22} viewBox="0 0 24 24"><path d="M6 3h12l4 6-10 12L2 9l4-6z" fill="#4cc3f0" /><path d="M2 9h20M9 3l3 18M15 3l-3 18" stroke="rgba(255,255,255,.55)" fill="none" strokeWidth={1} /></svg>, v: fmt(koin), l: 'Crystal' },
+            { icon: <Flame size={22} color="#F59E0B" fill="#F59E0B" />, v: String(streak), l: 'Streak (hari)' },
           ].map((x) => (
-            <div key={x.l} style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 12, background: CARD, border: '1px solid rgba(255,255,255,.1)', borderRadius: 18, padding: '12px 16px' }}>
+            <div key={x.l} style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 10, background: CARD, border: '1px solid rgba(255,255,255,.14)', borderRadius: 15, padding: '9px 14px' }}>
               {x.icon}
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.8, lineHeight: 1.1 }}>{x.v}</div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: MUTED, letterSpacing: -0.3 }}>{x.l}</div>
+                <div style={{ fontSize: 17, fontWeight: 800, letterSpacing: -0.5, lineHeight: 1.15 }}>{x.v}</div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: MUTED, letterSpacing: -0.2 }}>{x.l}</div>
               </div>
             </div>
           ))}
         </div>
       </div>
-      <div style={{ height: 1, background: 'rgba(255,255,255,.1)', margin: '16px 0 0' }} />
+      <div style={{ height: 1, background: 'rgba(255,255,255,.1)', margin: '14px 0 0' }} />
 
       {/* Hadiah Border level: hanya muncul kalau sudah bisa diambil */}
       {rewardReady && nextReward && (
@@ -1398,10 +1396,10 @@ export default function ProfilePage() {
       <Announcements uid={user.uid} role={role} />
 
       {/* Tombol melayang */}
-      <div style={{ position: 'fixed', right: 16, bottom: 96, zIndex: 40, display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ position: 'fixed', right: 20, bottom: 96, zIndex: 40, display: 'flex', flexDirection: 'column', gap: 16 }}>
         {[
-          { href: '/ranking', label: 'Peringkat', icon: <Users size={30} color="#1B1A20" /> },
-          { href: '/notifikasi', label: 'Notifikasi', icon: <MessageCircle size={30} color="#1B1A20" /> },
+          { href: '/ranking', label: 'Peringkat', icon: <Users size={28} color="#1B1A20" /> },
+          { href: '/notifikasi', label: 'Notifikasi', icon: <MessageCircle size={28} color="#1B1A20" /> },
         ].map((b) => (
           <Link key={b.href} href={b.href} aria-label={b.label} style={{ width: 64, height: 64, borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(0,0,0,.45)' }}>
             {b.icon}
