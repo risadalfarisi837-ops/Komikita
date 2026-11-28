@@ -27,3 +27,13 @@ export const isPremiumRole = (role?: string) => role === 'Komikita Premium' || r
 
 // Staff: Developer (akses penuh) & Admin (moderasi komentar saja, tanpa akses level/premium/crystal)
 export const isStaffRole = (role?: string) => role === 'Developer' || role === 'Admin';
+
+// Jenis nama berefek di game Mancing: dev / admin / premium (kosong = pemain biasa)
+export type NameRole = '' | 'dev' | 'admin' | 'premium';
+export function nameRoleOf(role?: string, premiumUntil?: number): NameRole {
+  if (role === 'Developer') return 'dev';
+  if (role === 'Admin') return 'admin';
+  if (isPremiumRole(role) && (!premiumUntil || premiumUntil > Date.now())) return 'premium';
+  return '';
+}
+export const cleanNameRole = (v: unknown): NameRole => (v === 'dev' || v === 'admin' || v === 'premium' ? v : '');

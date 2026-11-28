@@ -16,6 +16,11 @@ import ProfileModal from './ProfileModal';
 import { DEFAULT_OUTFIT, encodeOutfit, titleOf } from './outfit';
 import type { Outfit } from './outfit';
 import { startFishingNet } from '@/lib/fishingNet';
+import PremiumName from '@/components/PremiumName';
+import DevBadge from '@/components/DevBadge';
+import AdminBadge from '@/components/AdminBadge';
+import VerifiedBadge from '@/components/VerifiedBadge';
+import { cleanNameRole } from '@/lib/premium';
 import { MAIN_ROOM, islandName } from '@/lib/fishingIslands';
 import { getFirebase } from '@/lib/firebase-client';
 import ShopScreen from './Shop';
@@ -67,6 +72,17 @@ interface Props {
   onExit: () => void;
   room?: string; // kode pulau dari lobi (kosong = pulau utama)
   dev?: boolean; // role Developer: buka Dev Tools (auto fishing dll)
+  role?: string; // 'dev' | 'admin' | 'premium' | '' -> warna nama + lencana
+}
+
+// Nama berwarna sesuai role + lencana (dipakai di kartu pemain & chat)
+function RoleName({ role, children, nameStyle }: { role?: string; children: ReactNode; nameStyle?: CSSProperties }) {
+  return (
+    <>
+      <PremiumName premium={role === 'premium'} dev={role === 'dev'} admin={role === 'admin'} style={nameStyle}>{children}</PremiumName>
+      {role === 'dev' ? <DevBadge size={14} /> : role === 'admin' ? <AdminBadge size={14} /> : role === 'premium' ? <VerifiedBadge size={13} /> : null}
+    </>
+  );
 }
 
 const HUD = '"Fredoka", "Baloo 2", system-ui, sans-serif';
@@ -411,7 +427,7 @@ export default function FishingGame(props: Props) {
   const [now, setNow] = useState(() => new Date());
   const [intro, setIntro] = useState(false); // tanpa petunjuk/notif saat baru masuk game
   const [fails, setFails] = useState(0);
-  const [chat, setChat] = useState<{ who: string; msg: string; t: number }[]>([]);
+  const [chat, setChat] = useState<{ who: string; msg: string; t: number; rl?: string }[]>([]);
   const [chatOpen, setChatOpen] = useState(false);
   const [buffOpen, setBuffOpen] = useState(true);
   const [bagSort, setBagSort] = useState<'baru' | 'nilai'>('baru');
@@ -502,7 +518,7 @@ export default function FishingGame(props: Props) {
         } catch { /* abaikan */ }
         propsRef.current.onCatch(item, gain);
         setFails(0);
-        setChat((l) => [...l.slice(-19), { who: propsRef.current.name || 'Tamu', msg: 'dapat ' + c.species.name + ' ' + formatWeight(c.weight) + ' 🎣', t: Date.now() }]);
+        setChat((l) => [...l.slice(-19), { who: propsRef.current.name || 'Tamu', rl: cleanNameRole(propsRef.current.role), msg: 'dapat ' + c.species.name + ' ' + formatWeight(c.weight) + ' 🎣', t: Date.now() }]);
         if (autoRef.current) {
           // auto fishing: tanpa popup (engine menutup hasil sendiri), cukup catat statistik & kabari yang penting
           const sp = c.species;
@@ -620,10 +636,10 @@ export default function FishingGame(props: Props) {
         if (!u || dead) { setOnline(1); return; }
         net = startFishingNet({
           db, uid: u.uid, room: propsRef.current.room,
-          getSelf: () => ({ name: propsRef.current.name || u.displayName || 'Tamu', level: levelFromXp(propsRef.current.xp).level, rodId: propsRef.current.equippedRod, outfit: encodeOutfit(propsRef.current.outfit ?? DEFAULT_OUTFIT) }),
+          getSelf: () => ({ role: cleanNameRole(propsRef.current.role), name: propsRef.current.name || u.displayName || 'Tamu', level: levelFromXp(propsRef.current.xp).level, rodId: propsRef.current.equippedRod, outfit: encodeOutfit(propsRef.current.outfit ?? DEFAULT_OUTFIT) }),
           getPose: () => (engineRef.current ? engineRef.current.netPose() : null),
           onPlayers: (l) => { engineRef.current?.setRemotes(l); setOnline(l.length + 1); },
-          onChat: (m) => { setChat((c) => [...c.slice(-19), { who: m.who, msg: m.msg, t: Date.now() }]); engineRef.current?.setBubble(m.mine ? 'me' : m.uid, m.msg); },
+          onChat: (m) => { setChat((c) => [...c.slice(-19), { who: m.who, rl: m.rl, msg: m.msg, t: Date.now() }]); engineRef.current?.setBubble(m.mine ? 'me' : m.uid, m.msg); },
           onOffset: (ms) => engineRef.current?.setClockOffset(ms),
         });
         netRef.current = net;
@@ -639,8 +655,8 @@ export default function FishingGame(props: Props) {
     engineRef.current?.setEase(rodEase(rod.power));
     engineRef.current?.setRodPower(rod.power);
     engineRef.current?.setBagFull(bag.length >= BAG_MAX);
-    engineRef.current?.setProfile({ name: name || 'Tamu', title: titleOf(lv.level, outfit.ttl), level: lv.level, rodName: rod.name, rodId: rod.id, outfit });
-  }, [lv.level, bag.length, rod.luck, rod.power, rod.name, rod.id, name, outfit]);
+    engineRef.current?.setProfile({ name: name || 'Tamu', title: titleOf(lv.level, outfit.ttl), level: lv.level, rodName: rod.name, rodId: rod.id, outfit, role: cleanNameRole(props.role) });
+  }, [lv.level, bag.length, rod.luck, rod.power, rod.name, rod.id, name, outfit, props.role]);
 
   // ikan yang dipegang karakter (pamer)
   useEffect(() => {
@@ -853,7 +869,7 @@ export default function FishingGame(props: Props) {
               ) : null}
             </div>
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              <div style={{ fontSize: hx(14.5), fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.25, paddingTop: hx(1) }}>{name || 'Tamu'}</div>
+              <div style={{ fontSize: hx(14.5), fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', lineHeight: 1.25, paddingTop: hx(1), display: 'flex', alignItems: 'center', gap: hx(4) }}><RoleName role={props.role} nameStyle={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{name || 'Tamu'}</RoleName></div>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: hx(3), marginTop: hx(2), padding: `0 ${hx(7)}px`, borderRadius: 99, background: '#e6f6df', border: `${hx(1.5)}px solid #5fbf6a`, fontSize: hx(11.5), fontWeight: 800, color: '#1f7a35', lineHeight: 1.35, whiteSpace: 'nowrap', maxWidth: '100%' }}><BoatIcon size={hx(12)} />{titleOf(lv.level, outfit.ttl)}</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: hx(5), marginTop: hx(2) }}>
                 <span style={{ fontSize: hx(11.5), fontWeight: 800, color: '#2b7fc2' }}>Lv{lv.level}</span>
@@ -910,8 +926,8 @@ export default function FishingGame(props: Props) {
       {!fishing && (() => {
         const last = chat[chat.length - 1];
         const box: CSSProperties = { position: 'absolute', left: `calc(env(safe-area-inset-left, 0px) + ${hx(6)}px)`, top: `calc(env(safe-area-inset-top, 0px) + ${hx(134)}px)`, maxWidth: hx(277), boxSizing: 'border-box', background: 'transparent', padding: 0, fontSize: hx(13), fontWeight: 700, textShadow: '0 1px 2px rgba(0,0,0,0.7)' };
-        const line = (m: { who: string; msg: string }, i: number) => (
-          <div key={i} style={{ display: 'block', width: 'fit-content', maxWidth: '100%', boxSizing: 'border-box', background: 'rgba(24,30,22,0.46)', borderRadius: hx(13), padding: `${hx(3)}px ${hx(10)}px`, marginBottom: hx(3), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#fff' }}><span style={{ color: '#ffe9a8' }}>{m.who}</span> : {m.msg}</div>
+        const line = (m: { who: string; msg: string; rl?: string }, i: number) => (
+          <div key={i} style={{ display: 'block', width: 'fit-content', maxWidth: '100%', boxSizing: 'border-box', background: 'rgba(24,30,22,0.46)', borderRadius: hx(13), padding: `${hx(3)}px ${hx(10)}px`, marginBottom: hx(3), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#fff' }}><span style={{ color: '#ffe9a8' }}><RoleName role={m.rl}>{m.who}</RoleName></span> : {m.msg}</div>
         );
         if (chatOpen) return (
           <div style={{ ...box, minWidth: hx(220), maxWidth: hx(300), pointerEvents: 'auto' }}>

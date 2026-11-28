@@ -17,6 +17,8 @@ import { DUP_REFUND, LIMITED_PRICE, MYTHIC_PITY, rollLimited, sanitizeLimited } 
 import type { LimitedDrop, LimitedRarity } from '@/lib/limitedGacha';
 import type { QrOrder, TopUpPoll } from '@/lib/topupPacks';
 import { FREE_BAIT, dayKey, sanitizePromoBought } from '@/lib/promoPacks';
+import { nameRoleOf } from '@/lib/premium';
+import type { NameRole } from '@/lib/premium';
 
 export default function MancingPage() {
   const router = useRouter();
@@ -33,6 +35,7 @@ export default function MancingPage() {
   const [limited, setLimited] = useState<{ owned: string[]; pity: number }>({ owned: [], pity: 0 });
   const limitedRef = useRef<{ owned: string[]; pity: number; items: Record<string, number> }>({ owned: [], pity: 0, items: {} });
   const [isDev, setIsDev] = useState(false); // role Developer -> Dev Tools mancing
+  const [nameRole, setNameRole] = useState<NameRole>(''); // warna nama + lencana di game
   const [rods, setRodsState] = useState<string[]>([DEFAULT_ROD]);
   const [equippedRod, setEquippedState] = useState<string>(DEFAULT_ROD);
   const [rodLv, setRodLvState] = useState<Record<string, number>>({});
@@ -75,7 +78,7 @@ export default function MancingPage() {
       off = f.auth.onAuthStateChanged(async (u: any) => {
         if (stop) return;
         setStage((x) => Math.max(x, 2)); setPct((x) => Math.max(x, 10));
-        if (!u) { uid.current = ''; setName(''); setPhoto(''); setIsDev(false); isDevRef.current = false; setReady(true); return; }
+        if (!u) { uid.current = ''; setName(''); setPhoto(''); setIsDev(false); setNameRole(''); isDevRef.current = false; setReady(true); return; }
         uid.current = u.uid;
         setStage((x) => Math.max(x, 3)); setPct((x) => Math.max(x, 13));
         setName(u.displayName || '');
@@ -89,6 +92,7 @@ export default function MancingPage() {
           setGems(typeof v.gems === 'number' ? v.gems : 0);
           const dv = v.role === 'Developer';
           setIsDev(dv); isDevRef.current = dv;
+          setNameRole(nameRoleOf(v.role, v.premiumUntil));
           const fx = typeof v.fishing?.xp === 'number' ? v.fishing.xp : 0;
           xpRef.current = fx;
           setXp(fx);
@@ -475,7 +479,7 @@ export default function MancingPage() {
     <>
       <FishingGame
         name={name} photo={photo} crystal={crystal} gems={gems} onTopUp={onTopUp} onTopUpPoll={onTopUpPoll} onTopUpPaid={refreshWallet} onPromoPaid={refreshWallet} freeBaitClaimed={freeBaitDay !== dayKey()} onClaimBait={onClaimBait} promoBought={promoBought} onOpenLimited={onOpenLimited} limitedPity={limited.pity} limitedOwned={limited.owned} xp={xp} bag={bag}
-        rods={rods} equippedRod={equippedRod} rodLv={rodLv} onUpgradeRod={onUpgradeRod} dev={isDev} onDevGive={onDevGive} onDevPity={onDevPity}
+        rods={rods} equippedRod={equippedRod} rodLv={rodLv} onUpgradeRod={onUpgradeRod} dev={isDev} role={nameRole} onDevGive={onDevGive} onDevPity={onDevPity}
         onCatch={onCatch} onSetXp={onSetXp} outfit={outfit} onSaveOutfit={onSaveOutfit} onSell={onSell} onBuyRod={onBuyRod} onEquipRod={onEquipRod} onGacha={onGacha}
         room={room} pity={pity} starterClaimed={starter} onClaimStarter={onClaimStarter}
         onExit={() => router.push('/komikstore')}

@@ -1,3 +1,5 @@
+import { cleanNameRole } from '@/lib/premium';
+
 export interface NetPose {
   x: number;
   y: number;
@@ -19,12 +21,12 @@ export interface RemotePlayer {
 }
 
 // ---------- mabar: satu ruangan untuk semua pemain (Firebase Realtime Database) ----------
-export interface NetChat { uid: string; who: string; msg: string; t: number; mine: boolean }
+export interface NetChat { uid: string; who: string; msg: string; t: number; mine: boolean; rl?: string }
 export interface NetOptions {
   db: any;
   uid: string;
   room?: string;
-  getSelf: () => { name: string; level: number; rodId: string; outfit?: string };
+  getSelf: () => { name: string; level: number; rodId: string; outfit?: string; role?: string };
   getPose: () => NetPose | null;
   onPlayers: (list: RemotePlayer[]) => void;
   onChat: (m: NetChat) => void;
@@ -72,7 +74,7 @@ export function startFishingNet(o: NetOptions): { stop: () => void; send: (msg: 
     if (!v || typeof v.msg !== 'string') return;
     const t = Number(v.t) || Date.now();
     if (t < joined + offset - 20000) return; // lewati pesan lama
-    o.onChat({ uid: String(v.uid || ''), who: String(v.name || 'Tamu').slice(0, 20), msg: v.msg.slice(0, 80), t, mine: v.uid === o.uid });
+    o.onChat({ uid: String(v.uid || ''), who: String(v.name || 'Tamu').slice(0, 20), msg: v.msg.slice(0, 80), t, mine: v.uid === o.uid, rl: cleanNameRole(v.rl) });
   };
   chatQ.on('child_added', onChat);
 
@@ -89,6 +91,7 @@ export function startFishingNet(o: NetOptions): { stop: () => void; send: (msg: 
     const data: any = { x: Math.round(pose.x * 10) / 10, y: Math.round(pose.y * 10) / 10, dir: pose.dir || 'down', moving: !!pose.moving, casting: !!pose.casting, bx: Math.round(pose.bx || 0), by: Math.round(pose.by || 0), name: self.name, level: self.level, rodId: self.rodId, t: SV };
     if (pose.held) data.held = pose.held;
     if (self.outfit) data.o = self.outfit; // gaya karakter dari Lemari
+    if (self.role) data.rl = self.role; // role untuk warna nama + lencana
     me.set(data).catch(() => {});
   }, 150);
 
@@ -98,7 +101,8 @@ export function startFishingNet(o: NetOptions): { stop: () => void; send: (msg: 
       const now = Date.now();
       if (!text || now - lastChat < 1000) return;
       lastChat = now;
-      base.child('chat').push({ uid: o.uid, name: o.getSelf().name, msg: text, t: SV }).catch(() => {});
+      const rl = o.getSelf().role;
+      base.child('chat').push({ uid: o.uid, name: o.getSelf().name, msg: text, t: SV, ...(rl ? { rl } : {}) }).catch(() => {});
     },
     stop() {
       alive = false;

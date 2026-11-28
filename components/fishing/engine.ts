@@ -10,10 +10,12 @@ import {
 import type { Dir, Pal, World } from './art';
 import { palFromCode, palFromOutfit } from './outfit';
 import type { Outfit } from './outfit';
+import { cleanNameRole } from '@/lib/premium';
+import type { NameRole } from '@/lib/premium';
 
 export type Phase = 'idle' | 'cast' | 'wait' | 'bite' | 'reel' | 'catching' | 'result';
 export interface Catch { species: Species; weight: number }
-export interface Profile { name: string; title: string; level: number; rodName: string; rodId?: string; outfit?: Outfit }
+export interface Profile { name: string; title: string; level: number; rodName: string; rodId?: string; outfit?: Outfit; role?: NameRole }
 export interface ShoalStatus { dist: number; ang: number; left: number; kind: 'ikan' | 'hiu' | 'raksasa' }
 export interface EngineStatus { shoal: ShoalStatus | null; inShoal: boolean }
 interface Shoal { x: number; y: number; r: number; until: number; kind: 'ikan' | 'hiu' | 'raksasa' }
@@ -976,6 +978,77 @@ export class FishingEngine {
     ctx.fillText(text, cx, cy);
   }
 
+  // ---------- nama berwarna + lencana sesuai role (dev / admin / premium) ----------
+  private roleColors(role?: string): string[] | null {
+    return role === 'dev' ? ['#22d3ee', '#818cf8', '#e879f9'] : role === 'admin' ? ['#ff6b6b', '#ffd0d0', '#e5383b'] : role === 'premium' ? ['#f5c84b', '#fff3b0', '#ff9a3c'] : null;
+  }
+
+  private drawRoleBadge(role: string, bx: number, by: number, r: number, u: number) {
+    const ctx = this.ctx;
+    if (role === 'premium') {
+      ctx.fillStyle = '#4aa3ff';
+      ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+      ctx.lineWidth = Math.max(1, u * 0.8);
+      ctx.beginPath(); ctx.arc(bx, by, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = Math.max(1.5, u * 1.4);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath(); ctx.moveTo(bx - r * 0.45, by); ctx.lineTo(bx - r * 0.1, by + r * 0.35); ctx.lineTo(bx + r * 0.5, by - r * 0.35); ctx.stroke();
+      return;
+    }
+    const dev = role === 'dev';
+    ctx.save();
+    ctx.translate(bx - r, by - r);
+    ctx.scale((r * 2) / 24, (r * 2) / 24);
+    const g = ctx.createLinearGradient(0, 0, 24, 24);
+    (dev ? ['#22d3ee', '#818cf8', '#e879f9'] : ['#ff6b6b', '#e5383b', '#9b111e']).forEach((c, i) => g.addColorStop(i / 2, c));
+    ctx.fillStyle = g;
+    ctx.fill(new Path2D('M12 1.2l2.5 1.9 3.1-.2 1.1 2.9 2.6 1.8-.9 3 .9 3-2.6 1.8-1.1 2.9-3.1-.2L12 22.8l-2.5-1.9-3.1.2-1.1-2.9-2.6-1.8.9-3-.9-3 2.6-1.8 1.1-2.9 3.1.2z'));
+    ctx.fillStyle = '#ffffff';
+    if (dev) ctx.fill(new Path2D('M13 5.6L7.6 13h3.5l-1 5.4L16.4 11h-3.6z'));
+    else {
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.stroke(new Path2D('M7.5 12.3l3 3 6-6.4'));
+    }
+    ctx.restore();
+  }
+
+  // nama (warna sesuai role) + lencana + teks polos (mis. " · Lv5"), rata tengah di cx. pill = latar kapsul (kalau null: teks bergaris tepi).
+  private roleTag(name: string, rest: string, role: string | undefined, cx: number, cy: number, size: number, u: number, pill: { bg: string; stroke: string; fg: string; padX: number } | null) {
+    const ctx = this.ctx;
+    ctx.font = '700 ' + size + 'px "Pixelify Sans", ui-monospace, monospace';
+    const cols = this.roleColors(role);
+    const br = cols ? 6.5 * u : 0;
+    const gap = cols ? 4 * u : 0;
+    const wn = ctx.measureText(name).width;
+    const wr = ctx.measureText(rest).width;
+    const total = wn + (cols ? gap + br * 2 : 0) + wr;
+    if (pill) {
+      const h = size * 1.7;
+      const w = total + pill.padX * 2;
+      ctx.fillStyle = pill.bg;
+      this.rrect(cx - w / 2, cy - h / 2, w, h, h / 2.6);
+      ctx.fill();
+      ctx.strokeStyle = pill.stroke; ctx.lineWidth = Math.max(1, size * 0.14); ctx.stroke();
+    }
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+    const put = (txt: string, x: number, fg: string | CanvasGradient) => {
+      if (!pill) { ctx.lineWidth = Math.max(1.5, size * 0.16); ctx.strokeStyle = 'rgba(20,14,8,0.35)'; ctx.strokeText(txt, x, cy); }
+      ctx.fillStyle = fg;
+      ctx.fillText(txt, x, cy + (pill ? size * 0.06 : 0));
+    };
+    let x = cx - total / 2;
+    let fg: string | CanvasGradient = pill ? pill.fg : '#ffffff';
+    if (cols) { const g = ctx.createLinearGradient(x, 0, x + wn, 0); cols.forEach((c, i) => g.addColorStop(i / (cols.length - 1), c)); fg = g; }
+    put(name, x, fg);
+    x += wn;
+    if (cols && role) { this.drawRoleBadge(role, x + gap + br, cy, br, u); x += gap + br * 2; ctx.font = '700 ' + size + 'px "Pixelify Sans", ui-monospace, monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; }
+    if (rest) put(rest, x, pill ? pill.fg : '#ffffff');
+  }
+
   // label nama di atas karakter & NPC (digambar di layar supaya tajam)
   private drawTags(ox: number, oy: number) {
     const ctx = this.ctx;
@@ -1031,7 +1104,7 @@ export class FishingEngine {
       const rx = r.rx * S - ox;
       const ry = (r.ry - 21 - (r.p.held && !r.p.casting ? 24 : 0)) * S - oy;
       if (rx < -200 || rx > this.canvas.width + 200 || ry < -100 || ry > this.canvas.height + 100) continue;
-      this.pillText(r.p.name + ' · Lv' + r.p.level, rx, ry - 10 * u, sz * 0.85, 'rgba(18,16,14,0.82)', '#eaf7ff', 7 * u, 'rgba(110,200,255,0.9)');
+      this.roleTag(String(r.p.name || 'Tamu'), ' · Lv' + r.p.level, cleanNameRole(r.p.rl), rx, ry - 10 * u, sz * 0.85, u, { bg: 'rgba(18,16,14,0.82)', stroke: 'rgba(110,200,255,0.9)', fg: '#eaf7ff', padX: 7 * u });
       const b = this.bubbles.get(r.p.id);
       if (b && b.until > nowS) this.pillText(b.text, rx, ry - 34 * u, sz * 0.95, '#ffffff', '#222222', 9 * u, 'rgba(60,60,60,0.35)');
     }
@@ -1116,24 +1189,25 @@ export class FishingEngine {
       ctx.textBaseline = 'middle';
       ctx.fillText(pr.title, sxp - w / 2 + 20 * u, cy + sz * 0.05);
     }
-    const nm = (pr.name || 'Tamu') + ' · Lv' + pr.level;
-    this.outlined(nm, sxp, syHead - 24 * u, sz * 1.05, '#ffffff');
-    if (pr.name && pr.name !== 'Tamu') {
-      // lencana centang biru di ujung nama
-      ctx.font = '700 ' + sz * 1.05 + 'px "Pixelify Sans", ui-monospace, monospace';
-      const bx = sxp + ctx.measureText(nm).width / 2 + 9 * u;
-      const by = syHead - 24 * u;
-      const br = 6 * u;
-      ctx.fillStyle = '#4aa3ff';
-      ctx.strokeStyle = 'rgba(255,255,255,0.9)';
-      ctx.lineWidth = Math.max(1, u * 0.8);
-      ctx.beginPath(); ctx.arc(bx, by, br, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = Math.max(1.5, u * 1.4);
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.beginPath(); ctx.moveTo(bx - br * 0.45, by); ctx.lineTo(bx - br * 0.1, by + br * 0.35); ctx.lineTo(bx + br * 0.5, by - br * 0.35); ctx.stroke();
+    // pil role (Developer / Admin / Premium) di atas gelar
+    const cols = this.roleColors(pr.role);
+    if (cols && pr.role) {
+      const label = pr.role === 'dev' ? 'DEVELOPER' : pr.role === 'admin' ? 'ADMIN' : 'PREMIUM';
+      ctx.font = '700 ' + sz * 0.8 + 'px "Pixelify Sans", ui-monospace, monospace';
+      const w = ctx.measureText(label).width + 16 * u;
+      const h = sz * 1.4;
+      const cy2 = syHead - 46 * u - sz * 1.6 - 2 * u;
+      const g = ctx.createLinearGradient(sxp - w / 2, 0, sxp + w / 2, 0);
+      cols.forEach((c, i) => g.addColorStop(i / (cols.length - 1), c));
+      ctx.fillStyle = g;
+      this.rrect(sxp - w / 2, cy2 - h / 2, w, h, h / 2.4);
+      ctx.fill();
+      ctx.fillStyle = pr.role === 'admin' ? '#ffffff' : '#0b0b14';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, sxp, cy2 + sz * 0.05);
     }
+    this.roleTag(pr.name || 'Tamu', ' · Lv' + pr.level, pr.role, sxp, syHead - 24 * u, sz * 1.05, u, null);
   }
 
   private drawMeter() {
