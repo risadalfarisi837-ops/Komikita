@@ -16,8 +16,9 @@ export const openLevelSheet = (level: number) => {
 // Pil berwarna sesuai tier (ikon + teks). shine = kilau menyapu (mulai tier Gold), kerlip bintang (mulai tier Eternal)
 export function TierPill({ tier, text, fontSize = '12px', iconSize = 13, style, shine, delay = 0 }: { tier: LevelTier; text: string; fontSize?: string; iconSize?: number; style?: CSSProperties; shine?: boolean; delay?: number }) {
   const idx = TIERS.indexOf(tier);
-  const sweep = !!shine && idx >= 3;
-  const twinkle = !!shine && idx >= 10;
+  const isAdm = tier.key === 'admin';
+  const sweep = !!shine && (idx >= 3 || isAdm);
+  const twinkle = !!shine && (idx >= 10 || isAdm);
   const vars = { '--d': `${delay}s` } as CSSProperties;
   return (
     <span className={sweep ? 'tier-shine' : undefined} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 10px 3px 6px', borderRadius: 99, background: tier.pill, border: tier.border, color: tier.text, fontSize, fontWeight: 800, whiteSpace: 'nowrap', lineHeight: 1.25, fontFamily: ''Montserrat', var(--font-jakarta), sans-serif', ...vars, ...style }}>

@@ -137,3 +137,14 @@ html, body {
   .tier-shine::after, .tier-spark, .lv-cur::after, .lv-bar-fill::after { animation: none; }
   .lv-row, .lv-pop { animation: none; }
 }
+
+
+/* ── Animasi role Admin: centang berdenyut, mahkota bergoyang, cincin emas bercahaya, kilau pil ── */
+@keyframes admPulse { 0%, 100% { filter: drop-shadow(0 0 1px rgba(229,56,59,.5)); } 50% { filter: drop-shadow(0 0 6px rgba(255,100,100,.95)); } }
+@keyframes admCrown { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-1.5px) rotate(7deg); } }
+@keyframes admRing { 0%, 100% { box-shadow: 0 0 5px rgba(245,200,75,.30); } 50% { box-shadow: 0 0 12px rgba(245,200,75,.85); } }
+.adm-check { animation: admPulse 2.2s ease-in-out infinite; }
+.adm-crown { animation: admCrown 2.4s ease-in-out infinite; transform-origin: 50% 85%; }
+.adm-ring { animation: admRing 2.2s ease-in-out infinite; }
+.adm-d1 { --d: .5s; } .adm-d2 { --d: 1s; } .adm-d3 { --d: 1.5s; }
+@media (prefers-reduced-motion: reduce) { .adm-check, .adm-crown, .adm-ring { animation: none; } }

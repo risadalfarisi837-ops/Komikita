@@ -1331,7 +1331,7 @@ export default function ProfilePage() {
               {isPremium && !isDev && <VerifiedBadge size={17} />}
               {isDev && <DevBadge size={20} />}
               {isAdmin && (
-                <svg width={17} height={17} viewBox="0 0 24 24" aria-label="Admin" role="img" style={{ flex: '0 0 auto' }}>
+                <svg className="adm-check" width={17} height={17} viewBox="0 0 24 24" aria-label="Admin" role="img" style={{ flex: '0 0 auto' }}>
                   <circle cx={12} cy={12} r={10.5} fill="#E5383B" />
                   <path d="M7.6 12.3l3 3 5.8-6.2" fill="none" stroke="#fff" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
@@ -1348,7 +1348,7 @@ export default function ProfilePage() {
                 <span style={{ background: 'linear-gradient(90deg,#22d3ee,#818cf8,#e879f9)', color: '#0b0b14', padding: '3px 10px', borderRadius: 99, fontSize: 11.5, fontWeight: 800 }}>DEVELOPER</span>
               )}
               {isAdmin && (
-                <span style={{ background: 'linear-gradient(90deg,#B91C1C,#7f1d1d)', border: '1.5px solid #F5C84B', color: '#fff', padding: '2px 10px', borderRadius: 99, fontSize: 11.5, fontWeight: 800 }}>ADMIN</span>
+                <span className="tier-shine adm-ring" style={{ background: 'linear-gradient(90deg,#B91C1C,#7f1d1d)', border: '1.5px solid #F5C84B', color: '#fff', padding: '2px 10px', borderRadius: 99, fontSize: 11.5, fontWeight: 800 }}>ADMIN</span>
               )}
               {isPremium && !isDev && (
                 <span style={{ background: GOLD, color: '#2E2615', padding: '3px 10px', borderRadius: 99, fontSize: 11.5, fontWeight: 800 }}>PREMIUM</span>
