@@ -56,7 +56,7 @@ export function startFishingNet(o: NetOptions): { stop: () => void; send: (msg: 
       if (id === o.uid) continue;
       const v = raw[id];
       if (!v || typeof v.x !== 'number' || typeof v.y !== 'number') continue;
-      if (now - (Number(v.t) || 0) > 20000) continue;
+      if (now - (Number(v.t) || 0) > 30000) continue;
       list.push({ id, name: String(v.name || 'Tamu').slice(0, 20), level: Number(v.level) || 1, ...v });
     }
     o.onPlayers(list);
@@ -80,9 +80,9 @@ export function startFishingNet(o: NetOptions): { stop: () => void; send: (msg: 
     if (!alive) return;
     const pose = o.getPose();
     if (!pose) return;
-    const key = [Math.round(pose.x), Math.round(pose.y), pose.dir, pose.moving ? 1 : 0, pose.casting ? 1 : 0, pose.held ? pose.held.s : '', Math.round(pose.bx || 0)].join('|');
+    const key = [Math.round(pose.x), Math.round(pose.y), pose.dir, pose.moving ? 1 : 0, pose.casting ? 1 : 0, pose.held ? pose.held.s : '', Math.round(pose.bx || 0), Math.round(pose.by || 0)].join('|');
     const now = Date.now();
-    if (key === lastKey && now - lastSent < 4000) return;
+    if (key === lastKey && now - lastSent < 2500) return;
     lastKey = key;
     lastSent = now;
     const self = o.getSelf();
@@ -90,7 +90,7 @@ export function startFishingNet(o: NetOptions): { stop: () => void; send: (msg: 
     if (pose.held) data.held = pose.held;
     if (self.outfit) data.o = self.outfit; // gaya karakter dari Lemari
     me.set(data).catch(() => {});
-  }, 250);
+  }, 150);
 
   return {
     send(msg: string) {

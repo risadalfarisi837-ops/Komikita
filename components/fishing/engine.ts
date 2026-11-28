@@ -876,6 +876,10 @@ export class FishingEngine {
     }
     ents.sort((a, b) => a.y - b.y);
     for (const e of ents) e.f();
+    for (const r of this.remotes.values()) {
+      if (r.rx < vx0 - 200 || r.rx > vx0 + vw + 200 || r.ry < vy0 - 200 || r.ry > vy0 + vh + 200) continue;
+      this.drawRemoteLine(ctx, r, t);
+    }
 
     // tali pancing
     if (rod && tg && ph !== 'catching') {
@@ -917,12 +921,23 @@ export class FishingEngine {
     const sp = p.held && !p.casting ? SPECIES_BY_ID[p.held.s] : null;
     drawPlayer(ctx, x, y, p.dir, r.moving, r.step, p.casting, 0, r.pal, p.rodId, !p.casting && !sp, !!sp);
     if (sp && p.held) drawShowFish(ctx, x, y, sp, p.held.w);
-    if (p.casting && p.bx) {
-      const g = rodGeometry(x, y, p.dir, 0);
-      const dip = Math.sin(t * 3 + x);
-      drawBobber(ctx, p.bx, p.by, dip, p.rodId || 'default');
-      drawLine(ctx, g.tx, g.ty, p.bx, p.by - 3, 7, p.rodId || 'default');
-    }
+  }
+
+  /** Umpan + tali pemain lain. Digambar setelah semua objek supaya tidak tertutup pohon/bangunan. */
+  private drawRemoteLine(ctx: CanvasRenderingContext2D, r: { p: RemotePlayer; rx: number; ry: number }, t: number) {
+    const p = r.p;
+    if (!p.casting) return;
+    const x = Math.round(r.rx);
+    const y = Math.round(r.ry);
+    const dir: Dir = (p.dir as Dir) in DIRV ? (p.dir as Dir) : 'down';
+    // kalau titik lempar belum terkirim, tebak 2,5 petak di depan karakter supaya tali tetap terlihat
+    const hasT = Number(p.bx) > 0 && Number(p.by) > 0;
+    const bx = hasT ? Number(p.bx) : x + DIRV[dir].x * TILE * 2.5;
+    const by = hasT ? Number(p.by) : y - 1 + DIRV[dir].y * TILE * 2.5;
+    const g = rodGeometry(x, y, dir, 0);
+    const dip = Math.sin(t * 3 + x);
+    drawBobber(ctx, bx, by, dip, p.rodId || 'default');
+    drawLine(ctx, g.tx, g.ty, bx, by - 3, 7, p.rodId || 'default');
   }
 
   private pillText(text: string, cx: number, cy: number, size: number, bg: string, fg: string, padX: number, stroke?: string) {
