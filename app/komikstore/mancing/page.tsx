@@ -87,7 +87,7 @@ export default function MancingPage() {
           if (typeof v.photoURL === 'string' && v.photoURL) setPhoto(v.photoURL);
           setCrystal(typeof v.koin === 'number' ? v.koin : 0);
           setGems(typeof v.gems === 'number' ? v.gems : 0);
-          setIsDev(v.role === 'Developer'); isDevRef.current = v.role === 'Developer';
+          setIsDev(false); isDevRef.current = false;
           const fx = typeof v.fishing?.xp === 'number' ? v.fishing.xp : 0;
           xpRef.current = fx;
           setXp(fx);

@@ -11,7 +11,7 @@ import {
 } from '@/lib/fishing';
 import { SPECIES as KSPECIES, sizeRatio as kSizeRatio } from '@/lib/fishing';
 import type { BagItem, Rarity, Rod, SizeTier } from '@/lib/fishing';
-import DevTools, { DevFab, EMPTY_STATS } from './DevTools';
+import { EMPTY_STATS } from './DevTools';
 import ProfileModal from './ProfileModal';
 import { DEFAULT_OUTFIT, encodeOutfit, titleOf } from './outfit';
 import type { Outfit } from './outfit';
@@ -407,7 +407,6 @@ export default function FishingGame(props: Props) {
   const [bagSort, setBagSort] = useState<'baru' | 'nilai'>('baru');
   const [menu2, setMenu2] = useState(false);
   // ---- Mode Developer (auto fishing dll) ----
-  const [devOpen, setDevOpen] = useState(false);
   const [auto, setAuto] = useState(false);
   const autoRef = useRef(false);
   const [sellMode, setSellMode] = useState<SellMode>('keep');
@@ -1048,26 +1047,6 @@ export default function FishingGame(props: Props) {
         </button>
       </div>
       <style>{`@keyframes kpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}.komikita-pulse{animation:kpulse .5s infinite}`}</style>
-
-      {/* Dev Tools (auto fishing dll): hanya role Developer */}
-      {dev && (
-        <>
-          <DevFab px={px} rot={rot} getWrap={() => wrapRef.current} auto={auto} count={dstats.catches} open={devOpen} onTap={() => setDevOpen((o) => !o)} />
-          {devOpen && (
-            <DevTools
-              px={px} rot={rot} getWrap={() => wrapRef.current} engine={engineRef.current}
-              auto={auto} onAuto={(on) => engineRef.current?.setAuto(on)}
-              sellMode={sellMode} setSellMode={setSellMode}
-              speed={speed} setSpeed={setSpeed} instant={instant} setInstant={setInstant}
-              force={force} setForce={setForce} forceSize={forceSize} setForceSize={setForceSize}
-              gachaMin={gachaMin} setGachaMin={setGachaMin} gachaFree={gachaFree} setGachaFree={setGachaFree}
-              stats={dstats} resetStats={() => setDstats({ ...EMPTY_STATS })}
-              xp={xp} onSetXp={(v) => { props.onSetXp?.(v); say('XP diset ke ' + formatNum(v)); }}
-              onClose={() => setDevOpen(false)}
-            />
-          )}
-        </>
-      )}
 
       {/* hasil tangkapan: kartu gaya referensi (ketuk di mana saja untuk menutup) */}
       {popup && (() => {

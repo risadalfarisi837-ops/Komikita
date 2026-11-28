@@ -1,37 +1,57 @@
 'use client';
 
-// Halaman Dev Tools (khusus role Developer): info sesi, API tester, inspector localStorage,
-// pembaca Firebase (read-only), dan alat cache. Dibuka dari Pengaturan > Developer.
-import { useCallback, useEffect, useState } from 'react';
+// Dev Tools (khusus role Developer). Dibuka dari Pengaturan > Dev Tools.
+// Tiga tab saja: Info (status + aksi), API (tester), Data (localStorage & Firebase baca-saja).
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { getFirebase } from '@/lib/firebase-client';
 
 const BG = '#1B1A20';
-const CARD = '#2A2931';
+const CARD = '#25242B';
+const LINE = '#34333C';
 const MUTED = '#8F8D9B';
 const ACCENT = '#FF6B6B';
+const OK = '#4ade80';
+const BAD = '#f87171';
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
 
-type Tab = 'info' | 'api' | 'storage' | 'firebase';
-const TABS: [Tab, string][] = [['info', 'Info'], ['api', 'API'], ['storage', 'Storage'], ['firebase', 'Firebase']];
+type Tab = 'info' | 'api' | 'data';
+const TABS: [Tab, string][] = [['info', 'Info'], ['api', 'API'], ['data', 'Data']];
+const PRESETS = ['/api/manga/home', '/api/manga/browse', '/api/manga/search?q=solo', '/api/manga/detail?url=', '/api/manga/chapter?url='];
 
-const API_PRESETS = [
-  '/api/manga/home',
-  '/api/manga/search?q=solo',
-  '/api/manga/browse',
-  '/api/manga/browse?orderby=update',
-  '/api/manga/detail?url=',
-  '/api/manga/chapter?url=',
-];
+const field: CSSProperties = { width: '100%', boxSizing: 'border-box', background: BG, color: '#fff', border: `1px solid ${LINE}`, borderRadius: 10, padding: '11px 12px', fontSize: 14, fontFamily: MONO, outline: 'none' };
+const pre: CSSProperties = { background: BG, border: `1px solid ${LINE}`, borderRadius: 10, padding: 10, fontSize: 12, lineHeight: 1.5, fontFamily: MONO, color: '#D6D4E0', whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: 360, overflow: 'auto', margin: '10px 0 0' };
 
-const btn = (on = false): React.CSSProperties => ({
-  border: 0, borderRadius: 10, padding: '8px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer',
-  background: on ? ACCENT : '#3A3944', color: '#fff',
-});
-const box: React.CSSProperties = { background: CARD, borderRadius: 14, padding: 14, marginBottom: 12 };
-const input: React.CSSProperties = { width: '100%', boxSizing: 'border-box', background: '#1F1E25', color: '#fff', border: '1px solid #3A3944', borderRadius: 10, padding: '9px 11px', fontSize: 14, fontFamily: MONO };
-const pre: React.CSSProperties = { background: '#15141A', borderRadius: 10, padding: 10, fontSize: 12, fontFamily: MONO, color: '#D6D4E0', whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: 360, overflow: 'auto', margin: '8px 0 0' };
+function Btn({ children, onClick, kind = 'ghost', disabled }: { children: ReactNode; onClick?: () => void; kind?: 'ghost' | 'primary' | 'danger'; disabled?: boolean }) {
+  return (
+    <button onClick={onClick} disabled={disabled} style={{ border: 0, borderRadius: 10, padding: '10px 14px', fontSize: 13.5, fontWeight: 700, color: kind === 'danger' ? BAD : '#fff', background: kind === 'primary' ? ACCENT : kind === 'danger' ? '#4A2A2E' : '#33323B', opacity: disabled ? 0.5 : 1, cursor: 'pointer' }}>
+      {children}
+    </button>
+  );
+}
+const Card = ({ children }: { children: ReactNode }) => <section style={{ background: CARD, borderRadius: 16, padding: 14, marginBottom: 12 }}>{children}</section>;
+const Row = ({ k, v }: { k: string; v: string }) => (
+  <div style={{ display: 'flex', gap: 12, padding: '6px 0', fontSize: 13 }}>
+    <div style={{ width: 80, color: MUTED, flex: '0 0 auto' }}>{k}</div>
+    <div style={{ fontFamily: MONO, fontSize: 12.5, wordBreak: 'break-all' }}>{v}</div>
+  </div>
+);
+const Seg = <T extends string>({ items, value, onPick }: { items: [T, string][]; value: T; onPick: (v: T) => void }) => (
+  <div style={{ display: 'flex', background: BG, borderRadius: 10, padding: 3, marginBottom: 12 }}>
+    {items.map(([k, l]) => (
+      <button key={k} onClick={() => onPick(k)} style={{ flex: 1, border: 0, borderRadius: 8, padding: '8px 0', fontSize: 13, fontWeight: 700, color: value === k ? '#fff' : MUTED, background: value === k ? '#33323B' : 'transparent', cursor: 'pointer' }}>{l}</button>
+    ))}
+  </div>
+);
+
+async function copy(text: string, say: (m: string) => void) {
+  try { await navigator.clipboard.writeText(text); say('Disalin'); } catch { say('Gagal menyalin'); }
+}
+const kb = (n: number) => `${(n / 1024).toFixed(1)} KB`;
+const pretty = (raw: string) => { try { return JSON.stringify(JSON.parse(raw), null, 2); } catch { return raw; } };
+const cut = (s: string, n: number) => (s.length > n ? s.slice(0, n) + '\n… (dipotong, salin untuk lihat semua)' : s);
 
 export default function DevPage() {
   const router = useRouter();
@@ -40,7 +60,7 @@ export default function DevPage() {
   const [role, setRole] = useState('');
   const [tab, setTab] = useState<Tab>('info');
   const [toast, setToast] = useState('');
-  const say = useCallback((m: string) => { setToast(m); setTimeout(() => setToast(''), 2200); }, []);
+  const say = useCallback((m: string) => { setToast(m); setTimeout(() => setToast(''), 2000); }, []);
 
   useEffect(() => {
     let dead = false;
@@ -61,101 +81,134 @@ export default function DevPage() {
     return () => { dead = true; off?.(); };
   }, []);
 
-  const shell = (children: React.ReactNode) => (
-    <div style={{ minHeight: '100vh', background: BG, color: '#fff', padding: '0 14px 40px', fontFamily: 'system-ui, sans-serif' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 'calc(14px + env(safe-area-inset-top, 0px)) 0 12px' }}>
-        <button onClick={() => (window.history.length > 1 ? router.back() : router.push('/settings'))} aria-label="Kembali" style={{ ...btn(), padding: 8, display: 'flex' }}><ArrowLeft size={20} /></button>
-        <div style={{ fontWeight: 800, fontSize: 20 }}>Dev Tools</div>
+  const shell = (children: ReactNode, bar?: ReactNode) => (
+    <div style={{ minHeight: '100vh', background: BG, color: '#fff', fontFamily: 'system-ui, sans-serif' }}>
+      <div style={{ position: 'sticky', top: 0, zIndex: 10, background: BG, borderBottom: `1px solid ${LINE}`, padding: '0 14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 'calc(12px + env(safe-area-inset-top, 0px)) 0 10px' }}>
+          <button onClick={() => (window.history.length > 1 ? router.back() : router.push('/settings'))} aria-label="Kembali" style={{ background: 'none', border: 0, color: '#fff', display: 'flex', padding: 4, cursor: 'pointer' }}><ArrowLeft size={22} /></button>
+          <div style={{ fontWeight: 800, fontSize: 18 }}>Dev Tools</div>
+        </div>
+        {bar}
       </div>
-      {children}
-      {toast && <div style={{ position: 'fixed', left: 16, right: 16, bottom: 'calc(24px + env(safe-area-inset-bottom, 0px))', textAlign: 'center', zIndex: 90 }}><span style={{ background: '#000c', padding: '9px 16px', borderRadius: 99, fontSize: 13, fontWeight: 700 }}>{toast}</span></div>}
+      <div style={{ padding: '14px 14px 48px', maxWidth: 640, margin: '0 auto' }}>{children}</div>
+      {toast && <div style={{ position: 'fixed', left: 16, right: 16, bottom: 'calc(24px + env(safe-area-inset-bottom, 0px))', textAlign: 'center', zIndex: 90, pointerEvents: 'none' }}><span style={{ background: '#000d', padding: '9px 16px', borderRadius: 99, fontSize: 13, fontWeight: 700 }}>{toast}</span></div>}
     </div>
   );
 
   if (state === 'loading') return shell(<div style={{ color: MUTED }}>Memuat...</div>);
-  if (state === 'denied') return shell(<div style={box}>Halaman ini khusus akun Developer. Login dengan akun Developer dulu.</div>);
+  if (state === 'denied') return shell(<Card>Halaman ini khusus akun Developer. Login dengan akun Developer dulu.</Card>);
+
+  const bar = (
+    <div style={{ display: 'flex' }}>
+      {TABS.map(([k, l]) => (
+        <button key={k} onClick={() => setTab(k)} style={{ flex: 1, background: 'none', border: 0, borderBottom: `2px solid ${tab === k ? ACCENT : 'transparent'}`, color: tab === k ? '#fff' : MUTED, fontWeight: 700, fontSize: 14, padding: '9px 0', cursor: 'pointer' }}>{l}</button>
+      ))}
+    </div>
+  );
 
   return shell(
     <>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12, overflowX: 'auto' }}>
-        {TABS.map(([k, l]) => <button key={k} style={btn(tab === k)} onClick={() => setTab(k)}>{l}</button>)}
-      </div>
       {tab === 'info' && <InfoTab uid={uid} role={role} say={say} />}
       {tab === 'api' && <ApiTab say={say} />}
-      {tab === 'storage' && <StorageTab say={say} />}
-      {tab === 'firebase' && <FirebaseTab uid={uid} />}
+      {tab === 'data' && <DataTab uid={uid} say={say} />}
     </>,
+    bar,
   );
 }
 
-async function copy(text: string, say: (m: string) => void) {
-  try { await navigator.clipboard.writeText(text); say('Disalin'); } catch { say('Gagal menyalin'); }
-}
-
-// ── Info & alat cache ────────────────────────────────────────────────────────
+// ── Info ────────────────────────────────────────────────────────────────────
 function InfoTab({ uid, role, say }: { uid: string; role: string; say: (m: string) => void }) {
+  const [sw, setSw] = useState('...');
   const [vp, setVp] = useState('');
   const [online, setOnline] = useState(true);
-  const [sw, setSw] = useState('...');
+  const [health, setHealth] = useState<{ p: string; code: number; ms: number }[] | null>(null);
+  const [checking, setChecking] = useState(false);
+
   useEffect(() => {
-    const upd = () => { setVp(`${window.innerWidth}×${window.innerHeight} @${window.devicePixelRatio}x`); setOnline(navigator.onLine); };
+    const upd = () => { setVp(`${innerWidth}×${innerHeight}`); setOnline(navigator.onLine); };
     upd();
     window.addEventListener('resize', upd); window.addEventListener('online', upd); window.addEventListener('offline', upd);
     navigator.serviceWorker?.getRegistrations().then((r) => setSw(r.length ? `${r.length} aktif` : 'tidak ada')).catch(() => setSw('n/a'));
     return () => { window.removeEventListener('resize', upd); window.removeEventListener('online', upd); window.removeEventListener('offline', upd); };
   }, []);
 
-  const resetCaches = async () => {
-    if (!window.confirm('Hapus service worker + Cache Storage lalu muat ulang? Login & data akun tidak terhapus.')) return;
+  const runHealth = async () => {
+    if (checking) return;
+    setChecking(true); setHealth([]);
+    const out: { p: string; code: number; ms: number }[] = [];
+    for (const p of ['/api/manga/home', '/api/manga/browse', '/api/manga/search?q=solo']) {
+      const t0 = performance.now();
+      let code = 0;
+      try { const r = await fetch(p, { cache: 'no-store' }); code = r.status; await r.text(); } catch { /* 0 = gagal */ }
+      out.push({ p: p.replace('/api/manga/', ''), code, ms: Math.round(performance.now() - t0) });
+      setHealth([...out]);
+    }
+    setChecking(false);
+  };
+
+  const clearHome = () => {
+    const ks: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i) as string; if (/^komiku_home/.test(k)) ks.push(k); }
+    ks.forEach((k) => localStorage.removeItem(k));
+    say(ks.length ? 'Cache beranda dihapus' : 'Tidak ada cache beranda');
+  };
+  const resetAll = async () => {
+    if (!window.confirm('Hapus service worker + cache lalu muat ulang? Login & data akun tidak terhapus.')) return;
     try {
       const regs = (await navigator.serviceWorker?.getRegistrations()) || [];
       await Promise.all(regs.map((r) => r.unregister()));
       const keys = (await window.caches?.keys()) || [];
       await Promise.all(keys.map((k) => window.caches.delete(k)));
-    } catch { /* lanjut muat ulang */ }
-    window.location.reload();
+    } catch { /* lanjut */ }
+    location.reload();
   };
 
-  const rows: [string, string][] = [
-    ['UID', uid], ['Role', role], ['Mode', process.env.NODE_ENV], ['Layar', vp], ['Koneksi', online ? 'online' : 'offline'],
-    ['Service worker', sw], ['User agent', typeof navigator !== 'undefined' ? navigator.userAgent : ''],
-  ];
   return (
     <>
-      <div style={box}>
-        {rows.map(([k, v]) => (
-          <div key={k} style={{ display: 'flex', gap: 10, padding: '5px 0', fontSize: 13 }}>
-            <div style={{ width: 96, color: MUTED, flex: '0 0 auto' }}>{k}</div>
-            <div style={{ fontFamily: MONO, wordBreak: 'break-all' }}>{v}</div>
+      <Card>
+        <Row k="UID" v={uid} />
+        <Row k="Role" v={role} />
+        <Row k="Layar" v={vp} />
+        <Row k="Koneksi" v={online ? 'online' : 'offline'} />
+        <Row k="SW" v={sw} />
+        <div style={{ marginTop: 8 }}><Btn onClick={() => copy(uid, say)}>Salin UID</Btn></div>
+      </Card>
+
+      <Card>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          <Btn kind="primary" onClick={runHealth} disabled={checking}>{checking ? 'Mengecek...' : 'Cek API'}</Btn>
+          <Btn onClick={clearHome}>Hapus cache beranda</Btn>
+          <Btn kind="danger" onClick={resetAll}>Reset cache</Btn>
+        </div>
+        {health?.map((h) => (
+          <div key={h.p} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0 0', fontSize: 12.5, fontFamily: MONO }}>
+            <span>{h.p}</span>
+            <span style={{ color: h.code >= 200 && h.code < 300 ? OK : BAD }}>{h.code || 'ERR'} · {h.ms} ms</span>
           </div>
         ))}
-        <button style={{ ...btn(), marginTop: 8 }} onClick={() => copy(uid, say)}>Salin UID</button>
-      </div>
-      <div style={box}>
-        <div style={{ fontWeight: 700, marginBottom: 8 }}>Alat cache</div>
-        <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 10 }}>Berguna kalau habis deploy tapi tampilan masih versi lama.</div>
-        <button style={btn(true)} onClick={resetCaches}>Reset SW & Cache Storage</button>
-      </div>
+      </Card>
     </>
   );
 }
 
-// ── API tester ───────────────────────────────────────────────────────────────
+// ── API ─────────────────────────────────────────────────────────────────────
 function ApiTab({ say }: { say: (m: string) => void }) {
-  const [path, setPath] = useState(API_PRESETS[0]);
+  const [path, setPath] = useState(PRESETS[0]);
   const [busy, setBusy] = useState(false);
   const [res, setRes] = useState<{ status: number; ms: number; size: number; body: string } | null>(null);
 
   const send = async () => {
     if (busy) return;
+    // nilai url= otomatis di-encode, jadi link MangaDex bisa langsung ditempel
+    const m = path.trim().match(/^(.*[?&]url=)(.*)$/);
+    let p = path.trim();
+    if (m) { let v = m[2]; try { v = decodeURIComponent(v); } catch { /* biarkan */ } p = m[1] + encodeURIComponent(v); }
     setBusy(true); setRes(null);
     const t0 = performance.now();
     try {
-      const r = await fetch(path, { cache: 'no-store' });
+      const r = await fetch(p, { cache: 'no-store' });
       const text = await r.text();
-      let body = text;
-      try { body = JSON.stringify(JSON.parse(text), null, 2); } catch { /* bukan JSON */ }
-      setRes({ status: r.status, ms: Math.round(performance.now() - t0), size: text.length, body });
+      setRes({ status: r.status, ms: Math.round(performance.now() - t0), size: text.length, body: pretty(text) });
     } catch (e: any) {
       setRes({ status: 0, ms: Math.round(performance.now() - t0), size: 0, body: 'Error: ' + (e?.message || e) });
     }
@@ -163,78 +216,82 @@ function ApiTab({ say }: { say: (m: string) => void }) {
   };
 
   return (
-    <div style={box}>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
-        {API_PRESETS.map((p) => <button key={p} style={{ ...btn(path === p), fontSize: 11.5, padding: '5px 9px' }} onClick={() => setPath(p)}>{p.replace('/api/manga/', '')}</button>)}
+    <Card>
+      <div style={{ display: 'flex', gap: 6, overflowX: 'auto', marginBottom: 10 }}>
+        {PRESETS.map((p) => (
+          <button key={p} onClick={() => setPath(p)} style={{ border: `1px solid ${path === p ? ACCENT : LINE}`, background: 'transparent', color: path === p ? ACCENT : MUTED, borderRadius: 99, padding: '5px 11px', fontSize: 12, fontFamily: MONO, cursor: 'pointer', whiteSpace: 'nowrap' }}>{p.replace('/api/manga/', '')}</button>
+        ))}
       </div>
-      <input style={input} value={path} onChange={(e) => setPath(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') send(); }} placeholder="/api/..." />
+      <input style={field} value={path} onChange={(e) => setPath(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') send(); }} autoCapitalize="off" autoCorrect="off" spellCheck={false} />
       <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-        <button style={btn(true)} onClick={send}>{busy ? 'Mengirim...' : 'Kirim GET'}</button>
-        {res && <button style={btn()} onClick={() => copy(res.body, say)}>Salin hasil</button>}
+        <Btn kind="primary" onClick={send} disabled={busy}>{busy ? 'Mengirim...' : 'Kirim'}</Btn>
+        {res && <Btn onClick={() => copy(res.body, say)}>Salin hasil</Btn>}
       </div>
       {res && (
         <>
-          <div style={{ marginTop: 10, fontSize: 13, fontWeight: 700, color: res.status >= 200 && res.status < 300 ? '#4ade80' : '#f87171' }}>
-            {res.status || 'ERR'} · {res.ms} ms · {(res.size / 1024).toFixed(1)} KB
-          </div>
-          <pre style={pre}>{res.body.length > 20000 ? res.body.slice(0, 20000) + '\n… (dipotong, salin untuk lihat semua)' : res.body}</pre>
+          <div style={{ marginTop: 12, fontSize: 13, fontWeight: 700, color: res.status >= 200 && res.status < 300 ? OK : BAD }}>{res.status || 'ERR'} · {res.ms} ms · {kb(res.size)}</div>
+          <pre style={pre}>{cut(res.body, 20000)}</pre>
         </>
       )}
-    </div>
+    </Card>
   );
 }
 
-// ── Inspector localStorage ──────────────────────────────────────────────────
-function StorageTab({ say }: { say: (m: string) => void }) {
+// ── Data: localStorage + Firebase ───────────────────────────────────────────
+function DataTab({ uid, say }: { uid: string; say: (m: string) => void }) {
+  const [mode, setMode] = useState<'local' | 'fb'>('local');
+  return (
+    <>
+      <Seg items={[['local', 'localStorage'], ['fb', 'Firebase']]} value={mode} onPick={setMode} />
+      {mode === 'local' ? <StorageView say={say} /> : <FirebaseView uid={uid} say={say} />}
+    </>
+  );
+}
+
+function StorageView({ say }: { say: (m: string) => void }) {
   const [items, setItems] = useState<{ k: string; size: number }[]>([]);
+  const [q, setQ] = useState('');
   const [open, setOpen] = useState('');
   const load = useCallback(() => {
     try {
       const arr: { k: string; size: number }[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i) as string;
-        arr.push({ k, size: (localStorage.getItem(k) || '').length });
-      }
+      for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i) as string; arr.push({ k, size: (localStorage.getItem(k) || '').length }); }
       setItems(arr.sort((a, b) => b.size - a.size));
     } catch { setItems([]); }
   }, []);
   useEffect(load, [load]);
 
-  const val = (k: string) => {
-    const raw = localStorage.getItem(k) || '';
-    try { return JSON.stringify(JSON.parse(raw), null, 2); } catch { return raw; }
-  };
-  const del = (k: string) => { localStorage.removeItem(k); if (open === k) setOpen(''); load(); say('Dihapus: ' + k); };
-  const clearApp = () => {
-    if (!window.confirm('Hapus semua kunci komiku-* / komikita-* / komiku_* di perangkat ini? (favorit & riwayat lokal ikut hilang)')) return;
-    items.filter((i) => /^(komiku|komikita)[-_]/.test(i.k)).forEach((i) => localStorage.removeItem(i.k));
-    load(); say('Data lokal app dihapus');
-  };
-  const total = items.reduce((s, i) => s + i.size, 0);
+  const shown = useMemo(() => items.filter((i) => i.k.toLowerCase().includes(q.toLowerCase())), [items, q]);
+  const del = (k: string) => { localStorage.removeItem(k); setOpen(''); load(); say('Dihapus'); };
 
   return (
-    <div style={box}>
-      <div style={{ fontSize: 13, color: MUTED, marginBottom: 10 }}>{items.length} kunci · {(total / 1024).toFixed(1)} KB</div>
-      {items.map((i) => (
-        <div key={i.k} style={{ borderTop: '1px solid #3A3944', padding: '8px 0' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <button onClick={() => setOpen(open === i.k ? '' : i.k)} style={{ flex: 1, textAlign: 'left', background: 'none', border: 0, color: '#fff', fontFamily: MONO, fontSize: 12.5, cursor: 'pointer', wordBreak: 'break-all' }}>{i.k}</button>
-            <span style={{ fontSize: 11.5, color: MUTED }}>{(i.size / 1024).toFixed(1)} KB</span>
-            <button style={{ ...btn(), padding: '4px 9px', fontSize: 12 }} onClick={() => del(i.k)}>Hapus</button>
+    <Card>
+      <input style={field} value={q} onChange={(e) => setQ(e.target.value)} placeholder={`Cari di ${items.length} kunci...`} autoCapitalize="off" spellCheck={false} />
+      <div style={{ marginTop: 8 }}>
+        {shown.map((i) => (
+          <div key={i.k} style={{ borderTop: `1px solid ${LINE}`, padding: '9px 0' }}>
+            <button onClick={() => setOpen(open === i.k ? '' : i.k)} style={{ display: 'flex', width: '100%', gap: 8, background: 'none', border: 0, color: '#fff', padding: 0, cursor: 'pointer', textAlign: 'left' }}>
+              <span style={{ flex: 1, fontFamily: MONO, fontSize: 12.5, wordBreak: 'break-all' }}>{i.k}</span>
+              <span style={{ fontSize: 11.5, color: MUTED }}>{kb(i.size)}</span>
+            </button>
+            {open === i.k && (
+              <>
+                <pre style={pre}>{cut(pretty(localStorage.getItem(i.k) || ''), 8000)}</pre>
+                <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                  <Btn onClick={() => copy(localStorage.getItem(i.k) || '', say)}>Salin</Btn>
+                  <Btn kind="danger" onClick={() => del(i.k)}>Hapus</Btn>
+                </div>
+              </>
+            )}
           </div>
-          {open === i.k && <pre style={pre}>{val(i.k).slice(0, 8000)}</pre>}
-        </div>
-      ))}
-      <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-        <button style={btn()} onClick={load}>Muat ulang</button>
-        <button style={btn(true)} onClick={clearApp}>Hapus data lokal app</button>
+        ))}
+        {!shown.length && <div style={{ fontSize: 13, color: MUTED, padding: '8px 0' }}>Tidak ada data.</div>}
       </div>
-    </div>
+    </Card>
   );
 }
 
-// ── Pembaca Firebase (read-only) ────────────────────────────────────────────
-function FirebaseTab({ uid }: { uid: string }) {
+function FirebaseView({ uid, say }: { uid: string; say: (m: string) => void }) {
   const [path, setPath] = useState('users/' + uid);
   const [out, setOut] = useState('');
   const [busy, setBusy] = useState(false);
@@ -244,17 +301,20 @@ function FirebaseTab({ uid }: { uid: string }) {
     setBusy(true); setOut('');
     try {
       const { db } = await getFirebase();
-      const snap = await db.ref(p).get();
+      const snap = await db.ref(p).limitToFirst(50).get(); // dibatasi 50 anak pertama
       setOut(snap.exists() ? JSON.stringify(snap.val(), null, 2) : '(kosong / tidak ada)');
     } catch (e: any) { setOut('Error: ' + (e?.message || e)); }
     setBusy(false);
   };
   return (
-    <div style={box}>
-      <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 8 }}>Hanya baca. Contoh: users/&lt;uid&gt;, leaderboard, premiumOrders</div>
-      <input style={input} value={path} onChange={(e) => setPath(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') read(); }} placeholder="path/di/database" />
-      <button style={{ ...btn(true), marginTop: 10 }} onClick={read}>{busy ? 'Membaca...' : 'Baca'}</button>
-      {out && <pre style={pre}>{out.length > 30000 ? out.slice(0, 30000) + '\n… (dipotong)' : out}</pre>}
-    </div>
+    <Card>
+      <div style={{ fontSize: 12.5, color: MUTED, marginBottom: 8 }}>Hanya baca, maksimal 50 data pertama.</div>
+      <input style={field} value={path} onChange={(e) => setPath(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') read(); }} placeholder="path/di/database" autoCapitalize="off" autoCorrect="off" spellCheck={false} />
+      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+        <Btn kind="primary" onClick={read} disabled={busy}>{busy ? 'Membaca...' : 'Baca'}</Btn>
+        {out && <Btn onClick={() => copy(out, say)}>Salin</Btn>}
+      </div>
+      {out && <pre style={pre}>{cut(out, 30000)}</pre>}
+    </Card>
   );
 }
