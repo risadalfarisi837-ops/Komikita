@@ -170,10 +170,10 @@ export default function LencanaPage() {
             <div style={{ width: 40, height: 4, borderRadius: 2, background: 'rgba(255,255,255,.2)', margin: '0 auto 16px' }} />
             <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: -1 }}>Cara dapat lencana</div>
             <div style={{ color: '#D6D4DE', fontWeight: 700, fontSize: 15, lineHeight: 1.6, marginTop: 8 }}>
-              • {POINTS_PER_CHAPTER} poin tiap chapter baru dibaca<br />
-              • +{DAILY_BONUS} poin untuk chapter pertama tiap hari<br />
-              • +{NIGHT_BONUS} poin kalau baca jam 22.00–04.59<br />
-              • Poinmu sekarang: {fmt(pts)}<br />
+              • {POINTS_PER_CHAPTER} XP tiap chapter baru dibaca<br />
+              • +{DAILY_BONUS} XP untuk chapter pertama tiap hari<br />
+              • +{NIGHT_BONUS} XP kalau baca jam 22.00–04.59<br />
+              • XP-mu sekarang: {fmt(pts)}<br />
               • Lencana dari musim lalu tetap terbuka<br />
               • Ketuk lencana yang terbuka untuk memakainya
             </div>

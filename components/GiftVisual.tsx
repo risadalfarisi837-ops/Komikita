@@ -42,7 +42,7 @@ export default function GiftVisual({ type, itemKey, photo }: { type: string; ite
     const cfg: any = {
       level: { c1: '#34d399', c2: '#059669', label: 'LEVEL', icon: <path d="M32 14 L46 32 H37 V50 H27 V32 H18Z" fill="#fff" /> },
       exp: { c1: '#a78bfa', c2: '#6d28d9', label: 'EXP', icon: <polygon points="32,12 38,26 54,28 42,39 45,55 32,47 19,55 22,39 10,28 26,26" fill="#fff" /> },
-      poin: { c1: '#fbbf24', c2: '#d97706', label: 'POIN', icon: <path d="M20 14h24v10c0 9-6 15-12 16-6-1-12-7-12-16zM20 18h-8c0 8 4 12 10 13M44 18h8c0 8-4 12-10 13M28 42h8v6h6v6H22v-6h6z" fill="#fff" /> },
+      poin: { c1: '#fbbf24', c2: '#d97706', label: 'XP', icon: <path d="M20 14h24v10c0 9-6 15-12 16-6-1-12-7-12-16zM20 18h-8c0 8 4 12 10 13M44 18h8c0 8-4 12-10 13M28 42h8v6h6v6H22v-6h6z" fill="#fff" /> },
     }[type];
     return (
       <div style={{ textAlign: 'center' }}>

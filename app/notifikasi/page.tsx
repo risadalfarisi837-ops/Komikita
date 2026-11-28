@@ -35,14 +35,14 @@ const writeJSON = (k: string, v: unknown) => { try { localStorage.setItem(k, JSO
 function builtinInfo(): InfoItem[] {
   const s = currentSeason();
   return [
-    { id: `season-${s.id}`, judul: `Season ${s.id} sudah dimulai`, isi: `Periode ${s.label}. Baca chapter untuk kumpulkan poin dan naikkan lencanamu.` },
+    { id: `season-${s.id}`, judul: `Season ${s.id} sudah dimulai`, isi: `Periode ${s.label}. Baca chapter untuk kumpulkan XP dan naikkan lencanamu.` },
     { id: 'lencana-3-jalur', judul: 'Lencana baru: Noble, Murim, Demon', isi: 'Tiga jalur dengan 10 tingkat tiap jalur. Lencana musim lalu tetap terbuka.' },
     { id: 'edit-profil', judul: 'Profilmu bisa diedit', isi: 'Ganti foto, nama tampilan, dan lencana yang dipakai dari halaman Profil.' },
-    { id: 'cara-poin', judul: 'Cara dapat poin', isi: '10 poin tiap chapter baru, bonus 10 poin untuk chapter pertama tiap hari.' },
-    { id: 'bonus-malam', judul: 'Bonus baca malam', isi: 'Baca jam 22.00–04.59 dapat tambahan 5 poin per chapter.' },
+    { id: 'cara-poin', judul: 'Cara dapat XP', isi: '10 XP tiap chapter baru, bonus 10 XP untuk chapter pertama tiap hari.' },
+    { id: 'bonus-malam', judul: 'Bonus baca malam', isi: 'Baca jam 22.00–04.59 dapat tambahan 5 XP per chapter.' },
     { id: 'streak', judul: 'Jaga streak-mu', isi: 'Baca minimal satu chapter tiap hari supaya streak tidak putus.' },
-    { id: 'reset-musim', judul: 'Poin direset tiap musim', isi: 'Satu musim berlangsung 2 bulan. Lencana yang sudah terbuka tetap jadi milikmu.' },
-    { id: 'papan-peringkat', judul: 'Papan peringkat 100 besar', isi: 'Pembaca dengan poin tertinggi musim ini tampil di tab Peringkat.' },
+    { id: 'reset-musim', judul: 'XP direset tiap musim', isi: 'Satu musim berlangsung 2 bulan. Lencana yang sudah terbuka tetap jadi milikmu.' },
+    { id: 'papan-peringkat', judul: 'Papan peringkat 100 besar', isi: 'Pembaca dengan XP tertinggi musim ini tampil di tab Peringkat.' },
     { id: 'notif-chapter', judul: 'Notifikasi chapter baru', isi: 'Komik di Favorit yang rilis chapter baru akan muncul di tab Pembaruan.' },
   ];
 }

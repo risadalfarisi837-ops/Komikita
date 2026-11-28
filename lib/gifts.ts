@@ -9,7 +9,7 @@ export interface Gift {
 }
 
 export const GIFT_TYPE_LABEL: Record<GiftType, string> = {
-  koin: 'Crystal', level: 'Level', exp: 'EXP', poin: 'Poin musim',
+  koin: 'Crystal', level: 'Level', exp: 'EXP', poin: 'XP musim',
   border: 'Border profil', wallpaper: 'Wallpaper komentar', effect: 'Efek profil',
 };
 
@@ -17,7 +17,7 @@ export function giftTitle(type: GiftType, n: number): string {
   if (type === 'koin') return `+${fmt(n)} Crystal`;
   if (type === 'level') return `+${fmt(n)} Level`;
   if (type === 'exp') return `+${fmt(n)} EXP`;
-  return `+${fmt(n)} Poin musim`;
+  return `+${fmt(n)} XP musim`;
 }
 
 // Kirim hadiah ke satu atau banyak user. Hadiah masuk ke Notifikasi > Hadiah dan belum diterapkan sampai diklaim.

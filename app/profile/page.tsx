@@ -208,21 +208,21 @@ const DEV_ITEMS = {
 } as const;
 type ItemCat = keyof typeof DEV_ITEMS;
 type DevUser = { uid: string; name: string; photo: string; level: number; koin: number; role: string };
-const DEV_ACTS = [['koin', 'Crystal'], ['poin', 'Poin'], ['role', 'Role'], ['item', 'Item'], ['reset', 'Reset']] as const;
+const DEV_ACTS = [['koin', 'Crystal'], ['poin', 'XP'], ['role', 'Role'], ['item', 'Item'], ['reset', 'Reset']] as const;
 type DevAct = typeof DEV_ACTS[number][0];
 const DEV_MODES = [['add', 'Tambah'], ['sub', 'Kurangi'], ['set', 'Set jadi']] as const;
 type DevMode = typeof DEV_MODES[number][0];
 const DEV_PRESETS: Record<'koin' | 'poin', number[]> = { koin: [100, 500, 1000, 5000, 10000], poin: [100, 300, 700, 1500, 5000, 8000] };
-const DEV_UNIT: Record<'koin' | 'poin', string> = { koin: 'Crystal', poin: 'poin musim ini' };
+const DEV_UNIT: Record<'koin' | 'poin', string> = { koin: 'Crystal', poin: 'XP musim ini' };
 const DEV_ROLES = ['Member', 'Komikita Premium', 'Admin', 'Developer'];
-const DEV_RESETS = [['poin', 'Poin musim'], ['koin', 'Crystal'], ['hapus', 'Hapus data user']] as const;
+const DEV_RESETS = [['poin', 'XP musim'], ['koin', 'Crystal'], ['hapus', 'Hapus data user']] as const;
 type DevReset = typeof DEV_RESETS[number][0];
 type GType = 'koin' | 'level' | 'exp' | 'poin' | 'border' | 'wallpaper' | 'effect';
-const GIFT_TYPES: [GType, string][] = [['koin', 'Crystal'], ['poin', 'Poin musim'], ['border', 'Border'], ['wallpaper', 'Wallpaper'], ['effect', 'Efek']];
+const GIFT_TYPES: [GType, string][] = [['koin', 'Crystal'], ['poin', 'XP musim'], ['border', 'Border'], ['wallpaper', 'Wallpaper'], ['effect', 'Efek']];
 const GIFT_PRESETS: Record<GType, number[]> = { koin: [100, 500, 1000, 5000], level: [1, 3, 5, 10], exp: [100, 200, 1000, 5000], poin: [50, 100, 300, 700], border: [], wallpaper: [], effect: [] };
 // crystal = bonus Crystal yang diterima user saat pesanan disetujui
 const DEV_PLAN_DAYS: Record<string, { nama: string; days: number; crystal: number }> = { mingguan: { nama: 'Mingguan', days: 7, crystal: 150 }, bulanan: { nama: 'Bulanan', days: 30, crystal: 500 }, tahunan: { nama: 'Tahunan', days: 365, crystal: 6000 } };
-const GIFT_UNIT: Record<GType, string> = { koin: 'Crystal', level: 'Level', exp: 'EXP', poin: 'Poin', border: 'Border', wallpaper: 'Wallpaper', effect: 'Efek' };
+const GIFT_UNIT: Record<GType, string> = { koin: 'Crystal', level: 'Level', exp: 'EXP', poin: 'XP', border: 'Border', wallpaper: 'Wallpaper', effect: 'Efek' };
 const DEV_REASONS = ['Kompensasi', 'Server down', 'Hadiah event', 'Bonus spesial'];
 
 function DevPanel({ open, onClose, uid, db, userData, onUpdate }: {
@@ -317,8 +317,8 @@ function DevPanel({ open, onClose, uid, db, userData, onUpdate }: {
       });
       const total = Number(res.snapshot.val()?.points) || 0;
       if (target.uid === uid) await pushSeasonScore(); // sinkronkan ke tampilan lokal
-      showToast(`Poin ${target.name} sekarang ${fmt(total)}.`, 'success');
-      if (mode === 'add') setGift({ title: 'Gift terkirim!', sub: '+' + n + ' poin untuk ' + target.name, visual: <GiftVisual type="poin" /> });
+      showToast(`XP ${target.name} sekarang ${fmt(total)}.`, 'success');
+      if (mode === 'add') setGift({ title: 'Gift terkirim!', sub: '+' + n + ' XP untuk ' + target.name, visual: <GiftVisual type="poin" /> });
     } catch (e: any) { showToast('Gagal: ' + e.message + ' (cek aturan database leaderboard)', 'error'); }
     setSaving(false);
   };
@@ -479,7 +479,7 @@ function DevPanel({ open, onClose, uid, db, userData, onUpdate }: {
       try {
         await lbRef.remove();
         if (target.uid === uid) useUserStats.setState((st) => ({ season: { ...st.season, points: 0, chapters: 0, night: 0, read: [], bonus: 0 } }));
-        showToast('Poin musim ' + target.name + ' direset.', 'success');
+        showToast('XP musim ' + target.name + ' direset.', 'success');
       } catch (e: any) { showToast('Gagal: ' + e.message, 'error'); }
       setSaving(false);
       return;
@@ -498,7 +498,7 @@ function DevPanel({ open, onClose, uid, db, userData, onUpdate }: {
     setSaving(false);
   };
 
-  // Isi peringkat musim ini dari akun lama: poin awal = EXP (disimpan sebagai bonus supaya tidak tertimpa saat user baca chapter)
+  // Isi peringkat musim ini dari akun lama: XP awal = EXP (disimpan sebagai bonus supaya tidak tertimpa saat user baca chapter)
   const seedBoard = async () => {
     setSaving(true);
     try {
@@ -796,7 +796,7 @@ function DevPanel({ open, onClose, uid, db, userData, onUpdate }: {
             </div>
           ) : (
             <div>
-              <label style={LABEL}>{gType === 'koin' ? 'Jumlah crystal' : 'Jumlah poin musim ini'}</label>
+              <label style={LABEL}>{gType === 'koin' ? 'Jumlah crystal' : 'Jumlah XP musim ini'}</label>
               <div style={{ ...ROW, marginBottom: 8 }}>
                 {GIFT_PRESETS[gType].map(n => <button key={n} onClick={() => { setGVal(String(n)); setConfirmGlobal(false); }} style={chip(gVal === String(n))}>{n.toLocaleString('id-ID')}</button>)}
               </div>
@@ -836,7 +836,7 @@ function DevPanel({ open, onClose, uid, db, userData, onUpdate }: {
             <label style={LABEL}>Perawatan peringkat</label>
             <div style={{ fontSize: 13, fontWeight: 700, color: '#8F8D9B', lineHeight: 1.4, marginBottom: 10 }}>Hapus akun yang tidak aktif lebih dari {ACTIVE_DAYS} hari dari peringkat musim ini.</div>
             <button onClick={cleanBoard} disabled={saving} style={{ ...BTN, background: '#1F1E24', color: '#fff', opacity: saving ? 0.5 : 1 }}>Bersihkan akun tidak aktif</button>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#8F8D9B', lineHeight: 1.4, margin: '14px 0 10px' }}>Masukkan semua akun lama yang punya EXP ke peringkat musim ini (poin awal = EXP). Akun yang sudah ada di peringkat dilewati.</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#8F8D9B', lineHeight: 1.4, margin: '14px 0 10px' }}>Masukkan semua akun lama yang punya EXP ke peringkat musim ini (XP awal = EXP). Akun yang sudah ada di peringkat dilewati.</div>
             <button onClick={seedBoard} disabled={saving} style={{ ...BTN, background: '#0E8A6A', color: '#fff', opacity: saving ? 0.5 : 1 }}>{saving ? 'Memproses...' : 'Isi peringkat dari akun lama'}</button>
           </div>
         </div>
@@ -1226,7 +1226,7 @@ export default function ProfilePage() {
         {[
           { v: seasonRank != null ? `#${fmt(seasonRank)}` : '–', l: 'Peringkat musim' },
           { v: String(level), l: 'Tingkat' },
-          { v: fmtC(pts), l: 'Poin' },
+          { v: fmtC(pts), l: 'XP' },
         ].map((x, i) => (
           <div key={x.l} style={{ flex: 1, textAlign: 'center', borderLeft: i ? '1px solid rgba(255,255,255,.08)' : 'none', margin: '2px 0', minWidth: 0 }}>
             <div style={{ fontSize: 25, fontWeight: 800, letterSpacing: -1.2, lineHeight: 1.2 }}>{x.v}</div>
@@ -1312,7 +1312,7 @@ export default function ProfilePage() {
                 <Emblem t={r.track} fill={open ? r.bg : '#3A3940'} size={30} />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: -0.5 }}>{r.name}</div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: MUTED }}>{fmt(r.min)} poin</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: MUTED }}>{fmt(r.min)} XP</div>
                 </div>
                 {current ? <span style={{ fontSize: 12, fontWeight: 800, background: 'rgba(255,255,255,.1)', padding: '3px 10px', borderRadius: 99 }}>Dipakai</span> : !open && <Lock size={16} color={MUTED} />}
               </div>

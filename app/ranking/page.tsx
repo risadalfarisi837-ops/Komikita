@@ -44,7 +44,7 @@ type Theme = {
 };
 const THEMES: Record<BoardId, Theme> = {
   reader: {
-    id: 'reader', title: 'Top Pembaca', accent: GOLD, accentText: '#2A2208', border: 'rgba(245,196,81,.5)', bgTop: '#4D3C12', bgBottom: '#1D1809', unit: 'poin',
+    id: 'reader', title: 'Top Pembaca', accent: GOLD, accentText: '#2A2208', border: 'rgba(245,196,81,.5)', bgTop: '#4D3C12', bgBottom: '#1D1809', unit: 'XP',
     tabs: [], section: () => 'Top Pembaca Musim Ini',
     chip: (_t, d, s) => `Season ${s} · ${d} hari lagi`,
   },
@@ -60,7 +60,7 @@ const THEMES: Record<BoardId, Theme> = {
   },
 };
 const BOARD_ORDER: BoardId[] = ['reader', 'premium', 'charisma'];
-const BOARD_SUB: Record<BoardId, string> = { reader: 'Poin baca musim ini', premium: 'Sisa hari premium terbanyak', charisma: 'Hati yang diterima komentar' };
+const BOARD_SUB: Record<BoardId, string> = { reader: 'XP baca musim ini', premium: 'Sisa hari premium terbanyak', charisma: 'Hati yang diterima komentar' };
 
 // ───────────────────────── data ─────────────────────────
 type BRow = { uid: string; name: string; photo: string; value: number; points?: number };
@@ -547,13 +547,13 @@ a{text-decoration:none;color:inherit} button{font-family:inherit;cursor:pointer}
                     <MiniStat label="Malam" value={night} target={targets.night} />
                   </div>
                 </div>
-                <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: -1, margin: '22px 0 8px' }}>Cara dapat poin</div>
+                <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: -1, margin: '22px 0 8px' }}>Cara dapat XP</div>
                 <div style={{ color: '#D6D4DE', fontWeight: 700, fontSize: 14, lineHeight: 1.6 }}>
-                  • {POINTS_PER_CHAPTER} poin tiap chapter baru dibaca<br />
-                  • +{DAILY_BONUS} poin untuk chapter pertama tiap hari<br />
-                  • +{NIGHT_BONUS} poin kalau baca jam 22.00–04.59<br />
+                  • {POINTS_PER_CHAPTER} XP tiap chapter baru dibaca<br />
+                  • +{DAILY_BONUS} XP untuk chapter pertama tiap hari<br />
+                  • +{NIGHT_BONUS} XP kalau baca jam 22.00–04.59<br />
                   • Chapter yang sama hanya dihitung sekali per musim<br />
-                  • Poin direset tiap musim (2 bulan)
+                  • XP direset tiap musim (2 bulan)
                 </div>
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '22px 0 10px' }}>
                   <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: -1 }}>Daftar lencana</div>
@@ -562,7 +562,7 @@ a{text-decoration:none;color:inherit} button{font-family:inherit;cursor:pointer}
                 {RANKS.map((r) => (
                   <div key={r.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0' }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: r.bg, padding: '4px 12px 4px 6px', borderRadius: 99, fontSize: 14, fontWeight: 800 }}><Shield color={r.bg} />{r.name}</span>
-                    <span style={{ color: MUTED, fontWeight: 800, fontSize: 14 }}>{r.track} · {fmt(r.min)} poin</span>
+                    <span style={{ color: MUTED, fontWeight: 800, fontSize: 14 }}>{r.track} · {fmt(r.min)} XP</span>
                   </div>
                 ))}
               </>

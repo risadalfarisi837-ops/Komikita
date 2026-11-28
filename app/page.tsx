@@ -176,7 +176,7 @@ const nf = (n: number) => Math.round(n).toLocaleString('id-ID');
 const BOARDS: BoardTheme[] = [
   { id: 'giveaway', title: 'TOP PREMIUM', href: '/ranking?board=premium', tabs: false, border: '#1F6F86', bg: 'linear-gradient(160deg, #0E3446 0%, #115063 55%, #0B2C3C 100%)', accent: '#2DD4E8', accentText: '#06303A', glow: 'rgba(45,212,232,.25)', unit: 'hari premium', fmt: nf },
   { id: 'charisma', title: 'TOP CHARISMA', href: '/ranking?board=charisma', tabs: true, tabLabels: ['ALL', 'BULAN', 'MINGGU'], border: '#8E2F66', bg: 'linear-gradient(160deg, #4A1636 0%, #6B1F4C 55%, #3F1230 100%)', accent: '#FF5C9A', accentText: '#3A0B22', glow: 'rgba(255,92,154,.25)', unit: 'hati diterima', fmt: nf },
-  { id: 'reader', title: 'TOP PEMBACA', href: '/ranking?board=reader', tabs: false, border: '#55545C', bg: 'linear-gradient(160deg, #2E2E34 0%, #4A4A52 55%, #28282D 100%)', accent: '#F5C451', accentText: '#2A2208', glow: 'rgba(255,255,255,.14)', unit: 'poin musim ini', fmt: nf },
+  { id: 'reader', title: 'TOP PEMBACA', href: '/ranking?board=reader', tabs: false, border: '#55545C', bg: 'linear-gradient(160deg, #2E2E34 0%, #4A4A52 55%, #28282D 100%)', accent: '#F5C451', accentText: '#2A2208', glow: 'rgba(255,255,255,.14)', unit: 'XP musim ini', fmt: nf },
 ];
 
 // Cahaya latar di balik banner: berubah halus mengikuti slide yang aktif
