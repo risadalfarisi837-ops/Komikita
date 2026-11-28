@@ -22,7 +22,7 @@ export function TierPill({ tier, text, fontSize = '12px', iconSize = 13, style, 
   const glow = !!shine && idx >= 5; // cahaya mulai tier Diamond, sama seperti bar EXP
   const vars = { '--d': `${delay}s` } as CSSProperties;
   return (
-    <span className={sweep ? 'tier-shine' : undefined} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 10px 3px 6px', borderRadius: 99, background: tier.pill, border: tier.border, color: tier.text, fontSize, fontWeight: 800, whiteSpace: 'nowrap', lineHeight: 1.25, fontFamily: ''Montserrat', var(--font-jakarta), sans-serif', boxShadow: glow ? `0 0 ${idx >= 10 ? 14 : 9}px ${tier.ring}aa` : undefined, ...vars, ...style }}>
+    <span className={sweep ? 'tier-shine' : undefined} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 10px 3px 6px', borderRadius: 99, background: tier.pill, border: tier.border, color: tier.text, fontSize, fontWeight: 800, whiteSpace: 'nowrap', lineHeight: 1.25, fontFamily: "'Montserrat', var(--font-jakarta), sans-serif", boxShadow: glow ? `0 0 ${idx >= 10 ? 14 : 9}px ${tier.ring}aa` : undefined, ...vars, ...style }}>
       <TierIcon k={tier.key} size={iconSize} />{text}
       {twinkle && (<>
         <i className="tier-spark" style={{ left: '14%', top: '8%', ...({ '--d': `${delay}s` } as CSSProperties) }} />
@@ -57,7 +57,7 @@ function Sheet({ level, onClose }: { level: number; onClose: () => void }) {
     <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
       <style>{`@keyframes lvUp{from{transform:translate3d(0,100%,0)}to{transform:none}}@keyframes lvFade{from{opacity:0}to{opacity:1}}`}</style>
       <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.6)', animation: 'lvFade .2s ease both' }} />
-      <div role="dialog" aria-label="Semua tier level" style={{ position: 'relative', width: 'min(100%, 448px)', margin: '0 auto', height: '92vh', background: '#17181B', borderRadius: '26px 26px 0 0', overflowY: 'auto', overscrollBehavior: 'contain', padding: '0 18px calc(24px + env(safe-area-inset-bottom, 0px))', animation: 'lvUp .32s cubic-bezier(.2,.9,.25,1) both', color: '#fff', fontFamily: ''Montserrat', var(--font-jakarta), sans-serif' }}>
+      <div role="dialog" aria-label="Semua tier level" style={{ position: 'relative', width: 'min(100%, 448px)', margin: '0 auto', height: '92vh', background: '#17181B', borderRadius: '26px 26px 0 0', overflowY: 'auto', overscrollBehavior: 'contain', padding: '0 18px calc(24px + env(safe-area-inset-bottom, 0px))', animation: 'lvUp .32s cubic-bezier(.2,.9,.25,1) both', color: '#fff', fontFamily: "'Montserrat', var(--font-jakarta), sans-serif" }}>
         <div onClick={onClose} style={{ position: 'sticky', top: 0, height: 22, display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#17181B', zIndex: 2, cursor: 'pointer' }}>
           <span style={{ width: 40, height: 4, borderRadius: 2, background: 'rgba(255,255,255,.28)' }} />
         </div>
