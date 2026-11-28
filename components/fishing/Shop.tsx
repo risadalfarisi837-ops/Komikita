@@ -207,6 +207,28 @@ function BagIcon({ size }: { size: number }) {
   );
 }
 
+function XpIcon({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden style={{ flex: 'none' }}>
+      <ellipse cx="14" cy="13" rx="7" ry="5" fill="#ff9a4a" stroke="#c4601a" strokeWidth="1.1" />
+      <path d="M20 13l3-3v6z" fill="#ff9a4a" stroke="#c4601a" strokeWidth="1" strokeLinejoin="round" />
+      <circle cx="11.500" cy="12" r="1" fill="#3a2010" />
+      <path d="M1 12h6M4.500 9.500L7.200 12 4.500 14.500" stroke="#3b8cf0" strokeWidth="1.800" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+function StallIcon({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden shapeRendering="crispEdges" style={{ flex: 'none' }}>
+      <rect x="3" y="4" width="18" height="6" fill="#ffffff" stroke="#8a3217" strokeWidth="1" />
+      <rect x="3" y="4" width="3" height="6" fill="#e5322d" /><rect x="9" y="4" width="3" height="6" fill="#e5322d" /><rect x="15" y="4" width="3" height="6" fill="#e5322d" />
+      <rect x="4" y="10" width="2" height="10" fill="#8a5a2b" /><rect x="18" y="10" width="2" height="10" fill="#8a5a2b" />
+      <rect x="4" y="14" width="16" height="6" fill="#c98a4a" stroke="#8a5a2b" strokeWidth="1" />
+      <rect x="6" y="11.500" width="3" height="2.500" fill="#7a3fb0" /><rect x="10.500" y="11.500" width="3" height="2.500" fill="#ffd23a" /><rect x="15" y="11.500" width="3" height="2.500" fill="#e66bff" />
+    </svg>
+  );
+}
+
 // Batang joran piksel diagonal, warna mengikuti rarity
 export function RodArt({ color, size }: { color: string; size: number }) {
   const px: ReactNode[] = [];
@@ -300,23 +322,12 @@ const SIDE: { k: ShopTab; label: string; icon: (s: number) => ReactNode }[] = [
 export default function ShopScreen(p: Props) {
   const { px, font, crystal, rods, equippedRod, tab, onTab, buying, pulling } = p;
   const gems = p.gems ?? 0;
-  const [odds, setOdds] = useState(false);
+  const oddsRef = useRef<HTMLDivElement>(null);
   const [topup, setTopup] = useState<TopUpCurrency | null>((p.initialTopup as TopUpCurrency | null | undefined) ?? null);
   const [payPack, setPayPack] = useState<PromoPackId | null>(null);
   const sideRef = useRef<HTMLDivElement>(null);
 
   const chip: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: px(3), background: '#eaf1ff', color: '#2459c9', fontWeight: 800, fontSize: px(12), borderRadius: 99, padding: `${px(2)}px ${px(8)}px`, whiteSpace: 'nowrap' };
-  const Stats = ({ r }: { r: { power: number; luck: number; money: number; xp: number } }) => (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: px(4), justifyContent: 'center' }}>
-      <span style={{ ...chip, background: '#fff1c4', color: '#a86b00' }}>⚡{r.power}</span>
-      <span style={chip}>🍀+{Math.round(r.luck * 100)}%</span>
-      <span style={chip}>💰+{Math.round(r.money * 100)}%</span>
-      <span style={chip}>✨+{Math.round(r.xp * 100)}%</span>
-    </div>
-  );
-  const Pill = ({ r }: { r: { rarity: keyof typeof RARITY } }) => (
-    <span style={{ display: 'inline-block', background: RARITY[r.rarity].color + '33', color: '#5a3b1e', border: `${px(1.5)}px solid ${RARITY[r.rarity].color}`, fontWeight: 800, fontSize: px(11), borderRadius: 99, padding: `0 ${px(9)}px` }}>{RARITY[r.rarity].label}</span>
-  );
   const btn3d = (bg: string, edge: string, color: string): CSSProperties => ({
     border: 0, background: bg, boxShadow: `0 ${px(4)}px 0 ${edge}`, color, fontFamily: font, fontWeight: 800, borderRadius: px(14), cursor: 'pointer', padding: `${px(7)}px ${px(14)}px`,
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: px(6),
@@ -333,10 +344,8 @@ export default function ShopScreen(p: Props) {
   const lanjutMs = p.lanjutEndsAt ? Math.max(0, p.lanjutEndsAt - Date.now()) : leftMs;
   const lanjutD = Math.floor(lanjutMs / 86400000);
   const lanjutH = Math.floor((lanjutMs % 86400000) / 3600000);
-  const ownedG = gachaRods.filter((r) => rods.includes(r.id)).length;
   const topG = [...gachaRods].sort((a, b) => (GACHA_ODDS[a.id] ?? 0) - (GACHA_ODDS[b.id] ?? 0));
   const rarest = topG[0];
-  const legPct = gachaRods.filter((r) => r.rarity === rarest.rarity).reduce((s, r) => s + (GACHA_ODDS[r.id] ?? 0), 0);
   const topRar = RARITY[rarest.rarity];
   const rays = (a: string, b: string) => `repeating-conic-gradient(from 0deg at 50% 50%, ${a} 0 8deg, ${b} 8deg 16deg)`;
 
@@ -424,79 +433,94 @@ export default function ShopScreen(p: Props) {
     </div>
   );
 
-  const tabBody = tab === 'toko' ? promo
-    : tab === 'gacha' ? (
-            <div>
-              <div style={{ display: 'flex', borderRadius: px(22), border: `${px(3)}px solid #e6d4b0`, overflow: 'hidden', background: '#fffaf0', boxShadow: `0 ${px(3)}px 0 #e6d4b0` }}>
-                <div style={{ flex: '1 1 58%', minHeight: px(228), position: 'relative', background: `radial-gradient(circle at 50% 45%, #5a2a8a 0, #2a0f4a 75%), ${rays('#ffffff12', 'transparent')}`, backgroundBlendMode: 'screen', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', padding: `${px(14)}px ${px(18)}px` }}>
-                  <div style={{ position: 'absolute', inset: 0, background: rays('rgba(255,255,255,0.08)', 'rgba(255,255,255,0)') }} />
-                  {[topG[1] ?? rarest, rarest].map((r, i) => (
-                    <div key={r.id + i} style={{ position: 'relative', width: '31%', textAlign: 'center', color: '#fff' }}>
-                      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: px(4) }}><PixelRod id={r.id} size={px(i === 1 ? 92 : 80)} animate /></div>
-                      <div style={{ fontWeight: 800, fontSize: px(14), lineHeight: 1.1, textShadow: '0 2px 3px rgba(0,0,0,.7)' }}>{r.name}</div>
-                      <div style={{ fontWeight: 800, fontSize: px(13), color: RARITY[r.rarity].color }}>{RARITY[r.rarity].label}</div>
-                    </div>
-                  ))}
-                  <div style={{ position: 'absolute', left: '50%', top: px(14), transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: px(6) }}>
-                    <Chest body="#9a3fc0" lid="#b455de" size={px(100)} />
-                    <span style={{ background: topRar.color, color: '#2a0a14', fontWeight: 800, fontSize: px(15), borderRadius: 99, padding: `${px(3)}px ${px(16)}px`, boxShadow: '0 3px 0 rgba(0,0,0,.25)', whiteSpace: 'nowrap' }}>{topRar.label} · {pct(gachaRods.filter((r) => r.rarity === rarest.rarity).reduce((a, r) => a + (GACHA_ODDS[r.id] ?? 0), 0))}</span>
-                  </div>
-                </div>
-                <div style={{ flex: '1 1 42%', padding: `${px(14)}px ${px(16)}px`, display: 'flex', flexDirection: 'column', gap: px(8), justifyContent: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: px(8) }}>
-                    <div style={{ fontSize: px(28), fontWeight: 800 }}>Gacha Rod</div>
-                    <button onClick={() => setOdds(true)} style={{ background: '#fffaf0', border: `${px(3)}px solid #e6d4b0`, boxShadow: `0 ${px(3)}px 0 #e6d4b0`, color: BROWN, fontFamily: font, fontWeight: 800, fontSize: px(14), borderRadius: 99, padding: `${px(5)}px ${px(14)}px`, cursor: 'pointer', whiteSpace: 'nowrap' }}>Lihat peluang</button>
-                  </div>
-                  <div style={{ fontSize: px(16), fontWeight: 700, color: '#7a5c36' }}>Joran <b style={{ color: '#7a3fd0' }}>Epic</b> dijamin dalam <b style={{ color: '#7a3fd0', fontSize: px(22) }}>{Math.max(1, GACHA_PITY - p.pity)}</b> peti</div>
-                  <div style={{ height: px(14), borderRadius: 99, background: '#eadfc9', overflow: 'hidden' }}>
-                    <div style={{ width: Math.min(100, (p.pity / GACHA_PITY) * 100) + '%', height: '100%', background: 'linear-gradient(90deg,#a66cf0,#7a3fd0)', borderRadius: 99 }} />
-                  </div>
-                  <div style={{ display: 'flex', gap: px(10) }}>
-                    <button onClick={() => p.onPull(1)} disabled={pulling} style={{ ...BLUE, flex: 1, flexDirection: 'column', gap: px(2), padding: `${px(8)}px 0`, opacity: pulling ? 0.6 : 1 }}>
-                      <span style={{ fontSize: px(16) }}>Buka 1×</span>
-                      <span style={{ fontSize: px(22), display: 'inline-flex', alignItems: 'center', gap: px(6) }}><CrystalIcon size={px(22)} />{formatNum(GACHA_PRICE)}</span>
-                    </button>
-                    <button onClick={() => p.onPull(5)} disabled={pulling} style={{ ...GOLD, flex: 1, flexDirection: 'column', gap: px(2), padding: `${px(8)}px 0`, opacity: pulling ? 0.6 : 1 }}>
-                      <span style={{ fontSize: px(16) }}>Buka 5×</span>
-                      <span style={{ fontSize: px(22), display: 'inline-flex', alignItems: 'center', gap: px(6) }}><CrystalIcon size={px(22)} />{formatNum(GACHA_PRICE * 5)}</span>
-                    </button>
-                  </div>
+  // ---------- Gacha Rod (tampilan mengikuti referensi) ----------
+  const RAR_ORDER = ['mythic', 'legendary', 'epic', 'rare', 'uncommon', 'common'];
+  const RAR_EN: Record<string, string> = { mythic: 'Mythic', legendary: 'Legendary', epic: 'Epic', rare: 'Rare', uncommon: 'Uncommon', common: 'Common' };
+  const RAR_TXT: Record<string, string> = { mythic: '#c2185b', legendary: '#9a6200', epic: '#7a3fd0', rare: '#1f64cc', uncommon: '#2f8a4a', common: '#7a6a58' };
+  const tableRods = [...gachaRods].sort((x, y) => RAR_ORDER.indexOf(x.rarity) - RAR_ORDER.indexOf(y.rarity) || (GACHA_ODDS[x.id] ?? 0) - (GACHA_ODDS[y.id] ?? 0));
+  const topPct = gachaRods.filter((r) => r.rarity === rarest.rarity).reduce((a, r) => a + (GACHA_ODDS[r.id] ?? 0), 0);
+  const cols = `minmax(0, 1fr) repeat(4, ${px(78)}px)`;
+  const sparkles: [number, number, number][] = [[8, 12, 14], [22, 58, 10], [38, 6, 12], [64, 14, 10], [90, 40, 14], [74, 74, 10], [10, 84, 12]];
+  const statCell = (ic: ReactNode, t: string) => (
+    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: px(4), fontWeight: 800, fontSize: px(21), color: BROWN, whiteSpace: 'nowrap' }}>{ic}{t}</span>
+  );
+  const gachaTab = (
+    <div>
+      <div style={{ display: 'flex', borderRadius: px(22), border: `${px(3)}px solid #eadfc7`, overflow: 'hidden', background: '#fffdf8', boxShadow: `0 ${px(3)}px 0 #e3d4b3` }}>
+        <div style={{ flex: '1 1 50%', minHeight: px(228), position: 'relative', background: 'radial-gradient(circle at 50% 50%, #2a62c0 0, #0d2b66 58%, #081a46 100%)', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', padding: `${px(14)}px ${px(16)}px` }}>
+          <div style={{ position: 'absolute', inset: 0, background: rays('rgba(255,255,255,0.07)', 'rgba(255,255,255,0)') }} />
+          {sparkles.map(([x, y, z], i) => (
+            <span key={i} aria-hidden style={{ position: 'absolute', left: x + '%', top: y + '%', fontSize: px(z), color: '#fff', opacity: 0.85, lineHeight: 1 }}>✦</span>
+          ))}
+          {[topG[1] ?? rarest, rarest].map((r, i) => (
+            <div key={r.id + i} style={{ position: 'relative', width: '31%', textAlign: 'center', color: '#fff' }}>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: px(4) }}><PixelRod id={r.id} size={px(92)} animate /></div>
+              <div style={{ fontWeight: 800, fontSize: px(16), lineHeight: 1.1, textShadow: '0 2px 3px rgba(0,0,0,.7)' }}>{r.name.replace(/^Joran/, 'Rod')}</div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: px(3), fontWeight: 800, fontSize: px(17), color: '#ffd04a', marginTop: px(2) }}><BoltIcon size={px(16)} />{r.power}</div>
+            </div>
+          ))}
+          <div style={{ position: 'absolute', left: '50%', top: px(14), transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: px(8) }}>
+            <Chest body="#7a3fb0" lid="#9a5fd0" size={px(104)} />
+            <span style={{ background: rarest.rarity === 'mythic' ? '#c2185b' : topRar.color, color: '#fff', fontWeight: 800, fontSize: px(16), borderRadius: 99, padding: `${px(4)}px ${px(16)}px`, boxShadow: '0 3px 0 rgba(0,0,0,.25)', whiteSpace: 'nowrap' }}>{RAR_EN[rarest.rarity]} · {pct(topPct)}</span>
+          </div>
+        </div>
+        <div style={{ flex: '1 1 50%', padding: `${px(14)}px ${px(18)}px`, display: 'flex', flexDirection: 'column', gap: px(8), justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: px(8) }}>
+            <div style={{ fontSize: px(28), fontWeight: 800, lineHeight: 1.1 }}>Gacha Rod Legenda</div>
+            <button onClick={() => oddsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })} style={{ background: '#fff6df', border: `${px(3)}px solid #e6d4b0`, boxShadow: `0 ${px(3)}px 0 #e6d4b0`, color: BROWN, fontFamily: font, fontWeight: 800, fontSize: px(15), borderRadius: px(14), padding: `${px(6)}px ${px(14)}px`, cursor: 'pointer', whiteSpace: 'nowrap' }}>Lihat peluang</button>
+          </div>
+          <div>
+            <div style={{ fontSize: px(17), fontWeight: 700, color: '#7a5c36' }}>{RAR_EN.epic} dijamin dalam <b style={{ color: '#c2185b', fontSize: px(26) }}>{Math.max(1, GACHA_PITY - p.pity)}</b> peti</div>
+            <div style={{ height: px(14), borderRadius: 99, background: '#e6e1da', overflow: 'hidden', marginTop: px(8) }}>
+              <div style={{ width: Math.min(100, (p.pity / GACHA_PITY) * 100) + '%', height: '100%', background: 'linear-gradient(90deg,#a66cf0,#7a3fd0)', borderRadius: 99 }} />
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: px(12) }}>
+            <button onClick={() => p.onPull(1)} disabled={pulling} style={{ ...BLUE, flex: 1, flexDirection: 'column', gap: px(2), padding: `${px(9)}px 0`, opacity: pulling ? 0.6 : 1 }}>
+              <span style={{ fontSize: px(17) }}>Buka 1×</span>
+              <span style={{ fontSize: px(26), display: 'inline-flex', alignItems: 'center', gap: px(6) }}><CrystalIcon size={px(26)} />{formatNum(GACHA_PRICE)}</span>
+            </button>
+            <button onClick={() => p.onPull(5)} disabled={pulling} style={{ ...GOLD, flex: 1, flexDirection: 'column', gap: px(2), padding: `${px(9)}px 0`, opacity: pulling ? 0.6 : 1 }}>
+              <span style={{ fontSize: px(17) }}>Buka 5×</span>
+              <span style={{ fontSize: px(26), display: 'inline-flex', alignItems: 'center', gap: px(6) }}><CrystalIcon size={px(26)} />{formatNum(GACHA_PRICE * 5)}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div ref={oddsRef} style={{ fontSize: px(22), fontWeight: 800, color: '#6a5a48', margin: `${px(16)}px 0 ${px(8)}px`, scrollMarginTop: px(8) }}>Peluang rod · 100%</div>
+      <div style={{ borderRadius: px(20), border: `${px(3)}px solid #eadfc7`, background: '#fffdf8', overflow: 'hidden' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: cols, alignItems: 'center', padding: `${px(10)}px ${px(14)}px`, borderBottom: '1.5px solid #eadfc7', color: '#8a6d4a', fontWeight: 800, fontSize: px(19) }}>
+          <span style={{ paddingLeft: px(66) }}>Rod</span>
+          {[<BoltIcon key="p" size={px(26)} />, <XpIcon key="x" size={px(26)} />, <CloverIcon key="l" size={px(26)} />, <FishUpIcon key="m" size={px(26)} />].map((ic, i) => (
+            <span key={i} style={{ display: 'flex', justifyContent: 'center' }}>{ic}</span>
+          ))}
+        </div>
+        {tableRods.map((r, i) => {
+          const owned = rods.includes(r.id);
+          return (
+            <div key={r.id} style={{ display: 'grid', gridTemplateColumns: cols, alignItems: 'center', padding: `${px(8)}px ${px(14)}px`, borderTop: i ? '1.5px solid #f0e6d0' : 'none' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: px(10), minWidth: 0 }}>
+                <span style={{ width: px(56), display: 'flex', justifyContent: 'center', flex: 'none' }}><PixelRod id={r.id} size={px(54)} animate={owned} /></span>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 800, fontSize: px(22), lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name.replace(/^Joran/, 'Rod')}{owned && <span style={{ color: '#1f9a4a', marginLeft: px(6), fontSize: px(18) }}>✓</span>}</div>
+                  <div style={{ fontWeight: 800, fontSize: px(18), color: '#8a6d4a' }}><span style={{ color: RAR_TXT[r.rarity] ?? BROWN }}>{RAR_EN[r.rarity] ?? r.rarity}</span> · {pct(GACHA_ODDS[r.id] ?? 0)}</div>
                 </div>
               </div>
-
-              <div style={{ fontSize: px(22), fontWeight: 800, margin: `${px(14)}px 0 ${px(4)}px` }}>Peluang joran · {ownedG}/{gachaRods.length} dimiliki</div>
-              {(['mythic', 'legendary', 'epic', 'rare', 'uncommon', 'common'] as const).map((rk) => {
-                const list = gachaRods.filter((r) => r.rarity === rk);
-                if (!list.length) return null;
-                const rc = RARITY[rk].color;
-                const tot = list.reduce((s, r) => s + (GACHA_ODDS[r.id] ?? 0), 0);
-                return (
-                  <div key={rk}>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: px(10), margin: `${px(8)}px 0 ${px(8)}px` }}>
-                      <span style={{ color: rc, fontWeight: 800, fontSize: px(20), WebkitTextStroke: `${px(0.7)}px rgba(90,59,30,.6)` }}>{RARITY[rk].label}</span>
-                      <span style={{ fontWeight: 800, fontSize: px(18) }}>{pct(tot)}</span>
-                      <span style={{ color: '#8a6d4a', fontWeight: 700, fontSize: px(15) }}>{list.length} joran</span>
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(${px(128)}px, 1fr))`, gap: px(12) }}>
-                      {list.map((r) => {
-                        const owned = rods.includes(r.id);
-                        const o = GACHA_ODDS[r.id] ?? 0;
-                        return (
-                          <div key={r.id} style={{ position: 'relative', borderRadius: px(18), border: `${px(3)}px solid ${rc}`, background: owned ? '#fffaf0' : '#f0e5cf', boxShadow: `0 ${px(3)}px 0 ${rc}66`, textAlign: 'center', padding: `${px(10)}px ${px(6)}px ${px(8)}px` }}>
-                            <div style={{ opacity: owned ? 1 : 0.5, filter: owned ? 'none' : 'grayscale(.5)', display: 'flex', justifyContent: 'center' }}><PixelRod id={r.id} size={px(70)} animate={owned} /></div>
-                            <div style={{ fontSize: px(14), fontWeight: 800, lineHeight: 1.1, marginTop: px(2) }}>{r.name}</div>
-                            <div style={{ fontSize: px(12), fontWeight: 800, color: '#8a6d4a' }}>{pct(o)} · 1 dari {formatNum(Math.round(100 / Math.max(o, 0.01)))}</div>
-                            <div style={{ marginTop: px(5) }}><Stats r={r} /></div>
-                            {!owned && <span style={{ position: 'absolute', right: px(6), top: px(4), fontSize: px(16) }}>🔒</span>}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
+              {statCell(<BoltIcon size={px(22)} />, String(r.power))}
+              {statCell(null, '+' + Math.round(r.xp * 100) + '%')}
+              {statCell(null, '+' + Math.round(r.luck * 100) + '%')}
+              {statCell(null, '+' + Math.round(r.money * 100) + '%')}
             </div>
-    ) : tab === 'bajulimited' ? <ShopBajuLimited px={px} font={font} gems={gems} banner="/banner/baju-secret-hunter.jpg" onOpen={p.onOpenLimited} free={p.limitedFree} pity={p.limitedPity} owned={p.limitedOwned} endsAt={p.limitedEndsAt} />
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const tabBody = tab === 'toko' ? promo
+    : tab === 'gacha' ? gachaTab
+    : tab === 'bajulimited' ? <ShopBajuLimited px={px} font={font} gems={gems} banner="/banner/baju-secret-hunter.jpg" onOpen={p.onOpenLimited} free={p.limitedFree} pity={p.limitedPity} owned={p.limitedOwned} endsAt={p.limitedEndsAt} />
     : tab === 'gachagaya' ? soon('Gacha Gaya', 'Gaya rambut dan aksesori punggung karakter segera hadir.')
     : tab === 'gacharumah' ? soon('Gacha Rumah', 'Isi rumah dan dekorasi segera hadir.')
     : tab === 'gaya' ? soon('Etalase', 'Ganti gaya karakter di sini setelah Gacha Gaya dibuka.')
@@ -515,7 +539,7 @@ export default function ShopScreen(p: Props) {
       <div style={{ position: 'absolute', inset: px(4), display: 'flex', flexDirection: 'column', background: '#fff5e1', borderRadius: px(26), border: `${px(4)}px solid #1a74e4`, boxShadow: '0 0 0 2px #0b3f8f', overflow: 'hidden' }}>
         {/* header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: px(12), background: 'linear-gradient(180deg,#1479ec,#0b62cc)', padding: `${px(8)}px ${px(14)}px`, boxShadow: '0 3px 0 #0a4fa8', position: 'relative', zIndex: 2, flex: 'none' }}>
-          <span style={{ width: px(44), height: px(44), borderRadius: '50%', background: '#fff2d1', border: `${px(2.5)}px solid #fff`, boxShadow: '0 2px 0 rgba(0,0,60,.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: px(24), boxSizing: 'border-box' }}>🛍️</span>
+          <span style={{ width: px(44), height: px(44), borderRadius: '50%', background: '#fff2d1', border: `${px(2.5)}px solid #fff`, boxShadow: '0 2px 0 rgba(0,0,60,.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box' }}><StallIcon size={px(30)} /></span>
           <span style={{ color: '#fff', fontWeight: 700, fontSize: px(26) }}>Toko</span>
           <span style={{ marginLeft: 'auto', ...chipHdr }}><CrystalIcon size={px(34)} />{formatNum(crystal)}
             <button onClick={() => setTopup('crystal')} aria-label="Top up Crystal" style={{ width: px(26), height: px(26), borderRadius: '50%', border: 0, background: 'radial-gradient(circle at 35% 30%,#58e89a,#1fa85a)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
@@ -558,26 +582,6 @@ export default function ShopScreen(p: Props) {
         </div>
       </div>
 
-      {/* daftar peluang */}
-      {odds && (
-        <div onClick={() => setOdds(false)} style={{ position: 'absolute', inset: 0, zIndex: 5, background: 'rgba(40,20,0,.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: px(14) }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ width: px(420), maxWidth: '100%', maxHeight: '100%', overflowY: 'auto', borderRadius: px(22), border: `${px(4)}px solid #e6d4b0`, background: '#fff5e1', padding: px(16), boxShadow: `0 ${px(6)}px 0 #d9c7a4` }}>
-            <div style={{ fontSize: px(24), fontWeight: 800, textAlign: 'center' }}>Peluang Gacha Rod</div>
-            <div style={{ fontSize: px(13), fontWeight: 700, color: '#8a6d4a', textAlign: 'center', margin: `${px(2)}px 0 ${px(10)}px` }}>Satu pembukaan = {formatNum(GACHA_PRICE)} Crystal. Legendary total {pct(legPct)}.</div>
-            {[...gachaRods].sort((a, b) => (GACHA_ODDS[b.id] ?? 0) - (GACHA_ODDS[a.id] ?? 0)).map((r) => (
-              <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: px(10), padding: `${px(7)}px 0`, borderTop: '1px solid #e6d4b0' }}>
-                <PixelRod id={r.id} size={px(42)} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 800, fontSize: px(16) }}>{r.name}</div>
-                  <Pill r={r} />
-                </div>
-                <div style={{ fontWeight: 800, fontSize: px(18) }}>{pct(GACHA_ODDS[r.id] ?? 0)}</div>
-              </div>
-            ))}
-            <button onClick={() => setOdds(false)} style={{ ...BLUE, width: '100%', marginTop: px(12), fontSize: px(17) }}>Tutup</button>
-          </div>
-        </div>
-      )}
       {payPack && <ShopPay px={px} font={font} packId={payPack} onClose={() => setPayPack(null)} onPaid={p.onPromoPaid} />}
       {topup && <ShopTopUp px={px} font={font} initial={topup} gems={gems} crystal={crystal} gemIcon={(z) => <PermataIcon size={z} />} crystalIcon={(z) => <CrystalIcon size={z} />} onClose={() => setTopup(null)} onBuy={p.onTopUp} onPoll={p.onTopUpPoll} onPaid={p.onTopUpPaid} />}
     </div>
