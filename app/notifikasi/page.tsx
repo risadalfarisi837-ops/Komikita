@@ -12,6 +12,9 @@ import { EFFECT_CATALOG } from '@/lib/effects';
 import ProfileEffect from '@/components/ProfileEffect';
 import GiftEffect from '@/components/GiftEffect';
 import GiftVisual from '@/components/GiftVisual';
+import StaffHeader from '@/components/StaffHeader';
+import type { StaffRole } from '@/components/StaffHeader';
+import { formatShortId } from '@/lib/utils';
 
 const CORAL = '#FF6B6B';
 const MUTED = '#8F8D9B';
@@ -21,7 +24,12 @@ const K_REL = 'komiku-notif-releases';     // string[] link rilis yang sudah dil
 
 type Tab = 'update' | 'hadiah' | 'info' | 'komentar';
 interface UpdateItem { link: string; title: string; thumb: string; baru: number; chapter: string; date: string }
-interface InfoItem { id: string; judul: string; isi: string; waktu?: number; jenis?: string }
+interface InfoItem { id: string; judul: string; isi: string; waktu?: number; jenis?: string; dari?: string; nama?: string; foto?: string; role?: string }
+interface Author { nama: string; foto: string; role: StaffRole; idText?: string }
+
+// Pengirim bawaan untuk pengumuman & hadiah (kalau tidak ada akun pengirim di database)
+const DEFAULT_AUTHOR: Author = { nama: 'Komikita', foto: '/icon-192.png', role: 'Developer' };
+const asStaff = (r?: string): StaffRole => (r === 'Admin' ? 'Admin' : 'Developer');
 interface Release { link: string; title: string; thumb: string; type: string; chapter: string; time: string; baru: boolean }
 
 const Back = () => (
@@ -174,6 +182,7 @@ export default function NotifikasiPage() {
   const [giftErr, setGiftErr] = useState('');
   const [fx, setFx] = useState<{ title: string; sub?: string; visual?: React.ReactNode } | null>(null);
   const [releases, setReleases] = useState<Release[]>([]);
+  const [authors, setAuthors] = useState<Record<string, Author>>({});
 
   useEffect(() => { setMounted(true); setReadInfo(readJSON<string[]>(K_INFO, [])); }, []);
 
@@ -235,7 +244,7 @@ export default function NotifikasiPage() {
         const { db } = await getFirebase();
         const v = (await db.ref('notifikasi/info').get()).val();
         if (v) {
-          const arr = Object.entries(v as Record<string, any>).map(([id, x]) => ({ id, judul: x.judul || 'Info', isi: x.isi || '', waktu: x.waktu }));
+          const arr = Object.entries(v as Record<string, any>).map(([id, x]) => ({ id, judul: x.judul || 'Info', isi: x.isi || '', waktu: x.waktu, dari: x.dari, nama: x.nama, foto: x.foto, role: x.role }));
           if (arr.length) items = arr.sort((a, b) => (b.waktu || 0) - (a.waktu || 0));
         }
       } catch {}
@@ -249,6 +258,19 @@ export default function NotifikasiPage() {
             const mine: InfoItem[] = Object.entries(v as Record<string, any>).map(([id, x]) => ({ id: 'u_' + id, judul: x.judul || 'Info', isi: x.isi || '', waktu: Number(x.waktu) || 0, jenis: x.jenis }));
             items = [...mine, ...items].sort((a, b) => (b.waktu || 0) - (a.waktu || 0));
           }
+        }
+      } catch {}
+      // Profil pengirim (dev/admin) kalau pengumuman menyertakan uid `dari`
+      try {
+        const uids = Array.from(new Set(items.map((i) => i.dari).filter(Boolean) as string[]));
+        if (uids.length) {
+          const { db } = await getFirebase();
+          const got: Record<string, Author> = {};
+          await Promise.all(uids.map(async (u) => {
+            const p = (await db.ref(`users/${u}`).get()).val();
+            if (p) got[u] = { nama: p.displayName || 'Komikita', foto: p.photoURL || '', role: asStaff(p.role), idText: formatShortId(p.shortId, u) };
+          }));
+          if (alive) setAuthors(got);
         }
       } catch {}
       if (alive) setInfos(items);
@@ -420,6 +442,22 @@ export default function NotifikasiPage() {
           <div style={{ padding: '14px 14px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
             {infos.map((i) => {
               const unread = !readInfo.includes(i.id);
+              const personal = i.id.startsWith('u_');   // inbox pribadi (Premium disetujui/ditolak) tetap gaya lama
+              if (!personal) {
+                const a: Author = (i.dari && authors[i.dari]) || { ...DEFAULT_AUTHOR, nama: i.nama || DEFAULT_AUTHOR.nama, foto: i.foto || DEFAULT_AUTHOR.foto, role: asStaff(i.role) };
+                return (
+                  <button key={i.id} onClick={() => readOne(i.id)} style={{ background: '#2A2931', border: 0, borderRadius: 16, padding: '14px 16px', textAlign: 'left', color: '#fff', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <StaffHeader nama={a.nama} foto={a.foto} role={a.role} idText={a.idText} waktu={i.waktu ? ago(i.waktu) : undefined} />
+                    <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: -0.4, color: unread ? '#fff' : '#C8C6D2' }}>{i.judul}</div>
+                        <div style={{ color: MUTED, fontSize: 15, fontWeight: 700, lineHeight: 1.4, marginTop: 4 }}>{i.isi}</div>
+                      </div>
+                      {unread && <span style={{ width: 10, height: 10, borderRadius: '50%', background: CORAL, flex: '0 0 10px', marginTop: 6 }} />}
+                    </div>
+                  </button>
+                );
+              }
               return (
                 <button key={i.id} onClick={() => readOne(i.id)} style={{ background: '#2A2931', border: 0, borderRadius: 16, padding: '14px 16px', textAlign: 'left', color: '#fff', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                   {i.jenis === 'premium_ok' && <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(245,200,75,.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 40px' }}><svg width={22} height={22} viewBox="0 0 24 24" fill="#F5C84B"><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5L3 8z" /></svg></div>}
@@ -453,10 +491,13 @@ export default function NotifikasiPage() {
             )}
             {[...pendingGifts, ...doneGifts].map((g) => (
               <div key={g.id} style={{ background: '#2A2931', borderRadius: 24, padding: 14, border: g.claimed ? '1px solid rgba(255,255,255,.05)' : '1px solid rgba(255,107,107,.45)', opacity: g.claimed ? 0.6 : 1 }}>
+                <div style={{ marginBottom: 12 }}>
+                  <StaffHeader nama={g.from || 'Developer'} foto={DEFAULT_AUTHOR.foto} role={/admin/i.test(g.from || '') ? 'Admin' : 'Developer'} waktu={ago(g.timestamp)} />
+                </div>
                 <div style={{ display: 'flex', gap: 14 }}>
                   <GiftArt g={g} photo={photo} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ color: MUTED, fontSize: 14, fontWeight: 800 }}>Hadiah dari {g.from} · {ago(g.timestamp)}</div>
+                    <div style={{ color: MUTED, fontSize: 14, fontWeight: 800 }}>Hadiah dari {g.from}</div>
                     <div style={{ fontSize: 21, fontWeight: 800, letterSpacing: -0.7, lineHeight: 1.15, marginTop: 4 }}>{g.itemName}</div>
                     <div style={{ color: CORAL, fontSize: 14, fontWeight: 800, marginTop: 3 }}>{GIFT_TYPE_LABEL[g.type] || 'Hadiah'}</div>
                     {g.message && <div style={{ marginTop: 8, background: '#1F1E24', borderRadius: 12, padding: '8px 10px', color: '#D6D4DE', fontSize: 14, fontWeight: 700, lineHeight: 1.35 }}>“{g.message}”</div>}
