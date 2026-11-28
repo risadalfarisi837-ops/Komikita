@@ -1,6 +1,8 @@
 // Semua gambar game Mancing dibuat lewat kode (pixel art procedural), tanpa file gambar.
 import { RARITY, isXL, sizeRatio } from '@/lib/fishing';
 import type { Species } from '@/lib/fishing';
+import { FISH_ART } from './fishArt';
+import type { FishArt } from './fishArt';
 
 export const TILE = 16;
 export type Dir = 'down' | 'up' | 'left' | 'right';
@@ -1861,9 +1863,28 @@ const SHAPES: Record<string, ShapeDef> = {
   shark: { rx: 17, ry: 6, tail: 8, tailH: 8, dorsal: 8 },
 };
 
+// Ikan gambar tangan (lihat fishArt.ts): isi piksel dari peta karakter, lalu garis tepi otomatis.
+function customFish(art: FishArt): HTMLCanvasElement {
+  const W = FISH_W;
+  const H = FISH_H;
+  const at = (x: number, y: number) => (x >= 0 && x < W && y >= 0 && y < H ? art.r[y]?.[x] ?? '.' : '.');
+  const out = mk(W, H);
+  const c = out.getContext('2d') as CanvasRenderingContext2D;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const ch = at(x, y);
+      if (ch !== '.' && art.p[ch]) { c.fillStyle = art.p[ch]; c.fillRect(x, y, 1, 1); continue; }
+      if (at(x - 1, y) !== '.' || at(x + 1, y) !== '.' || at(x, y - 1) !== '.' || at(x, y + 1) !== '.') { c.fillStyle = '#1b2a3b'; c.fillRect(x, y, 1, 1); }
+    }
+  }
+  return out;
+}
+
 export function fishSprite(sp: Species): HTMLCanvasElement {
   const hit = fishCache.get(sp.id);
   if (hit) return hit;
+  const art = FISH_ART[sp.id];
+  if (art) { const cf = customFish(art); fishCache.set(sp.id, cf); return cf; }
   const W = FISH_W;
   const H = FISH_H;
   const g: (string | null)[][] = Array.from({ length: H }, () => Array<string | null>(W).fill(null));

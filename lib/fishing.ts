@@ -40,41 +40,15 @@ export interface Species {
 }
 
 export const SPECIES: Species[] = [
-  { id: 'teri', name: 'Teri Pasir', rarity: 'common', min: 0.003, max: 0.015, price: 4, shape: 'long', body: '#cfd8dc', belly: '#eceff1', fin: '#b0bec5', pattern: 'none', accent: '#90a4ae' },
   { id: 'kembung', name: 'Kembung Biru', rarity: 'common', min: 0.08, max: 0.25, price: 10, shape: 'oval', body: '#4f8fbf', belly: '#cfe8f7', fin: '#356a94', pattern: 'stripes', accent: '#2b4f73' },
   { id: 'selar', name: 'Selar Kuning', rarity: 'common', min: 0.1, max: 0.3, price: 12, shape: 'oval', body: '#e6c24a', belly: '#fff3b0', fin: '#c9a227', pattern: 'band', accent: '#8a6d0f' },
-  { id: 'baronang', name: 'Baronang Belang', rarity: 'common', min: 0.2, max: 0.6, price: 16, shape: 'round', body: '#8bbf6a', belly: '#e6f4d3', fin: '#5e9444', pattern: 'stripes', accent: '#3d6b2b' },
-  { id: 'bandeng', name: 'Bandeng Tambak', rarity: 'common', min: 0.2, max: 0.9, price: 14, shape: 'long', body: '#b8c4cc', belly: '#f1f5f7', fin: '#8fa0ab', pattern: 'none', accent: '#6b7c88' },
-  { id: 'belanak', name: 'Belanak Pantai', rarity: 'common', min: 0.1, max: 0.5, price: 11, shape: 'long', body: '#a9bfa0', belly: '#eef5e8', fin: '#7d9873', pattern: 'stripes', accent: '#55704c' },
-  { id: 'tembang', name: 'Tembang Hijau', rarity: 'common', min: 0.03, max: 0.12, price: 7, shape: 'oval', body: '#5fae9a', belly: '#d8f2ea', fin: '#3f8a76', pattern: 'none', accent: '#2c6354' },
-  { id: 'layur', name: 'Layur Pita', rarity: 'common', min: 0.3, max: 1.1, price: 18, shape: 'long', body: '#d6dde3', belly: '#ffffff', fin: '#aab6c0', pattern: 'none', accent: '#8896a2' },
-  { id: 'kerong', name: 'Kerong-kerong Loreng', rarity: 'common', min: 0.15, max: 0.5, price: 13, shape: 'oval', body: '#9a8f6a', belly: '#ece4c4', fin: '#746a48', pattern: 'band', accent: '#4a4229' },
-  { id: 'kakap', name: 'Kakap Merah', rarity: 'uncommon', min: 0.8, max: 2.5, price: 36, shape: 'oval', body: '#e0584d', belly: '#ffd4cf', fin: '#b83a30', pattern: 'none', accent: '#8f2a22' },
-  { id: 'tongkol', name: 'Tongkol Perak', rarity: 'uncommon', min: 1, max: 3, price: 40, shape: 'long', body: '#6c8ea8', belly: '#dbe7ef', fin: '#4a6a82', pattern: 'stripes', accent: '#3b546a' },
-  { id: 'buntal', name: 'Buntal Duri', rarity: 'uncommon', min: 0.3, max: 1, price: 46, shape: 'round', body: '#e9b86a', belly: '#fff0d2', fin: '#c08a3e', pattern: 'spots', accent: '#8a5a1c' },
   { id: 'badut', name: 'Ikan Badut Karang', rarity: 'uncommon', min: 0.05, max: 0.2, price: 38, shape: 'round', body: '#ff8a3d', belly: '#ffd2a8', fin: '#e0651a', pattern: 'band', accent: '#ffffff' },
   { id: 'kakatua', name: 'Kakatua Pelangi', rarity: 'uncommon', min: 0.6, max: 2, price: 52, shape: 'oval', body: '#3fc2b0', belly: '#ffc2e0', fin: '#ee7fb4', pattern: 'spots', accent: '#1f7f72' },
-  { id: 'cakalang', name: 'Cakalang Garis', rarity: 'uncommon', min: 1.5, max: 4.5, price: 48, shape: 'long', body: '#3d5f8a', belly: '#d9e3ee', fin: '#2a4668', pattern: 'stripes', accent: '#1d3350' },
-  { id: 'bawal', name: 'Bawal Hitam', rarity: 'uncommon', min: 0.7, max: 2.2, price: 44, shape: 'round', body: '#4a4f5c', belly: '#c7ccd6', fin: '#30343e', pattern: 'none', accent: '#1f222a' },
-  { id: 'kuwe', name: 'Kuwe Bintik Emas', rarity: 'uncommon', min: 1, max: 3.5, price: 50, shape: 'oval', body: '#b9c7b2', belly: '#fff7d0', fin: '#e0b83a', pattern: 'spots', accent: '#b8901c' },
-  { id: 'kerapu', name: 'Kerapu Macan', rarity: 'rare', min: 3, max: 9, price: 110, shape: 'big', body: '#b9835a', belly: '#f1d9c0', fin: '#8b5b38', pattern: 'spots', accent: '#5b3a22' },
-  { id: 'pari', name: 'Pari Elang', rarity: 'rare', min: 5, max: 14, price: 150, shape: 'flat', body: '#5f7fa6', belly: '#d9e5f2', fin: '#3f5c82', pattern: 'spots', accent: '#e8f1ff' },
   { id: 'lentera', name: 'Ikan Lentera', rarity: 'rare', min: 0.5, max: 2.2, price: 130, shape: 'round', body: '#3b3f77', belly: '#6b70b8', fin: '#272b57', pattern: 'spots', accent: '#7df9ff', glow: true },
   { id: 'singa', name: 'Ikan Singa Api', rarity: 'rare', min: 0.4, max: 1.6, price: 120, shape: 'round', body: '#c8402f', belly: '#ffd9c9', fin: '#ff8a5c', pattern: 'stripes', accent: '#ffffff' },
-  { id: 'moray', name: 'Moray Hijau', rarity: 'rare', min: 2, max: 8, price: 140, shape: 'long', body: '#5f8f3a', belly: '#d6e8b8', fin: '#44691f', pattern: 'spots', accent: '#e8e07a' },
-  { id: 'barakuda', name: 'Barakuda Taring', rarity: 'rare', min: 4, max: 12, price: 160, shape: 'long', body: '#7d8f9c', belly: '#e8eef2', fin: '#5a6b77', pattern: 'band', accent: '#2f3b44' },
-  { id: 'napoleon', name: 'Napoleon Samudra', rarity: 'rare', min: 8, max: 28, price: 190, shape: 'big', body: '#2fa6a0', belly: '#c6f0ea', fin: '#1d746f', pattern: 'spots', accent: '#7df9d8' },
-  { id: 'parilistrik', name: 'Pari Listrik', rarity: 'rare', min: 3, max: 10, price: 170, shape: 'flat', body: '#6a5fa6', belly: '#e0dcf5', fin: '#4a4082', pattern: 'spots', accent: '#fff36b', glow: true },
-  { id: 'tuna', name: 'Tuna Sirip Biru', rarity: 'epic', min: 30, max: 90, price: 360, shape: 'long', body: '#2f5fa8', belly: '#cfe0f5', fin: '#f2c230', pattern: 'stripes', accent: '#1d3f78' },
   { id: 'marlin', name: 'Marlin Senja', rarity: 'epic', min: 60, max: 180, price: 480, shape: 'long', body: '#3a8fa8', belly: '#d6f0f6', fin: '#ff9a62', pattern: 'band', accent: '#ff9a62' },
-  { id: 'todak', name: 'Todak Pedang', rarity: 'epic', min: 50, max: 150, price: 440, shape: 'long', body: '#4a6fa8', belly: '#dbe6f5', fin: '#2d4a7c', pattern: 'band', accent: '#e8f1ff' },
   { id: 'angler', name: 'Setan Laut Dalam', rarity: 'epic', min: 15, max: 60, price: 520, shape: 'round', body: '#2a2236', belly: '#4a3d63', fin: '#1a1424', pattern: 'spots', accent: '#7df9ff', glow: true },
-  { id: 'mola', name: 'Mola Raksasa', rarity: 'epic', min: 120, max: 400, price: 500, shape: 'round', body: '#aab7c4', belly: '#eef2f6', fin: '#7d8c9b', pattern: 'spots', accent: '#5f6f7e' },
-  { id: 'ubur', name: 'Ikan Ubur Pelangi', rarity: 'epic', min: 20, max: 70, price: 470, shape: 'oval', body: '#b07cff', belly: '#ffd0f5', fin: '#6ee7ff', pattern: 'band', accent: '#ffffff', glow: true },
-  { id: 'bulan', name: 'Ikan Bulan Emas', rarity: 'legendary', min: 200, max: 900, price: 1200, shape: 'round', body: '#ffd24a', belly: '#fff1b8', fin: '#ffb300', pattern: 'spots', accent: '#fff8d6', glow: true },
-  { id: 'paus', name: 'Paus Kristal', rarity: 'legendary', min: 500, max: 1500, price: 1800, shape: 'big', body: '#58c7ff', belly: '#e0f7ff', fin: '#2f9bdc', pattern: 'spots', accent: '#ffffff', glow: true },
   { id: 'arwana', name: 'Arwana Matahari', rarity: 'legendary', min: 150, max: 600, price: 1500, shape: 'long', body: '#e8b830', belly: '#fff0a8', fin: '#ff9a1f', pattern: 'spots', accent: '#fff8d6', glow: true },
-  { id: 'selakan', name: 'Selakan Purba', rarity: 'legendary', min: 300, max: 1100, price: 2100, shape: 'big', body: '#2b4b8a', belly: '#9fc0ee', fin: '#1a3262', pattern: 'spots', accent: '#cfe4ff', glow: true },
   { id: 'nagalaut', name: 'Ikan Naga Laut', rarity: 'legendary', min: 400, max: 1300, price: 2300, shape: 'long', body: '#1fa3a8', belly: '#c4f5ee', fin: '#ff5d7a', pattern: 'stripes', accent: '#ffe27a', glow: true },
   { id: 'hiu', name: 'Hiu Raksasa', rarity: 'legendary', min: 400, max: 1800, price: 2600, shape: 'shark', body: '#6b7f94', belly: '#eef3f7', fin: '#52657a', pattern: 'none', accent: '#3d4d5f', glow: true, eventOnly: true },
   { id: 'pariraksasa', name: 'Pari Manta Raksasa', rarity: 'legendary', min: 20000, max: 50000, price: 9000, shape: 'flat', body: '#2d3a52', belly: '#e6ecf5', fin: '#1d2638', pattern: 'spots', accent: '#9fc4ff', glow: true, eventOnly: true, giant: true, gs: 3.8 },
@@ -83,11 +57,8 @@ export const SPECIES: Species[] = [
   { id: 'leviathan', name: 'Leviathan Pulau', rarity: 'legendary', min: 150000, max: 400000, price: 40000, shape: 'big', body: '#1f6f8b', belly: '#bfeaf5', fin: '#134a63', pattern: 'spots', accent: '#7df9ff', glow: true, eventOnly: true, giant: true },
   // ---- Divine (butuh joran power 7+) ----
   { id: 'malaikat', name: 'Ikan Malaikat Cahaya', rarity: 'divine', min: 8, max: 40, price: 6500, shape: 'round', body: '#fff3b8', belly: '#ffffff', fin: '#ffe27a', pattern: 'band', accent: '#fffbe0', glow: true },
-  { id: 'arwanadewa', name: 'Arwana Dewa Fajar', rarity: 'divine', min: 25, max: 110, price: 8800, shape: 'long', body: '#ffd96a', belly: '#fffbe6', fin: '#ff9a3d', pattern: 'spots', accent: '#ffffff', glow: true },
-  { id: 'pariilahi', name: 'Pari Manta Ilahi', rarity: 'divine', min: 80, max: 260, price: 11500, shape: 'flat', body: '#9fe3ff', belly: '#f4fdff', fin: '#5fb8ec', pattern: 'spots', accent: '#ffffff', glow: true },
   // ---- Secret (butuh joran power 7+, sangat langka & susah ditarik) ----
   { id: 'bayangan', name: 'Ikan Bayangan Hampa', rarity: 'secret', min: 6, max: 34, price: 32000, shape: 'long', body: '#150f24', belly: '#3b2a5c', fin: '#7c3aed', pattern: 'band', accent: '#f0abfc', glow: true },
-  { id: 'nagasegel', name: 'Naga Segel Terlarang', rarity: 'secret', min: 220, max: 900, price: 62000, shape: 'big', body: '#1b0f2b', belly: '#4a2a73', fin: '#d946ef', pattern: 'spots', accent: '#f5d0fe', glow: true },
 ];
 
 export const SPECIES_BY_ID: Record<string, Species> = Object.fromEntries(SPECIES.map((s) => [s.id, s]));
@@ -242,13 +213,24 @@ export function formatWeight(kg: number): string {
 export const formatNum = (n: number) => Math.round(n).toLocaleString('id-ID');
 
 // Bersihkan data tas dari Firebase (bisa berupa array/objek, bisa ada yang rusak)
+// Ikan lama yang sudah dihapus -> diganti ikan baru dengan rarity yang sama (supaya isi tas pemain tidak hilang).
+const LEGACY_FISH: Record<string, string> = {
+  teri: 'kembung', tembang: 'kembung', layur: 'kembung', bandeng: 'kembung', baronang: 'selar', belanak: 'selar', kerong: 'selar',
+  kakap: 'badut', tongkol: 'badut', cakalang: 'badut', buntal: 'kakatua', bawal: 'kakatua', kuwe: 'kakatua',
+  kerapu: 'singa', pari: 'singa', moray: 'singa', barakuda: 'lentera', napoleon: 'lentera', parilistrik: 'lentera',
+  tuna: 'marlin', todak: 'marlin', mola: 'angler', ubur: 'angler',
+  bulan: 'arwana', paus: 'arwana', selakan: 'nagalaut',
+  arwanadewa: 'malaikat', pariilahi: 'malaikat', nagasegel: 'bayangan',
+};
 export function sanitizeBag(raw: unknown): BagItem[] {
   const arr: unknown[] = Array.isArray(raw) ? raw : raw && typeof raw === 'object' ? Object.values(raw as object) : [];
   const out: BagItem[] = [];
   for (const it of arr) {
     const o = it as { id?: unknown; s?: unknown; w?: unknown };
-    if (o && typeof o.s === 'string' && SPECIES_BY_ID[o.s] && typeof o.w === 'number' && o.w > 0) {
-      out.push({ id: typeof o.id === 'string' ? o.id : newId(), s: o.s, w: o.w });
+    const sid = o && typeof o.s === 'string' ? (SPECIES_BY_ID[o.s] ? o.s : LEGACY_FISH[o.s]) : '';
+    if (sid && SPECIES_BY_ID[sid] && typeof o.w === 'number' && o.w > 0) {
+      const sp = SPECIES_BY_ID[sid];
+      out.push({ id: typeof o.id === 'string' ? o.id : newId(), s: sid, w: sid === o.s ? o.w : Math.min(sp.max, Math.max(sp.min, o.w)) });
     }
     if (out.length >= BAG_MAX) break;
   }
