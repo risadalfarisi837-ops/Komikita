@@ -1247,6 +1247,7 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
+        <div style={{ marginTop: 16, paddingBottom: 2, textAlign: 'left' }}><ExpBar level={level} exp={lvExp} max={200} /></div>
       </div>
 
       {/* Crystal & streak */}
@@ -1264,6 +1265,7 @@ export default function ProfilePage() {
           </div>
         ))}
       </div>
+      <div style={{ height: 1, background: 'rgba(255,255,255,.1)', margin: '16px 0 0' }} />
 
       {/* Ringkasan: peringkat / tingkat / poin */}
       <div style={{ margin: '16px 26px 0', background: CARD, borderRadius: 18, display: 'flex', padding: '14px 0' }}>
@@ -1302,7 +1304,6 @@ export default function ProfilePage() {
             <button onClick={() => handleClaimReward(nextReward.key, nextReward.lv)} style={{ background: GOLD, color: '#2E2615', border: 0, borderRadius: 99, padding: '0 18px', height: 38, fontSize: 16, fontWeight: 800, letterSpacing: -0.4, flexShrink: 0, cursor: 'pointer', fontFamily: 'inherit' }}>Ambil</button>
           )}
         </div>
-        <div style={{ marginTop: 14 }}><ExpBar level={level} exp={lvExp} max={200} /></div>
         <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
           <MiniStat icon={<BookOpen size={16} color={ICON} />} label="Chapter" value={chapters} target={TARGETS.chapter} />
           <MiniStat icon={<Flame size={16} color={ICON} />} label="Streak" value={streak} target={TARGETS.streak} unit="hari" />
