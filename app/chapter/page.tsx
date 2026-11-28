@@ -480,7 +480,7 @@ function SpeedPanel({ speed, onSpeedChange, onClose }: { speed: number; onSpeedC
         <div
             onClick={e => e.stopPropagation()}
             style={{
-                position: 'fixed', bottom: 120, left: '50%', transform: 'translateX(-50%)', zIndex: 200,
+                position: 'fixed', bottom: 128, left: '50%', transform: 'translateX(-50%)', zIndex: 200,
                 background: 'rgba(20,20,26,0.97)', backdropFilter: 'blur(20px)',
                 border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16,
                 padding: '14px 18px', minWidth: 220,
@@ -853,8 +853,8 @@ function ChapterContent() {
                 }
                 .icon-btn:active { transform: scale(0.86); }
                 .icon-btn.play-active { background: rgba(220,38,38,0.25) !important; border: 1px solid rgba(220,38,38,0.5); }
-                .float-btn { width: 62px !important; height: 62px !important; background: #222226 !important; box-shadow: 0 4px 14px rgba(0,0,0,0.4); border: none !important; color: #fff; }
-                .float-btn svg { width: 26px; height: 26px; }
+                .float-btn { width: 46px !important; height: 46px !important; background: #222226 !important; box-shadow: 0 4px 14px rgba(0,0,0,0.4); border: none !important; color: #fff; }
+                .float-btn svg { width: 20px; height: 20px; }
                 .ch-nav-btn {
                     background: none; border: none; cursor: pointer; color: white;
                     display: flex; align-items: center; gap: 2px;
@@ -893,21 +893,21 @@ function ChapterContent() {
             {/* TOP BAR (pil melayang) */}
             <div className={`ui-layer ${uiVisible ? '' : 'hidden'}`} style={{
                 position: 'fixed', top: 'max(12px, env(safe-area-inset-top))', left: 12, right: 12, zIndex: 50,
-                background: 'rgba(28,28,32,0.96)', borderRadius: 28,
-                padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10,
+                background: 'rgba(28,28,32,0.96)', borderRadius: 26,
+                padding: '8px 8px 8px 10px', display: 'flex', alignItems: 'center', gap: 8,
                 boxShadow: '0 4px 18px rgba(0,0,0,0.45)',
             }}>
                 <button onClick={goToMangaDetail} className="ch-nav-btn" style={{ padding: 6 }} aria-label="Kembali">
                     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M11 5l-7 7 7 7" /></svg>
                 </button>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: -0.6, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                    <span style={{ fontSize: 14.5, fontWeight: 800, letterSpacing: -0.3, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
                         {mangaTitleParam || chapter.mangaTitle || chapter.title}
                     </span>
                 </div>
-                <button onClick={goToMangaDetail} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', color: '#fff', fontWeight: 800, fontSize: 20, letterSpacing: -0.6, padding: '9px 14px', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                <button onClick={goToMangaDetail} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', color: '#fff', fontWeight: 800, fontSize: 14.5, letterSpacing: -0.3, height: 38, padding: '0 11px', borderRadius: 99, display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
                     Ch. {chNum}
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
                 </button>
             </div>
 
@@ -947,10 +947,10 @@ function ChapterContent() {
             {/* BOTTOM BAR (tombol bulat melayang) */}
             <div className={`ui-layer ${uiVisible ? '' : 'hidden'}`} style={{
                 position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50,
-                padding: '0 12px max(env(safe-area-inset-bottom), 12px)',
+                padding: '0 12px max(env(safe-area-inset-bottom), 16px)',
                 pointerEvents: uiVisible ? 'auto' : 'none',
             }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 10px 12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 15px 12px' }}>
                     <button className="icon-btn float-btn"
                         onClick={(e) => { e.stopPropagation(); setShowSpeedPanel(v => !v); setShowComments(false); }}
                         style={{ position: 'relative' }} aria-label="Pengaturan">
@@ -975,19 +975,19 @@ function ChapterContent() {
                     </button>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <button className="icon-btn float-btn" disabled={!chapter.prev}
                         onClick={(e) => { e.stopPropagation(); chapter.prev && navigateTo(chapter.prev); }}
                         style={{ opacity: chapter.prev ? 1 : 0.35 }} aria-label="Chapter sebelumnya">
                         <IconChevLeft />
                     </button>
 
-                    <div style={{ flex: 1, height: 62, borderRadius: 31, background: '#222226', display: 'flex', alignItems: 'center', gap: 14, padding: '0 20px', boxShadow: '0 4px 14px rgba(0,0,0,0.4)' }}>
-                        <span style={{ color: '#8F8D9B', fontSize: 22, fontWeight: 800, letterSpacing: -0.5, minWidth: 20 }}>{currentPage + 1}</span>
-                        <div style={{ flex: 1, position: 'relative', height: 30, display: 'flex', alignItems: 'center' }}>
-                            <div style={{ position: 'absolute', left: 0, right: 0, height: 5, borderRadius: 99, background: '#4A4A52', pointerEvents: 'none' }} />
-                            <div style={{ position: 'absolute', left: 0, width: `${progress * 100}%`, height: 5, borderRadius: 99, background: '#8F8D9B', pointerEvents: 'none' }} />
-                            <div style={{ position: 'absolute', left: `calc(${progress * 100}% - ${progress * 30}px)`, width: 30, height: 30, borderRadius: '50%', background: '#D8D3E8', pointerEvents: 'none', transition: 'left 0.1s' }} />
+                    <div style={{ flex: 1, height: 46, borderRadius: 23, background: '#222226', display: 'flex', alignItems: 'center', gap: 10, padding: '0 16px', boxShadow: '0 4px 14px rgba(0,0,0,0.4)' }}>
+                        <span style={{ color: '#8F8D9B', fontSize: 15, fontWeight: 800, letterSpacing: -0.3, minWidth: 14 }}>{currentPage + 1}</span>
+                        <div style={{ flex: 1, position: 'relative', height: 22, display: 'flex', alignItems: 'center' }}>
+                            <div style={{ position: 'absolute', left: 0, right: 0, height: 4, borderRadius: 99, background: '#4A4A52', pointerEvents: 'none' }} />
+                            <div style={{ position: 'absolute', left: 0, width: `${progress * 100}%`, height: 4, borderRadius: 99, background: '#E6E3F0', pointerEvents: 'none' }} />
+                            <div style={{ position: 'absolute', left: `calc(${progress * 100}% - ${progress * 22}px)`, width: 22, height: 22, borderRadius: '50%', background: '#D8D3E8', pointerEvents: 'none', transition: 'left 0.1s' }} />
                             <input
                                 type="range" min={0} max={Math.max(totalPages - 1, 0)} value={currentPage}
                                 onChange={(e) => { const pg = parseInt(e.target.value); setCurrentPage(pg); scrollToPage(pg); }}
@@ -995,7 +995,7 @@ function ChapterContent() {
                                 style={{ WebkitAppearance: 'none', appearance: 'none', position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', margin: 0 }}
                             />
                         </div>
-                        <span style={{ color: '#8F8D9B', fontSize: 22, fontWeight: 800, letterSpacing: -0.5, minWidth: 28, textAlign: 'right' }}>{totalPages}</span>
+                        <span style={{ color: '#8F8D9B', fontSize: 15, fontWeight: 800, letterSpacing: -0.3, minWidth: 16, textAlign: 'right' }}>{totalPages}</span>
                     </div>
 
                     <button className="icon-btn float-btn" disabled={!chapter.next}
