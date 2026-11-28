@@ -562,11 +562,11 @@ function DevPanel({ open, onClose, uid, db, userData, onUpdate }: {
     setSaving(false);
   };
 
-  const FIELD: React.CSSProperties = { width: '100%', boxSizing: 'border-box', background: '#1F1E24', border: '1px solid rgba(255,255,255,.08)', borderRadius: 14, padding: '13px 14px', color: '#fff', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', outline: 'none' };
-  const LABEL: React.CSSProperties = { display: 'block', fontSize: 12, fontWeight: 800, color: '#8F8D9B', letterSpacing: -0.2, textTransform: 'uppercase', margin: '0 0 6px 2px' };
-  const BTN: React.CSSProperties = { width: '100%', border: 0, borderRadius: 16, padding: '14px 0', fontSize: 15, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' };
+  /*dev-ringkas*/ const FIELD: React.CSSProperties = { width: '100%', boxSizing: 'border-box', background: '#1F1E24', border: '1px solid rgba(255,255,255,.08)', borderRadius: 12, padding: '11px 13px', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: 'inherit', outline: 'none' };
+  const LABEL: React.CSSProperties = { display: 'block', fontSize: 12.5, fontWeight: 700, color: '#8F8D9B', margin: '0 0 6px 2px' };
+  const BTN: React.CSSProperties = { width: '100%', border: 0, borderRadius: 12, padding: '12px 0', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' };
   const ROW: React.CSSProperties = { display: 'flex', gap: 8, flexWrap: 'wrap' };
-  const chip = (on: boolean): React.CSSProperties => ({ border: 0, borderRadius: 99, padding: '9px 14px', fontSize: 14, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap', background: on ? '#0E8A6A' : '#1F1E24', color: on ? '#fff' : '#B5B3C0' });
+  const chip = (on: boolean): React.CSSProperties => ({ border: 0, borderRadius: 99, padding: '7px 12px', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap', background: on ? '#0E8A6A' : '#1F1E24', color: on ? '#fff' : '#B5B3C0' });
 
   const ql = q.trim().replace('#', '').toLowerCase();
   const matches = (users || []).filter(u => !ql || u.name.toLowerCase().includes(ql) || u.uid.toLowerCase().startsWith(ql) || formatShortId((u as any).shortId, u.uid).replace('#', '').includes(ql.replace(/^#/, ''))).slice(0, 6);
@@ -592,7 +592,7 @@ function DevPanel({ open, onClose, uid, db, userData, onUpdate }: {
 
       {/* Tab */}
       <div style={{ display: 'flex', gap: 4, background: '#1F1E24', borderRadius: 14, padding: 4, marginBottom: 14 }}>
-        {([['user', 'Kelola user'], ['global', 'Hadiah semua'], ['bayar', 'Pembayaran']] as const).map(([k, l]) => (
+        {([['user', 'User'], ['global', 'Semua'], ['bayar', 'Bayar']] as const).map(([k, l]) => (
           <button key={k} onClick={() => setTab(k)} style={{ flex: 1, border: 0, borderRadius: 11, padding: '10px 0', fontSize: 14, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', background: tab === k ? '#2A2931' : 'transparent', color: tab === k ? '#fff' : '#8F8D9B' }}>{l}</button>
         ))}
       </div>
@@ -601,7 +601,7 @@ function DevPanel({ open, onClose, uid, db, userData, onUpdate }: {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {/* 1. Pilih user */}
           <div>
-            <label style={LABEL}>1 · Pilih user</label>
+            <label style={LABEL}>User</label>
             <div style={{ display: 'flex', gap: 8 }}>
               <input style={FIELD} value={q} onChange={e => setQ(e.target.value)} placeholder={loadingUsers ? 'Memuat user...' : 'Cari nama atau ID'} />
               <button onClick={() => { const me = (users || []).find(u => u.uid === uid); if (me) pick(me); }} style={{ ...chip(false), borderRadius: 14, padding: '0 16px' }}>Saya</button>
@@ -639,17 +639,13 @@ function DevPanel({ open, onClose, uid, db, userData, onUpdate }: {
                     </div>
                   ))}
                 </div>
-                <div style={{ marginTop: 10, fontSize: 12, fontWeight: 700, color: '#8F8D9B', lineHeight: 1.5 }}>
-                  Punya: {cnt(tData.ownedBorders)} border · {cnt(tData.ownedWallpapers)} wallpaper · {cnt(tData.ownedEffects)} effect<br />
-                  Dipakai: {tData.activeBorder ? nameOf('border', tData.activeBorder) || tData.activeBorder : '–'} · {tData.activeWallpaper ? nameOf('wallpaper', tData.activeWallpaper) || tData.activeWallpaper : '–'} · {tData.activeEffect ? nameOf('effect', tData.activeEffect) || tData.activeEffect : '–'}
-                </div>
               </div>
             )}
           </div>
 
           {/* 2. Pilih aksi */}
           <div>
-            <label style={LABEL}>2 · Mau ngapain?</label>
+            <label style={LABEL}>Aksi</label>
             <div style={ROW}>
               {DEV_ACTS.map(([k, l]) => <button key={k} onClick={() => { setAct(k); setAmount(''); }} style={chip(act === k)}>{l}</button>)}
             </div>
@@ -748,9 +744,9 @@ function DevPanel({ open, onClose, uid, db, userData, onUpdate }: {
             );
           })}
           <div style={{ borderTop: '1px solid rgba(255,255,255,.08)', paddingTop: 14, marginTop: 6 }}>
-            <label style={LABEL}>Perawatan Premium</label>
+            <details><summary style={{ ...LABEL, cursor: 'pointer', margin: 0 }}>Perawatan Premium</summary><div style={{ marginTop: 10 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: '#8F8D9B', lineHeight: 1.4, marginBottom: 10 }}>Turunkan semua Premium yang masa aktifnya sudah habis jadi Member. Premium dari Panel Developer tanpa batas waktu tidak ikut diturunkan.</div>
-            <button onClick={sweepPremium} disabled={saving} style={{ ...BTN, background: '#1F1E24', color: '#fff', opacity: saving ? 0.5 : 1 }}>Turunkan Premium yang habis</button>
+            <button onClick={sweepPremium} disabled={saving} style={{ ...BTN, background: '#1F1E24', color: '#fff', opacity: saving ? 0.5 : 1 }}>Turunkan Premium yang habis</button></div></details>
           </div>
         </div>
       )}
@@ -811,11 +807,11 @@ function DevPanel({ open, onClose, uid, db, userData, onUpdate }: {
           )}
 
           <div style={{ borderTop: '1px solid rgba(255,255,255,.08)', paddingTop: 14, marginTop: 6 }}>
-            <label style={LABEL}>Perawatan peringkat</label>
+            <details><summary style={{ ...LABEL, cursor: 'pointer', margin: 0 }}>Perawatan peringkat</summary><div style={{ marginTop: 10 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: '#8F8D9B', lineHeight: 1.4, marginBottom: 10 }}>Hapus akun yang tidak aktif lebih dari {ACTIVE_DAYS} hari dari peringkat musim ini.</div>
             <button onClick={cleanBoard} disabled={saving} style={{ ...BTN, background: '#1F1E24', color: '#fff', opacity: saving ? 0.5 : 1 }}>Bersihkan akun tidak aktif</button>
             <div style={{ fontSize: 13, fontWeight: 700, color: '#8F8D9B', lineHeight: 1.4, margin: '14px 0 10px' }}>Masukkan semua akun lama yang punya EXP ke peringkat musim ini (XP awal = EXP). Akun yang sudah ada di peringkat dilewati.</div>
-            <button onClick={seedBoard} disabled={saving} style={{ ...BTN, background: '#0E8A6A', color: '#fff', opacity: saving ? 0.5 : 1 }}>{saving ? 'Memproses...' : 'Isi peringkat dari akun lama'}</button>
+            <button onClick={seedBoard} disabled={saving} style={{ ...BTN, background: '#0E8A6A', color: '#fff', opacity: saving ? 0.5 : 1 }}>{saving ? 'Memproses...' : 'Isi peringkat dari akun lama'}</button></div></details>
           </div>
         </div>
       )}

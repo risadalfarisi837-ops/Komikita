@@ -309,7 +309,6 @@ export default function SettingsPage() {
             {isDev && (
               <Section title="Developer">
                 <Row title="Panel Developer" chevron onClick={() => router.push('/profile?dev=1')} />
-                <Row title="Dev Tools" chevron onClick={() => router.push('/dev')} />
               </Section>
             )}
 
