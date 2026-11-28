@@ -1161,7 +1161,9 @@ export class FishingEngine {
     }
     // pemain
     const pr = this.profile;
-    if (pr.title) {
+    // role (Developer/Admin/Premium) MENGGANTIKAN title level: kalau punya role, pil title hijau tidak digambar
+    const hasRole = !!(this.roleColors(pr.role) && pr.role);
+    if (pr.title && !hasRole) {
       const cy = syHead - 46 * u;
       ctx.font = '700 ' + sz * 0.9 + 'px "Pixelify Sans", ui-monospace, monospace';
       const tw = ctx.measureText(pr.title).width;
@@ -1198,7 +1200,7 @@ export class FishingEngine {
       const tw = ctx.measureText(label).width;
       const w = tw + 30 * u;
       const h = sz * 1.6;
-      const cy2 = syHead - 46 * u - h - 3 * u;
+      const cy2 = syHead - 46 * u; // menempati posisi title
       const x0 = sxp - w / 2;
       // gradien berulang yang bergeser pelan
       const shift = (tt * 0.3) % 1;

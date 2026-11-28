@@ -13,7 +13,7 @@ import { SPECIES as KSPECIES, sizeRatio as kSizeRatio } from '@/lib/fishing';
 import type { BagItem, Rarity, Rod, SizeTier } from '@/lib/fishing';
 import DevTools, { DevFab, EMPTY_STATS } from './DevTools';
 import ProfileModal from './ProfileModal';
-import { DEFAULT_OUTFIT, encodeOutfit, titleOf } from './outfit';
+import { DEFAULT_OUTFIT, encodeOutfit, titleOf, roleLabel } from './outfit';
 import type { Outfit } from './outfit';
 import { startFishingNet } from '@/lib/fishingNet';
 import PremiumName from '@/components/PremiumName';
@@ -870,7 +870,11 @@ export default function FishingGame(props: Props) {
             </div>
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
               <div style={{ fontSize: hx(14.5), fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', lineHeight: 1.25, paddingTop: hx(1), display: 'flex', alignItems: 'center', gap: hx(4) }}><RoleName role={props.role} nameStyle={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{name || 'Tamu'}</RoleName></div>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: hx(3), marginTop: hx(2), padding: `0 ${hx(7)}px`, borderRadius: 99, background: '#e6f6df', border: `${hx(1.5)}px solid #5fbf6a`, fontSize: hx(11.5), fontWeight: 800, color: '#1f7a35', lineHeight: 1.35, whiteSpace: 'nowrap', maxWidth: '100%' }}><BoatIcon size={hx(12)} />{titleOf(lv.level, outfit.ttl)}</div>
+              {roleLabel(props.role) ? (
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: hx(3), marginTop: hx(2), padding: `0 ${hx(8)}px`, borderRadius: 99, background: props.role === 'dev' ? 'linear-gradient(90deg,#22d3ee,#818cf8,#e879f9)' : props.role === 'admin' ? 'linear-gradient(90deg,#ff6b6b,#ffd0d0,#e5383b)' : 'linear-gradient(90deg,#f5c84b,#fff3b0,#ff9a3c)', border: `${hx(1.5)}px solid rgba(255,255,255,.85)`, fontSize: hx(11.5), fontWeight: 800, color: props.role === 'premium' ? '#3b2a05' : props.role === 'admin' ? '#fff' : '#0b0b14', lineHeight: 1.35, whiteSpace: 'nowrap', maxWidth: '100%' }}>{roleLabel(props.role)}</div>
+              ) : (
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: hx(3), marginTop: hx(2), padding: `0 ${hx(7)}px`, borderRadius: 99, background: '#e6f6df', border: `${hx(1.5)}px solid #5fbf6a`, fontSize: hx(11.5), fontWeight: 800, color: '#1f7a35', lineHeight: 1.35, whiteSpace: 'nowrap', maxWidth: '100%' }}><BoatIcon size={hx(12)} />{titleOf(lv.level, outfit.ttl)}</div>
+              )}
               <div style={{ display: 'flex', alignItems: 'center', gap: hx(5), marginTop: hx(2) }}>
                 <span style={{ fontSize: hx(11.5), fontWeight: 800, color: '#2b7fc2' }}>Lv{lv.level}</span>
                 <div style={{ flex: 1, height: hx(5), borderRadius: hx(3), background: '#eadfc4', overflow: 'hidden' }}>
@@ -1275,7 +1279,7 @@ export default function FishingGame(props: Props) {
       {profileOpen && (
         <ProfileModal
           px={(n: number) => px(n * 0.64)} font={HUD} name={name || 'Tamu'} photo={photo} xp={xp} crystal={crystal} bag={bag} rods={rods}
-          outfit={outfit} limitedOwned={props.limitedOwned} dev={!!props.dev} onSave={(o) => props.onSaveOutfit?.(o)} onClose={() => setProfileOpen(false)}
+          outfit={outfit} limitedOwned={props.limitedOwned} dev={!!props.dev} role={cleanNameRole(props.role)} onSave={(o) => props.onSaveOutfit?.(o)} onClose={() => setProfileOpen(false)}
         />
       )}
 

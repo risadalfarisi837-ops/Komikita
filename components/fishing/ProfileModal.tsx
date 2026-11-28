@@ -8,7 +8,7 @@ import { BAG_MAX, MAX_LEVEL, RARITY, RODS, SPECIES_BY_ID, TITLES, formatNum, for
 import type { BagItem } from '@/lib/fishing';
 import { FISH_H, FISH_W, drawFish, drawPlayer } from './art';
 import type { Dir } from './art';
-import { HATS, HAT_COLORS, HAIRS, LIMITED_OUTFITS, PANTS, SHIRTS, SKINS, TOPS, palFromOutfit, randomOutfit, titleOf } from './outfit';
+import { HATS, HAT_COLORS, HAIRS, LIMITED_OUTFITS, PANTS, SHIRTS, SKINS, TOPS, palFromOutfit, randomOutfit, titleOf, displayTitle } from './outfit';
 import type { Outfit } from './outfit';
 
 interface Props {
@@ -24,6 +24,7 @@ interface Props {
   /** Baju dari Gacha Baju Limited yang dimiliki ('night' | 'flame'). */
   limitedOwned?: string[];
   dev: boolean;
+  role?: string;
   onSave: (o: Outfit) => void;
   onClose: () => void;
 }
@@ -106,7 +107,7 @@ export default function ProfileModal(p: Props) {
   const o = p.outfit;
   const open = (need: number) => p.dev || lv.level >= need;
   const set = (patch: Partial<Outfit>) => p.onSave({ ...o, ...patch });
-  const title = titleOf(lv.level, o.ttl);
+  const title = displayTitle(lv.level, o.ttl, p.role);
   const best = [...p.bag].sort((a, b) => b.w - a.w).slice(0, 4);
   const pct = lv.level >= MAX_LEVEL ? 100 : Math.min(100, (lv.into / Math.max(1, lv.need)) * 100);
   const styleLists = [SKINS, HAIRS, SHIRTS, TOPS, PANTS, HATS, HAT_COLORS];

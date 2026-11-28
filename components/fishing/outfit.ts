@@ -106,3 +106,11 @@ export function randomOutfit(level: number, dev: boolean, base: Outfit): Outfit 
   };
   return { ...base, skin: pick(SKINS), hair: pick(HAIRS), shirt: pick(SHIRTS), top: pick(TOPS), pants: pick(PANTS), hat: pick(HATS), hatCol: pick(HAT_COLORS) };
 }
+
+// Title tampilan: role (Developer / Admin / Premium) menggantikan title level; tanpa role = title biasa
+export function roleLabel(role?: string): string {
+  return role === 'dev' ? 'DEVELOPER' : role === 'admin' ? 'ADMIN' : role === 'premium' ? 'PREMIUM' : '';
+}
+export function displayTitle(level: number, ttl: number, role?: string): string {
+  return roleLabel(role) || titleOf(level, ttl);
+}
