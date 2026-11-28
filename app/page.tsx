@@ -74,22 +74,32 @@ function Header({ onSearch }: { onSearch: () => void }) {
   const router = useRouter();
   const [hasGift, setHasGift] = useState(false);
   const [me, setMe] = useState<{ name: string; photo: string; level: number; exp: number } | null>(null);
+  const [ready, setReady] = useState(false);   // false = masih memuat → tampil kerangka, bukan data default "Komikita / Lvl. 1"
   useEffect(() => {
     let alive = true;
+    // Tampilkan profil terakhir dari cache langsung (sebelum Firebase siap) supaya tidak ada kedipan data default
+    let cached = false;
+    try {
+      const c = JSON.parse(localStorage.getItem('komikita-home-me') || 'null');
+      if (c && typeof c.name === 'string') { setMe({ name: c.name, photo: c.photo || '', level: Math.max(1, Number(c.level) || 1), exp: Math.max(0, Number(c.exp) || 0) }); setHasGift(!!c.gift); setReady(true); cached = true; }
+    } catch {}
     const t = setTimeout(async () => {
       try {
         const { auth, db } = await getFirebase();
         const u: any = auth.currentUser || await new Promise((res) => { const un = auth.onAuthStateChanged((x: any) => { un(); res(x); }); });
-        if (!u || !alive) return;
+        if (!alive) return;
+        if (!u) { try { localStorage.removeItem('komikita-home-me'); } catch {} setMe(null); setHasGift(false); setReady(true); return; }
         const d = (await db.ref(`users/${u.uid}`).get()).val() || {};
         if (!alive) return;
         const lv = Math.max(1, Math.floor(Number(d.level) || 1));
         const rawExp = d.exp === undefined || d.exp === null || !Number.isFinite(Number(d.exp)) ? (lv - 1) * 200 : Number(d.exp);
-        setMe({ name: d.displayName || u.displayName || 'User', photo: d.photoURL || u.photoURL || '', level: lv, exp: Math.max(0, Math.min(199, Math.floor(rawExp - (lv - 1) * 200))) });
+        const fresh = { name: d.displayName || u.displayName || 'User', photo: d.photoURL || u.photoURL || '', level: lv, exp: Math.max(0, Math.min(199, Math.floor(rawExp - (lv - 1) * 200))) };
         const v = d.gifts || {};
-        setHasGift(Object.values(v).some((g: any) => g && !g.claimed));
-      } catch {}
-    }, 1500);
+        const gift = Object.values(v).some((g: any) => g && !g.claimed);
+        setMe(fresh); setHasGift(gift); setReady(true);
+        try { localStorage.setItem('komikita-home-me', JSON.stringify({ ...fresh, gift })); } catch {}
+      } catch { if (alive) setReady(true); }
+    }, cached ? 1200 : 250);
     return () => { alive = false; clearTimeout(t); };
   }, []);
 
@@ -101,22 +111,35 @@ function Header({ onSearch }: { onSearch: () => void }) {
       <div style={{ ...BOX, padding: '12px 15px 11px', borderRadius: 22 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <Link href="/profile" style={{ flex: '0 0 auto' }}>
-          {me?.photo ? (
+          {!ready ? (
+            <div style={{ width: 54, height: 54, borderRadius: '50%', background: '#3A3942' }} />
+          ) : me?.photo ? (
             <img decoding="async" src={me.photo} alt="" referrerPolicy="no-referrer" style={{ width: 54, height: 54, borderRadius: '50%', objectFit: 'cover', border: '2px solid #3A3942', display: 'block' }} />
           ) : (
             <div style={{ width: 54, height: 54, borderRadius: '50%', background: '#3A3942', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, fontWeight: 800 }}>{(me?.name || 'K').slice(0, 1).toUpperCase()}</div>
           )}
         </Link>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ ...ell, fontSize: 17, fontWeight: 800, letterSpacing: -0.5 }}>{me?.name || 'Komikita'}</div>
-          <div style={{ marginTop: 6 }}><LevelPill level={level} label="Lvl." fontSize="13px" iconSize={15} style={{ padding: '3px 12px 3px 8px' }} /></div>
+          {ready ? (
+            <>
+              <div style={{ ...ell, fontSize: 17, fontWeight: 800, letterSpacing: -0.5 }}>{me?.name || 'Komikita'}</div>
+              <div style={{ marginTop: 6 }}><LevelPill level={level} label="Lvl." fontSize="13px" iconSize={15} style={{ padding: '3px 12px 3px 8px' }} /></div>
+            </>
+          ) : (
+            <>
+              <div style={{ width: 120, height: 18, borderRadius: 9, background: '#3A3942' }} />
+              <div style={{ width: 74, height: 26, borderRadius: 99, background: '#33323A', marginTop: 8 }} />
+            </>
+          )}
         </div>
         <button onClick={() => { window.location.assign('/notifikasi'); }} aria-label="Notifikasi" style={{ position: 'relative', flex: '0 0 auto', width: 52, height: 52, borderRadius: '50%', background: '#3A3942', border: 0, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 01-3.4 0" /></svg>
           {hasGift && <span style={{ position: 'absolute', top: 12, right: 13, width: 9, height: 9, borderRadius: '50%', background: ACCENT }} />}
         </button>
       </div>
-      <div style={{ marginTop: 11 }}><ExpBar level={level} exp={me ? me.exp : 0} max={200} /></div>
+      <div style={{ marginTop: 11 }}>
+        {ready ? <ExpBar level={level} exp={me ? me.exp : 0} max={200} /> : <div style={{ height: 10, borderRadius: 5, background: '#3A3942', margin: '9px 0' }} />}
+      </div>
       </div>
       <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
         <button onClick={onSearch} style={{ ...BOX, flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 12, padding: '0 16px', height: 54, color: MUTED, fontSize: 16, textAlign: 'left' }}>
