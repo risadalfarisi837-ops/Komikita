@@ -40,11 +40,10 @@ const CompassIcon = ({ color, filled }: IconProps) => (
     <polygon points="16 8 14 14 8 16 10 10 16 8" fill={filled ? color : 'none'} />
   </svg>
 );
-const RankingIcon = ({ color }: IconProps) => (
+const ClockIcon = ({ color }: IconProps) => (
   <svg {...svg} stroke={color} strokeWidth={2}>
-    <rect x="3" y="12" width="5" height="9" rx="1" />
-    <rect x="9.5" y="3" width="5" height="18" rx="1" />
-    <rect x="16" y="8" width="5" height="13" rx="1" />
+    <circle cx="12" cy="12" r="9.5" />
+    <path d="M12 6.5V12l3.5 2" />
   </svg>
 );
 const LibraryIcon = ({ color }: IconProps) => (
@@ -64,7 +63,7 @@ const PersonIcon = ({ color }: IconProps) => (
 const links = [
   { href: '/',          Icon: HomeIcon,    label: 'Beranda' },
   { href: '/schedule',  Icon: CompassIcon, label: 'Jelajah' },
-  { href: '/ranking',   Icon: RankingIcon, label: 'Peringkat' },
+  { href: '/riwayat',   Icon: ClockIcon,   label: 'Riwayat' },
   { href: '/history',   Icon: LibraryIcon, label: 'Koleksi' },
   { href: '/profile',   Icon: PersonIcon,  label: 'Profil' },
 ];
@@ -88,18 +87,18 @@ function BottomNavInner() {
       <div style={{ display: 'flex', width: '100%', maxWidth: 448, padding: '8px 6px 0' }}>
         {links.map(({ href, Icon, label }) => {
           const active = pathname === href;
-          const color = active ? '#fff' : 'var(--muted)';
+          const color = '#fff';
           const isProfile = href === '/profile';
           return (
-            <Link key={href} href={href} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, textDecoration: 'none' }}>
-              <div style={{ width: 62, height: 36, borderRadius: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', background: active ? 'rgba(255,107,107,0.28)' : 'transparent', transition: 'background .2s' }}>
+            <Link key={href} href={href} aria-label={label} style={{ flex: 1, minHeight: 58, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, textDecoration: 'none' }}>
+              <div style={{ width: 62, height: 34, borderRadius: 17, display: 'flex', alignItems: 'center', justifyContent: 'center', background: active ? '#46405A' : 'transparent', transition: 'background .2s' }}>
                 {isProfile && photoURL ? (
-                  <img src={photoURL} alt="" style={{ width: 26, height: 26, borderRadius: '50%', objectFit: 'cover', outline: active ? '2px solid #fff' : 'none', opacity: active ? 1 : 0.7 }} />
+                  <img src={photoURL} alt="" style={{ width: 26, height: 26, borderRadius: '50%', objectFit: 'cover', outline: active ? '2px solid #fff' : 'none', opacity: 1 }} />
                 ) : (
                   <Icon color={color} filled={active} />
                 )}
               </div>
-              <span style={{ fontSize: 11.5, fontWeight: active ? 800 : 700, color, paddingBottom: 6 }}>{label}</span>
+              {active && <span style={{ fontSize: 11.5, fontWeight: 800, color, paddingBottom: 6 }}>{label}</span>}
             </Link>
           );
         })}
