@@ -51,8 +51,6 @@ const THEMES: Record<BoardId, Theme> = {
     id: 'premium', title: 'Top Premium', accent: '#2DD4E8', accentText: '#06303A', border: 'rgba(45,212,232,.5)', bgTop: '#0F5266', bgBottom: '#08212C', unit: 'hari',
     tabs: [], section: () => 'Top Premium', chip: () => 'Sisa hari premium',
   },
-
-  },
 };
 const BOARD_ORDER: BoardId[] = ['reader', 'premium'];
 const BOARD_SUB: Record<BoardId, string> = { reader: 'XP baca musim ini', premium: 'Sisa hari premium terbanyak' };

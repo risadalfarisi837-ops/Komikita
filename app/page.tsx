@@ -508,7 +508,6 @@ function ContinueReading() {
             </Link>
           );
         })}
-        })}
       </div>
     </>
   );
