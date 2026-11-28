@@ -73,7 +73,7 @@ export function palFromOutfit(o: Outfit): Pal {
     hat, hatD: shade(hat, -0.3),
     nohat: o.hat === 0, cap: o.hat === 2,
   };
-  return lim ? { ...base, ...lim.pal } : base;
+  return lim ? { ...base, ...lim.pal, fx: lim.key } : base;
 }
 
 // kode ringkas untuk dikirim ke pemain lain (tanpa title)
