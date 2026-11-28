@@ -1442,15 +1442,15 @@ export const PAL_PLAYER: Pal = { skin: '#fbd5bb', skinD: '#e6a98c', hair: '#5a3a
 export const PAL_BAYU: Pal = { skin: '#e2b48a', skinD: '#c4936a', hair: '#d9d6cf', shirt: '#6b9a4e', shirtD: '#527a3a', pants: '#c8a96a', boot: '#6b4a2a', hat: '#ead69a', hatD: '#c9b06a', band: '#8a5a2b' };
 
 export function drawPlayerRaw(ctx: CanvasRenderingContext2D, x: number, y: number, dir: Dir, moving: boolean, step: number, rod: boolean, rodShake = 0, pal: Pal = PAL_PLAYER, rodId = 'default', hold = false, armsUp = false) {
-  // sprite 20x30 piksel, proporsi manusia: kepala 10 (1/3), leher, badan 9, kaki 10. Kaki menapak di y-1.
+  // sprite 20x30 piksel gaya CHIBI: kepala besar bulat (14 lebar), badan gemuk bulat, tangan & kaki pendek mungil. Kaki menapak di y-1.
   const ox = Math.round(x) - 10;
   const oy = Math.round(y) - 30;
   // animasi jalan: satu siklus langkah 0.64 detik. Kaki mengayun & terangkat bergantian, lengan berayun berlawanan,
   // badan naik-turun tiap langkah. Saat diam: badan "bernapas" naik-turun pelan.
   const th = moving ? (step * Math.PI * 2) / 0.64 : 0;
   const sn = moving ? Math.sin(th) : 0, cs = moving ? Math.cos(th) : 0;
-  const ub = moving ? (Math.abs(cs) > 0.55 ? -1 : 0) : (Math.sin(performance.now() / 1000 * 2.4) > 0.3 ? 1 : 0); // offset badan atas (kepala, dada, lengan)
-  drawShadow(ctx, x, y - 1, 7, 2.2, 0.28);
+  const ub = moving ? (Math.abs(cs) > 0.55 ? -1 : 0) : (Math.sin(performance.now() / 1000 * 2.4) > 0.3 ? 1 : 0); // offset badan atas (kepala, perut, lengan)
+  drawShadow(ctx, x, y - 1, 8, 2.6, 0.28);
   const flip = dir === 'right';
   ctx.save();
   if (flip) {
@@ -1470,180 +1470,171 @@ export function drawPlayerRaw(ctx: CanvasRenderingContext2D, x: number, y: numbe
   const belt = '#3b2716', buckle = fx === 'night' ? pal.band : '#e8c15a';
   const cuff = fx === 'night' ? pal.band : fx === 'flame' ? '#ff8a2a' : top;
   const cape = fx === 'flame' ? sh : top, capeD = fx === 'flame' ? shD : darken(top, 0.28), flameA = '#ffd27a', flameB = pal.band || '#ff9b3a';
-  const eye = '#1d1d2b', white = '#ffffff', blush = 'rgba(240,110,120,0.5)', mouth = '#b5543f';
+  const eye = '#1d1d2b', white = '#ffffff', blush = 'rgba(255,115,135,0.62)', mouth = '#c0504a';
   const flameHem = (x0: number, w: number, yy: number) => { for (let i = 0; i < w; i++) o(x0 + i, yy, 1, (i % 2) ? 2 : 1, i % 3 === 0 ? flameA : flameB); };
 
   if (dir === 'down' || dir === 'up') {
-    // kaki kiri/kanan: terangkat saat mengayun ke depan, tumit terangkat saat di belakang
-    let lf = moving ? -Math.max(0, Math.round(cs * 2)) : 0, rf = moving ? -Math.max(0, Math.round(-cs * 2)) : 0;
-    if (moving) { if (sn < -0.6) lf -= 1; if (sn > 0.6) rf -= 1; }
-    const al = moving ? Math.round(-sn * 2) : 0; // lengan kiri berlawanan dengan kaki kiri
-    if (fx === 'flame' && dir === 'down') { u(5, 11, 10, 13, capeD); u(5, 11, 1, 13, cape); u(14, 11, 1, 13, cape); flameHem(5, 10, 24 + ub); }
-    // kaki: paha, lutut, betis (celana lurus) + sorotan dan bayangan sela kaki
-    o(6, 19, 4, 8 + lf, pal.pants); o(10, 19, 4, 8 + rf, pal.pants);
-    o(6, 19, 1, 8 + lf, pantsL); o(13, 19, 1, 8 + rf, pantsD);
-    o(9, 19, 1, 8 + lf, pantsD); o(10, 19, 1, 8 + rf, pantsD);
-    o(7, 24 + lf, 2, 1, pantsD); o(11, 24 + rf, 2, 1, pantsD);
-    // sepatu bot: bibir atas terang, sol gelap
-    o(5, 27 + lf, 5, 3, pal.boot); o(10, 27 + rf, 5, 3, pal.boot);
-    o(5, 27 + lf, 5, 1, bootL); o(10, 27 + rf, 5, 1, bootL);
-    o(9, 28 + lf, 1, 1, bootD); o(10, 28 + rf, 1, 1, bootD);
-    o(5, 29 + lf, 5, 1, sole); o(10, 29 + rf, 5, 1, sole);
-    if (dir === 'down') { o(5, 28 + lf, 2, 1, bootL); o(13, 28 + rf, 2, 1, bootL); }
-    // badan: jaket dengan sorotan kiri, bayangan kanan
-    u(6, 11, 8, 8, sh);
-    u(6, 11, 8, 1, shL); u(6, 11, 1, 8, shL); u(13, 11, 1, 8, shD); u(6, 18, 8, 1, shD);
+    // kaki mungil: terangkat sedikit saat melangkah
+    const lf = moving ? -Math.max(0, Math.round(cs * 1.5)) : 0, rf = moving ? -Math.max(0, Math.round(-cs * 1.5)) : 0;
+    const al = moving ? Math.round(-sn * 1.5) : 0; // lengan kiri berlawanan dengan kaki kiri
+    if (fx === 'flame') { u(3, 13, 14, 12, capeD); u(3, 13, 1, 12, cape); u(16, 13, 1, 12, cape); flameHem(3, 14, 25 + ub); }
+    // kaki pendek gempal
+    o(5, 22, 4, 5 + lf, pal.pants); o(11, 22, 4, 5 + rf, pal.pants);
+    o(5, 22, 1, 5 + lf, pantsL); o(14, 22, 1, 5 + rf, pantsD);
+    o(8, 22, 1, 5 + lf, pantsD); o(11, 22, 1, 5 + rf, pantsD);
+    // sepatu bulat besar
+    o(4, 27 + lf, 5, 3, pal.boot); o(11, 27 + rf, 5, 3, pal.boot);
+    o(5, 27 + lf, 3, 1, bootL); o(12, 27 + rf, 3, 1, bootL);
+    o(4, 29 + lf, 5, 1, sole); o(11, 29 + rf, 5, 1, sole);
+    o(8, 28 + lf, 1, 1, bootD); o(11, 28 + rf, 1, 1, bootD);
+    // badan gemuk bulat (perut buncit)
+    u(6, 13, 8, 1, sh);
+    u(4, 14, 12, 7, sh); u(5, 21, 10, 1, sh);
+    u(4, 14, 1, 7, shL); u(15, 14, 1, 7, shD); u(5, 21, 10, 1, shD); u(6, 14, 4, 1, shL);
     if (dir === 'down') {
-      u(8, 11, 4, 8, top);                         // kaus dalam di tengah (jaket terbuka)
-      u(9, 11, 2, 1, pal.skinD);                   // lekuk leher
-      u(7, 11, 1, 8, fx === 'night' ? '#1b5a70' : shD); u(12, 11, 1, 8, fx === 'night' ? '#1b5a70' : shD); // tepi jaket
-      u(9, 13, 1, 1, topD); u(10, 15, 1, 1, topD); u(9, 17, 1, 1, topD); // kancing
-      u(6, 15, 1, 2, shDD); u(13, 15, 1, 2, shDD); // saku
-      if (fx === 'flame') { u(9, 12, 2, 2, '#ff7a1a'); u(9, 12, 1, 1, flameA); }
-      if (fx === 'night') { u(6, 13, 1, 1, pal.band); u(13, 12, 1, 1, pal.band); u(6, 17, 1, 1, pal.band); }
+      u(8, 13, 4, 8, top);                          // kaus dalam di tengah (jaket terbuka)
+      u(7, 13, 1, 8, fx === 'night' ? '#1b5a70' : shD); u(12, 13, 1, 8, fx === 'night' ? '#1b5a70' : shD);
+      u(9, 15, 1, 1, topD); u(10, 17, 1, 1, topD); u(9, 19, 1, 1, topD); // kancing
+      u(5, 18, 2, 1, shDD); u(13, 18, 2, 1, shDD); // saku
+      if (fx === 'flame') { u(9, 14, 2, 2, '#ff7a1a'); u(9, 14, 1, 1, flameA); }
+      if (fx === 'night') { u(4, 15, 1, 1, pal.band); u(15, 14, 1, 1, pal.band); u(4, 19, 1, 1, pal.band); }
     } else {
-      u(6, 11, 8, 1, top);                         // kerah belakang
-      u(9, 12, 2, 6, shD); u(9, 12, 1, 6, sh);     // jahitan punggung
-      if (fx === 'night') { u(9, 12, 2, 1, '#1fa6c4'); u(9, 13, 1, 5, '#35e6ff'); u(10, 13, 1, 5, '#1fa6c4'); }
+      u(6, 13, 8, 1, top);                          // kerah belakang
+      u(9, 14, 2, 6, shD); u(9, 14, 1, 6, sh);      // jahitan punggung
+      if (fx === 'night') { u(9, 14, 2, 1, '#1fa6c4'); u(9, 15, 1, 5, '#35e6ff'); u(10, 15, 1, 5, '#1fa6c4'); }
     }
     // ikat pinggang
-    u(6, 19, 8, 1, belt);
-    if (dir === 'down') u(9, 19, 2, 1, buckle);
-    if (fx === 'flame' && dir === 'up') { u(5, 11, 10, 13, capeD); u(5, 11, 1, 13, cape); u(14, 11, 1, 13, cape); u(9, 12, 2, 2, flameA); flameHem(5, 10, 24 + ub); }
+    u(4, 20, 12, 1, belt);
+    if (dir === 'down') u(9, 20, 2, 1, buckle);
+    if (fx === 'flame' && dir === 'up') { u(3, 13, 14, 12, capeD); u(3, 13, 1, 12, cape); u(16, 13, 1, 12, cape); u(9, 14, 2, 2, flameA); flameHem(3, 14, 25 + ub); }
     if (armsUp) {
-      u(2, -9, 2, 21, sh); u(16, -9, 2, 21, sh);
-      u(2, -9, 1, 21, shL); u(17, -9, 1, 21, shD);
-      u(2, 10, 4, 2, sh); u(14, 10, 4, 2, sh);
-      u(2, 7, 2, 1, cuff); u(16, 7, 2, 1, cuff);
-      u(2, -11, 2, 2, pal.skin); u(16, -11, 2, 2, pal.skin);
-      u(2, -11, 1, 1, skinL);
+      u(1, -9, 2, 23, sh); u(17, -9, 2, 23, sh);
+      u(1, -9, 1, 23, shL); u(18, -9, 1, 23, shD);
+      u(1, 10, 4, 3, sh); u(15, 10, 4, 3, sh);
+      u(1, -9, 2, 1, cuff); u(17, -9, 2, 1, cuff);
+      u(1, -11, 2, 2, pal.skin); u(17, -11, 2, 2, pal.skin);
+      u(1, -11, 1, 1, skinL);
     } else {
-      // lengan panjang: bahu, siku, manset, tangan kulit (bahu diam, ujung lengan berayun)
+      // lengan pendek gempal: lengan baju, manset, tangan bulat
       const aU = Math.round(al / 2);
-      u(4, 11 + aU, 2, 3, sh); u(14, 11 - aU, 2, 3, sh);
-      u(4, 14 + al, 2, 3, sh); u(14, 14 - al, 2, 3, sh);
-      u(4, 11 + aU, 1, 3, shL); u(15, 11 - aU, 1, 3, shD);
-      u(4, 14 + al, 1, 3, shL); u(15, 14 - al, 1, 3, shD);
-      u(4, 11 + aU, 2, 1, shL); u(14, 11 - aU, 2, 1, sh);
-      u(5, 12 + aU, 1, 4, shD);
-      u(4, 17 + al, 2, 1, cuff); u(14, 17 - al, 2, 1, cuff);
-      u(4, 18 + al, 2, 2, pal.skin); u(14, 18 - al, 2, 2, pal.skin);
-      u(5, 19 + al, 1, 1, pal.skinD); u(14, 19 - al, 1, 1, pal.skinD);
+      u(2, 14 + aU, 2, 4, sh); u(16, 14 - aU, 2, 4, sh);
+      u(2, 14 + aU, 1, 4, shL); u(17, 14 - aU, 1, 4, shD);
+      u(2, 17 + al, 2, 1, cuff); u(16, 17 - al, 2, 1, cuff);
+      u(2, 18 + al, 2, 2, pal.skin); u(16, 18 - al, 2, 2, pal.skin);
+      u(3, 19 + al, 1, 1, pal.skinD); u(16, 19 - al, 1, 1, pal.skinD);
     }
     if (fx === 'night') {
       const cy = '#35e6ff', cyD = '#1fa6c4', cyW = '#e8ffff';
-      o(6, 21 + lf, 1, 5, cyD); o(13, 21 + rf, 1, 5, cyD);
-      o(5, 27 + lf, 5, 1, cyD); o(10, 27 + rf, 5, 1, cyD);
-      if (!armsUp) { u(4, 12 + al, 1, 4, cyD); u(15, 12 - al, 1, 4, cyD); }
-      if (dir === 'down') { u(9, 12, 2, 2, cy); u(9, 12, 1, 1, cyW); u(8, 12, 1, 2, cyD); u(11, 12, 1, 2, cyD); u(8, 14, 4, 1, '#1b5a70'); }
-      u(4, 10, 2, 2, cy); u(4, 10, 1, 1, cyW);
-      u(14, 10, 2, 2, cy); u(14, 10, 1, 1, cyW);
+      o(5, 23 + lf, 1, 3, cyD); o(14, 23 + rf, 1, 3, cyD);
+      o(4, 27 + lf, 5, 1, cyD); o(11, 27 + rf, 5, 1, cyD);
+      if (!armsUp) { u(2, 15 + al, 1, 2, cyD); u(17, 15 - al, 1, 2, cyD); }
+      if (dir === 'down') { u(9, 14, 2, 2, cy); u(9, 14, 1, 1, cyW); u(8, 14, 1, 2, cyD); u(11, 14, 1, 2, cyD); u(8, 16, 4, 1, '#1b5a70'); }
+      u(2, 13, 2, 2, cy); u(2, 13, 1, 1, cyW);
+      u(16, 13, 2, 2, cy); u(16, 13, 1, 1, cyW);
     }
     if (fx === 'flame') {
       const FR = '#e8402a', FO = '#ff8a2a', FY = '#ffd23a';
       const cl = (sx: number, sy: number, c: string) => { o(sx, sy, 1, 1, c); o(19 - sx, sy, 1, 1, c); };
-      cl(6, 24, FR);
-      cl(5, 25, FR); cl(6, 25, FO); cl(7, 25, FR);
-      cl(4, 26, FR); cl(5, 26, FO); cl(6, 26, FY); cl(7, 26, FO); cl(8, 26, FR);
-      cl(4, 27, FR); cl(5, 27, FR); cl(6, 27, FO); cl(7, 27, FY);
-      if (!armsUp) { u(4, 14 + al, 2, 1, FR); u(14, 14 - al, 2, 1, FR); u(4, 15 + al, 2, 1, FY); u(14, 15 - al, 2, 1, FY); }
+      cl(5, 26, FR);
+      cl(4, 27, FR); cl(5, 27, FO); cl(6, 27, FR);
+      cl(4, 28, FR); cl(5, 28, FO); cl(6, 28, FY); cl(7, 28, FO);
+      if (!armsUp) { u(2, 15 + al, 2, 1, FR); u(16, 15 - al, 2, 1, FR); u(2, 16 + al, 2, 1, FY); u(16, 16 - al, 2, 1, FY); }
     }
-    // leher
-    u(8, 10, 4, 1, pal.skinD);
     if (dir === 'down') {
-      // wajah: kulit berbayang, rambut berponi dengan jambul samping, alis, mata (kelopak, putih, iris), hidung, pipi, bibir
-      u(5, 3, 10, 6, pal.skin); u(6, 9, 8, 1, pal.skin);
-      u(14, 5, 1, 4, pal.skinD); u(13, 9, 1, 1, pal.skinD); u(6, 9, 1, 1, pal.skinD);
-      u(7, 0, 6, 1, pal.hair); u(5, 1, 10, 1, pal.hair); u(4, 2, 12, 2, pal.hair);
-      u(9, 3, 2, 1, pal.skin);                                  // belahan poni
-      u(7, 3, 1, 1, pal.skin); u(12, 3, 1, 1, pal.skin);
-      u(4, 4, 2, 1, pal.hair); u(14, 4, 2, 1, pal.hair); u(4, 5, 1, 3, pal.hair); u(15, 5, 1, 3, pal.hair);
-      u(7, 1, 3, 1, hairL); u(6, 2, 2, 1, hairL); u(12, 2, 2, 1, hairD); u(4, 3, 1, 1, hairD); u(15, 3, 1, 1, hairD);
-      u(6, 4, 3, 1, hairD); u(11, 4, 3, 1, hairD);              // alis
-      u(6, 5, 3, 1, eye); u(11, 5, 3, 1, eye);                  // kelopak atas
-      u(6, 6, 3, 1, white); u(11, 6, 3, 1, white);              // putih mata
-      u(7, 6, 1, 1, eye); u(12, 6, 1, 1, eye);                  // iris
-      u(9, 7, 2, 1, pal.skinD);                                  // hidung
-      u(5, 7, 2, 1, blush); u(13, 7, 2, 1, blush);
-      u(9, 8, 2, 1, mouth); u(9, 9, 2, 1, pal.skinD);
+      // kepala besar bulat (x3..16): pipi tembem, mata besar berkilau, pipi merona, mulut mungil
+      u(5, 2, 10, 1, pal.skin); u(4, 3, 12, 1, pal.skin); u(3, 4, 14, 7, pal.skin); u(4, 11, 12, 1, pal.skin); u(5, 12, 10, 1, pal.skinD);
+      u(16, 5, 1, 5, pal.skinD); u(15, 11, 1, 1, pal.skinD); u(4, 11, 1, 1, pal.skinD);
+      // rambut: poni rapi + rambut samping
+      u(6, 0, 8, 1, pal.hair); u(4, 1, 12, 1, pal.hair); u(3, 2, 14, 3, pal.hair);
+      u(3, 5, 2, 3, pal.hair); u(15, 5, 2, 3, pal.hair);
+      u(6, 5, 2, 1, pal.hair); u(12, 5, 2, 1, pal.hair);
+      u(9, 4, 2, 1, pal.skin);                                    // belahan poni
+      u(6, 1, 3, 1, hairL); u(5, 2, 2, 1, hairL); u(12, 2, 3, 1, hairD); u(3, 4, 1, 1, hairD); u(16, 4, 1, 1, hairD);
+      // mata besar 3x3 dengan kilau
+      u(5, 7, 3, 3, eye); u(12, 7, 3, 3, eye);
+      u(5, 7, 1, 1, white); u(12, 7, 1, 1, white);
+      u(7, 9, 1, 1, '#7a86c8'); u(14, 9, 1, 1, '#7a86c8');
+      // pipi merona + senyum kecil
+      u(3, 10, 3, 1, blush); u(14, 10, 3, 1, blush);
+      u(9, 10, 2, 1, mouth);
     } else {
-      // belakang kepala: rambut penuh
-      u(7, 0, 6, 1, pal.hair); u(5, 1, 10, 1, pal.hair); u(4, 2, 12, 8, pal.hair);
-      u(4, 7, 12, 3, hairD);
+      // belakang kepala: rambut penuh dan bulat
+      u(6, 0, 8, 1, pal.hair); u(4, 1, 12, 1, pal.hair); u(3, 2, 14, 9, pal.hair); u(4, 11, 12, 1, pal.hair); u(5, 12, 10, 1, pal.hair);
+      u(3, 9, 14, 2, hairD); u(4, 11, 12, 1, hairD); u(5, 12, 10, 1, hairD);
       u(6, 1, 3, 1, hairL); u(5, 2, 3, 1, hairL); u(6, 3, 2, 1, hairL);
-      u(9, 2, 2, 3, hairD); u(9, 5, 2, 2, pal.hair);
+      u(9, 3, 2, 3, hairD); u(9, 6, 2, 2, pal.hair);
     }
   } else {
     // samping (menghadap kiri; kanan = cermin). Kaki depan (a) dan belakang (b) melangkah bergantian.
-    const a = moving ? -Math.round(sn * 2) : 0, b = -a;
-    const la = moving ? Math.max(0, Math.round(cs * 1.6)) : 0, lb = moving ? Math.max(0, Math.round(-cs * 1.6)) : 0;
-    const ax = moving ? Math.round(sn * 2) : 0, ah = moving ? Math.round(sn) : 0; // lengan dekat berlawanan dengan kaki depan
-    if (fx === 'flame') { u(8, 11, 5, 12, capeD); u(12, 11, 1, 12, cape); flameHem(8, 5, 23 + ub); }
+    const a = moving ? -Math.round(sn * 1.5) : 0, b = -a;
+    const la = moving ? Math.max(0, Math.round(cs * 1.3)) : 0, lb = moving ? Math.max(0, Math.round(-cs * 1.3)) : 0;
+    const ax = moving ? Math.round(sn * 1.5) : 0, ah = moving ? Math.round(sn) : 0; // lengan dekat berlawanan dengan kaki depan
+    if (fx === 'flame') { u(7, 13, 6, 11, capeD); u(12, 13, 1, 11, cape); flameHem(7, 6, 24 + ub); }
     // kaki belakang (gelap) lalu kaki depan
-    o(9 + b, 19, 3, 8 - lb, pantsD); o(8 + b, 27 - lb, 4, 3, bootD); o(8 + b, 29 - lb, 4, 1, sole);
-    o(6 + a, 19, 4, 8 - la, pal.pants); o(6 + a, 19, 1, 8 - la, pantsL); o(7 + a, 24 - la, 3, 1, pantsD);
+    o(9 + b, 22, 3, 5 - lb, pantsD); o(8 + b, 27 - lb, 4, 3, bootD); o(8 + b, 29 - lb, 4, 1, sole);
+    o(6 + a, 22, 4, 5 - la, pal.pants); o(6 + a, 22, 1, 5 - la, pantsL); o(7 + a, 25 - la, 3, 1, pantsD);
     o(4 + a, 27 - la, 6, 3, pal.boot); o(4 + a, 27 - la, 6, 1, bootL); o(4 + a, 28 - la, 2, 1, bootL); o(4 + a, 29 - la, 6, 1, sole);
     // lengan jauh (gelap, di belakang badan)
     if (!armsUp) {
-      u(8 - ah, 11, 3, 4, shD); u(8 - ax, 15, 3, 2, shD); u(8 - ax, 17, 3, 1, shDD); u(8 - ax, 18, 3, 2, pal.skinD);
+      u(8 - ah, 14, 3, 3, shD); u(8 - ax, 17, 3, 1, shDD); u(8 - ax, 18, 3, 2, pal.skinD);
     }
-    // badan
-    u(7, 11, 6, 8, sh);
-    u(7, 11, 6, 1, shL); u(12, 11, 1, 8, shD); u(7, 18, 6, 1, shD);
-    u(7, 11, 2, 8, top);                            // kaus dalam di depan (jaket terbuka)
-    u(9, 12, 1, 7, shD);
-    if (fx === 'night') u(9, 12, 1, 7, pal.band);
-    u(7, 19, 6, 1, belt); u(7, 19, 1, 1, buckle);
-    if (armsUp) { u(8, -9, 3, 21, sh); u(8, -9, 1, 21, shL); u(8, 7, 3, 1, cuff); u(8, -11, 3, 2, pal.skin); }
+    // badan gemuk bulat dengan perut maju ke depan
+    u(7, 13, 6, 1, sh);
+    u(5, 14, 9, 7, sh); u(4, 15, 1, 5, sh);
+    u(5, 14, 9, 1, shL); u(13, 14, 1, 7, shD); u(5, 20, 9, 1, shD);
+    u(4, 15, 3, 4, top); u(5, 14, 2, 1, top);       // kaus dalam di depan (jaket terbuka)
+    u(7, 15, 1, 5, shD);
+    if (fx === 'night') u(7, 15, 1, 5, pal.band);
+    u(4, 19, 10, 1, belt); u(4, 19, 1, 1, buckle);
+    if (armsUp) { u(8, -9, 3, 23, sh); u(8, -9, 1, 23, shL); u(8, -9, 3, 1, cuff); u(8, -11, 3, 2, pal.skin); }
     else {
-      // lengan dekat: pangkal ikut bahu, lengan bawah & tangan berayun lebih jauh
-      u(8 + ah, 11, 3, 4, sh); u(8 + ah, 11, 1, 4, shL); u(8 + ah, 11, 3, 1, shL);
-      u(8 + ax, 15, 3, 2, sh); u(8 + ax, 15, 1, 2, shL);
+      // lengan dekat: pendek gempal, tangan bulat
+      u(8 + ah, 14, 3, 3, sh); u(8 + ah, 14, 1, 3, shL); u(8 + ah, 14, 3, 1, shL);
       u(8 + ax, 17, 3, 1, cuff); u(8 + ax, 18, 3, 2, pal.skin); u(10 + ax, 19, 1, 1, pal.skinD);
     }
     if (fx === 'night') {
       const cy = '#35e6ff', cyD = '#1fa6c4', cyW = '#e8ffff';
-      o(6 + a, 21, 1, 5, cyD); o(4 + a, 27 - la, 6, 1, cyD);
-      u(8, 10, 3, 2, cy); u(8, 10, 1, 1, cyW); u(10, 11, 1, 1, cyD);
-      if (!armsUp) u(8 + ax, 12, 1, 4, cyD);
+      o(6 + a, 23, 1, 3, cyD); o(4 + a, 27 - la, 6, 1, cyD);
+      u(8, 13, 3, 2, cy); u(8, 13, 1, 1, cyW); u(10, 14, 1, 1, cyD);
+      if (!armsUp) u(8 + ax, 15, 1, 2, cyD);
     }
     if (fx === 'flame') {
       const FR = '#e8402a', FO = '#ff8a2a', FY = '#ffd23a';
-      o(9, 23, 1, 1, FR); o(9, 24, 2, 1, FO); o(9, 25, 3, 1, FR); o(10, 25, 1, 1, FY); o(9, 26, 3, 1, FO); o(10, 26, 1, 1, FY);
-      o(5 + a, 25 - la, 2, 1, FR); o(5 + a, 26 - la, 2, 1, FO);
-      if (!armsUp) { u(8 + ax, 14, 3, 1, FR); u(8 + ax, 15, 3, 1, FY); }
+      o(9, 24, 1, 1, FR); o(9, 25, 2, 1, FO); o(9, 26, 3, 1, FR); o(10, 26, 1, 1, FY);
+      o(5 + a, 26 - la, 2, 1, FR); o(5 + a, 27 - la, 2, 1, FO);
+      if (!armsUp) { u(8 + ax, 16, 3, 1, FR); u(8 + ax, 17, 3, 1, FY); }
     }
-    // leher + kepala (profil): hidung mancung, mata dengan kelopak/putih/iris, telinga, rambut belakang
-    u(5, 10, 4, 1, pal.skinD);
-    u(4, 3, 6, 6, pal.skin); u(5, 9, 4, 1, pal.skin); u(3, 6, 1, 2, pal.skin); u(3, 7, 1, 1, pal.skinD);
-    u(8, 5, 1, 4, pal.skinD);
-    u(7, 0, 6, 1, pal.hair); u(5, 1, 10, 1, pal.hair); u(4, 2, 11, 2, pal.hair);
-    u(10, 4, 5, 6, pal.hair);
-    u(11, 7, 4, 3, hairD); u(14, 3, 1, 1, hairD);
+    // kepala bulat besar (profil): pipi tembem, mata besar berkilau, pipi merona, telinga, rambut belakang
+    u(5, 2, 7, 1, pal.skin); u(4, 3, 9, 1, pal.skin); u(3, 4, 10, 7, pal.skin); u(4, 11, 8, 1, pal.skin); u(5, 12, 6, 1, pal.skinD);
+    u(2, 8, 1, 1, pal.skin);                                  // hidung kecil
+    u(11, 5, 1, 6, pal.skinD);
+    u(6, 0, 8, 1, pal.hair); u(4, 1, 12, 1, pal.hair); u(3, 2, 14, 2, pal.hair);
+    u(3, 4, 8, 1, pal.hair); u(5, 5, 2, 1, pal.hair);
+    u(10, 4, 7, 8, pal.hair); u(11, 11, 5, 1, pal.hair);
+    u(11, 9, 5, 3, hairD); u(16, 3, 1, 1, hairD);
     u(6, 1, 3, 1, hairL); u(5, 2, 2, 1, hairL);
-    u(10, 5, 2, 2, pal.skin); u(11, 6, 1, 1, pal.skinD);   // telinga
-    u(5, 4, 2, 1, hairD);                                    // alis
-    u(5, 5, 2, 1, eye); u(5, 6, 1, 1, eye); u(6, 6, 1, 1, white);
-    u(7, 7, 2, 1, blush);
-    u(4, 8, 2, 1, mouth);
+    u(9, 7, 2, 2, pal.skin); u(10, 8, 1, 1, pal.skinD);       // telinga
+    u(4, 7, 3, 3, eye); u(4, 7, 1, 1, white); u(6, 9, 1, 1, '#7a86c8');
+    u(4, 10, 3, 1, blush);
+    u(3, 11, 2, 1, mouth);
   }
   if (pal.nohat) {
     // tanpa topi: rambut sudah digambar di atas
   } else if (pal.cap) {
-    // topi pelaut
-    u(4, -1, 12, 4, pal.hat);
-    u(3, 1, 1, 2, pal.hat); u(16, 1, 1, 2, pal.hat);
-    u(4, 2, 12, 1, pal.band);
+    // topi pelaut (pas di kepala besar)
+    u(3, -1, 14, 5, pal.hat);
+    u(2, 1, 1, 2, pal.hat); u(17, 1, 1, 2, pal.hat);
+    u(3, 2, 14, 1, pal.band);
     u(6, -1, 3, 1, lighten(pal.hat, 0.3));
-    if (dir === 'down') { u(9, 0, 2, 2, pal.band); u(4, 3, 12, 1, pal.hatD); }
-    else if (dir === 'up') { u(4, 3, 12, 1, pal.hatD); }
-    else { u(1, 2, 5, 2, pal.hatD); u(2, 2, 4, 1, pal.hat); }
+    if (dir === 'down') { u(9, 0, 2, 2, pal.band); u(3, 4, 14, 1, pal.hatD); }
+    else if (dir === 'up') { u(3, 4, 14, 1, pal.hatD); }
+    else { u(0, 2, 6, 3, pal.hatD); u(1, 2, 5, 2, pal.hat); }
   } else {
     // topi jerami
-    u(2, 2, 16, 2, pal.hat);
-    u(2, 3, 16, 1, pal.hatD);
-    u(5, -2, 10, 4, pal.hat);
-    u(5, 1, 10, 1, pal.band);
+    u(0, 3, 20, 2, pal.hat);
+    u(0, 4, 20, 1, pal.hatD);
+    u(4, -2, 12, 5, pal.hat);
+    u(4, 2, 12, 1, pal.band);
     u(6, -2, 3, 1, lighten(pal.hat, 0.35));
   }
   ctx.restore();
