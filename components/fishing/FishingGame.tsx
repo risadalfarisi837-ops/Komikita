@@ -757,7 +757,7 @@ export default function FishingGame(props: Props) {
     try {
       if (!document.fullscreenElement) await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
       await o.lock?.('landscape');
-    } catch { say('Putar layar sendiri ke landscape ya'); }
+    } catch { /* tanpa pemberitahuan: tampilan sudah diputar otomatis */ }
   };
 
   const share = async (item: BagItem) => {

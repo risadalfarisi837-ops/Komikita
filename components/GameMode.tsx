@@ -105,19 +105,11 @@ async function leaveGameMode() {
 }
 
 export default function GameMode() {
-  const [needTap, setNeedTap] = useState(false);
-  const frame = useGameFrame();
   useEffect(() => {
     enterGameMode();
     // Sentuhan yang membuka halaman ini biasanya masih berlaku (± 5 detik): langsung masuk layar penuh + landscape.
     // Kalau ditolak (mis. dibuka lewat refresh), tampilkan "Ketuk untuk mulai" supaya jelas apa yang harus dilakukan.
-    if (!document.fullscreenElement) {
-      enterFullscreenLandscape();
-      // Ditolak (mis. halaman dibuka lewat refresh)? Tampilkan "Ketuk untuk mulai"; ketukan berikutnya masuk layar penuh.
-      setTimeout(() => {
-        if (!document.fullscreenElement && !isImmersiveApp() && isTouchDevice() && !leaving) setNeedTap(true);
-      }, 900);
-    }
+    if (!document.fullscreenElement) enterFullscreenLandscape(); // ditolak? tidak ada pesan: sentuhan pertama berikutnya yang membukanya
     let armed = false;
     const onTap = () => {
       armed = false;
@@ -135,7 +127,6 @@ export default function GameMode() {
     const onFs = () => {
       const isFs = !!document.fullscreenElement;
       if (!isFs) arm();
-      else setNeedTap(false);
       // keluar layar penuh karena tombol back (bukan karena pindah aplikasi) → minta konfirmasi keluar
       if (wasFs && !isFs && !leaving && document.visibilityState === 'visible' && Date.now() - visChangedAt > 1500) {
         window.dispatchEvent(new Event(GAME_BACK_EVENT));
@@ -152,17 +143,5 @@ export default function GameMode() {
       leaveGameMode();
     };
   }, []);
-  if (!needTap) return null;
-  return (
-    <div
-      onPointerDown={() => setNeedTap(false)}
-      style={{ position: 'fixed', inset: 0, zIndex: 75, overflow: 'hidden', background: 'rgba(5,16,30,0.82)', color: '#fff', textAlign: 'center', touchAction: 'none' }}
-    >
-      <div style={{ ...frame.style, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-        <div style={{ fontSize: 40 }}>🎣</div>
-        <div style={{ fontSize: 22, fontWeight: 800 }}>Ketuk untuk mulai</div>
-        <div style={{ fontSize: 14, fontWeight: 600, opacity: 0.7 }}>Layar penuh, mode game (landscape)</div>
-      </div>
-    </div>
-  );
+  return null;
 }
