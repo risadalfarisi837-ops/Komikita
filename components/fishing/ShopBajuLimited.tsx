@@ -154,7 +154,7 @@ export default function ShopBajuLimited({ px, font, gems, onOpen, free, banner, 
   );
 
   const infoCard = (o: (typeof OUTFITS)[number], right: boolean) => (
-    <div style={{ position: 'absolute', bottom: px(10), [right ? 'right' : 'left']: px(10), width: px(300), borderRadius: px(10), border: `${px(2)}px solid ${right ? '#b88a3a' : '#4fc3d0'}`, background: 'rgba(6,10,36,.82)', padding: `${px(6)}px ${px(10)}px`, textAlign: right ? 'right' : 'left', color: '#fff' }}>
+    <div style={{ position: 'absolute', bottom: px(10), [right ? 'right' : 'left']: px(10), width: '31%', minWidth: px(260), boxSizing: 'border-box', borderRadius: px(14), border: `${px(2.5)}px solid ${right ? '#d9a032' : '#4fc3d0'}`, background: 'rgba(8,10,40,.80)', padding: `${px(7)}px ${px(12)}px`, textAlign: right ? 'right' : 'left', color: '#fff' }}>
       <div style={{ fontWeight: 800, fontSize: px(17) }}>{o.name}</div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: px(4), alignItems: 'center', justifyContent: right ? 'flex-end' : 'flex-start', marginTop: px(2) }}>
         <span style={{ color: o.color === C.mythic ? '#ff7fc0' : '#ffd04a', fontWeight: 800, fontSize: px(13) }}>{o.rarity}</span>
@@ -180,7 +180,7 @@ export default function ShopBajuLimited({ px, font, gems, onOpen, free, banner, 
     <div>
       <div style={{ position: 'relative', borderRadius: px(20), overflow: 'hidden', border: `${px(3)}px solid #2a2158`, background: '#0b1030', color: '#fff', fontFamily: font }}>
         <div style={{ position: 'relative', height: px(290) }}>
-          {banner ? <img src={banner} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} /> : (
+          {banner ? <img src={banner} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} /> : (
             <>
               <NightScene />
               <div style={{ position: 'absolute', left: px(20), bottom: px(40), filter: 'drop-shadow(0 0 14px rgba(53,230,255,.55))' }}><Sprite k="night" size={px(250)} /></div>

@@ -494,7 +494,7 @@ export default function ShopScreen(p: Props) {
                 );
               })}
             </div>
-    ) : tab === 'bajulimited' ? <ShopBajuLimited px={px} font={font} gems={gems} onOpen={p.onOpenLimited} free={p.limitedFree} pity={p.limitedPity} owned={p.limitedOwned} endsAt={p.limitedEndsAt} />
+    ) : tab === 'bajulimited' ? <ShopBajuLimited px={px} font={font} gems={gems} banner="/banner/baju-secret-hunter.jpg" onOpen={p.onOpenLimited} free={p.limitedFree} pity={p.limitedPity} owned={p.limitedOwned} endsAt={p.limitedEndsAt} />
     : tab === 'gachagaya' ? soon('Gacha Gaya', 'Gaya rambut dan aksesori punggung karakter segera hadir.')
     : tab === 'gacharumah' ? soon('Gacha Rumah', 'Isi rumah dan dekorasi segera hadir.')
     : tab === 'gaya' ? soon('Etalase', 'Ganti gaya karakter di sini setelah Gacha Gaya dibuka.')
