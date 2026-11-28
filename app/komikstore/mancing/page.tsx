@@ -21,6 +21,7 @@ export default function MancingPage() {
   const [name, setName] = useState('');
   const [photo, setPhoto] = useState('');
   const [crystal, setCrystal] = useState(0);
+  const [gems, setGems] = useState(0);
   const [xp, setXp] = useState(0);
   const [outfit, setOutfit] = useState<Outfit>(DEFAULT_OUTFIT);
   const [bag, setBagState] = useState<BagItem[]>([]);
@@ -76,6 +77,7 @@ export default function MancingPage() {
           if (typeof v.displayName === 'string' && v.displayName) setName(v.displayName);
           if (typeof v.photoURL === 'string' && v.photoURL) setPhoto(v.photoURL);
           setCrystal(typeof v.koin === 'number' ? v.koin : 0);
+          setGems(typeof v.gems === 'number' ? v.gems : 0);
           setIsDev(v.role === 'Developer'); isDevRef.current = v.role === 'Developer';
           const fx = typeof v.fishing?.xp === 'number' ? v.fishing.xp : 0;
           xpRef.current = fx;
@@ -277,6 +279,40 @@ export default function MancingPage() {
     }
   }, []);
 
+  // saldo diperbarui lagi saat kembali dari halaman pembayaran
+  const refreshWallet = useCallback(async () => {
+    const f = fb.current;
+    if (!f || !uid.current) return;
+    try {
+      const v = (await f.db.ref('users/' + uid.current).get()).val() || {};
+      setCrystal(typeof v.koin === 'number' ? v.koin : 0);
+      setGems(typeof v.gems === 'number' ? v.gems : 0);
+    } catch { /* abaikan */ }
+  }, []);
+  useEffect(() => {
+    const h = () => { if (document.visibilityState === 'visible') refreshWallet(); };
+    document.addEventListener('visibilitychange', h);
+    window.addEventListener('focus', h);
+    return () => { document.removeEventListener('visibilitychange', h); window.removeEventListener('focus', h); };
+  }, [refreshWallet]);
+
+  // top up: server membuat transaksi Midtrans, lalu kita arahkan ke halaman bayar
+  const onTopUp = useCallback(async (currency: 'gems' | 'crystal', packId: string) => {
+    try {
+      const user = fb.current?.auth?.currentUser;
+      if (!user) { warn('Login dulu untuk top up'); return; }
+      const token = await user.getIdToken();
+      const res = await fetch('/api/topup/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ currency, packId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.redirectUrl) { warn(data.error || 'Gagal membuat pembayaran'); return; }
+      window.location.href = data.redirectUrl;
+    } catch { warn('Gagal membuat pembayaran'); }
+  }, [warn]);
+
   const LABELS = ['Lagi bangunin pulaunya...', 'Nyambung ke pulau...', 'Baca peta pulau...', 'Lagi nyiapin pulau...', 'Masuk ke pulau...'];
   if (!ready || !shown) {
     const st = !boot ? 0 : ready ? 4 : stage;
@@ -287,7 +323,7 @@ export default function MancingPage() {
   return (
     <>
       <FishingGame
-        name={name} photo={photo} crystal={crystal} xp={xp} bag={bag}
+        name={name} photo={photo} crystal={crystal} gems={gems} onTopUp={onTopUp} xp={xp} bag={bag}
         rods={rods} equippedRod={equippedRod} rodLv={rodLv} onUpgradeRod={onUpgradeRod} dev={isDev}
         onCatch={onCatch} onSetXp={onSetXp} outfit={outfit} onSaveOutfit={onSaveOutfit} onSell={onSell} onBuyRod={onBuyRod} onEquipRod={onEquipRod} onGacha={onGacha}
         room={room} pity={pity} starterClaimed={starter} onClaimStarter={onClaimStarter}

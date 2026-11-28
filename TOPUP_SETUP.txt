@@ -1,0 +1,4 @@
+Setup top up (Midtrans)
+1. Env di Vercel: MIDTRANS_SERVER_KEY, MIDTRANS_IS_PRODUCTION (true/false), FIREBASE_SERVICE_ACCOUNT (isi JSON service account, satu baris)
+2. Midtrans Dashboard > Settings > Payment Notification URL: https://DOMAIN-KAMU/api/topup/webhook
+3. Redeploy.

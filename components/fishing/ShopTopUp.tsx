@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 
-export type TopUpCurrency = 'gems' | 'crystal';
+import { TOPUP_PACKS as PACKS } from '@/lib/topupPacks';
+import type { TopUpCurrency } from '@/lib/topupPacks';
+export type { TopUpCurrency };
 
 interface Props {
   px: (n: number) => number;
@@ -17,28 +19,6 @@ interface Props {
   /** Dipanggil saat tombol harga ditekan. Hubungkan ke pembayaran. */
   onBuy?: (currency: TopUpCurrency, packId: string, amount: number, bonus: number, rupiah: number) => void;
 }
-
-interface Pack { id: string; amount: number; bonus: number; rupiah: number; tag?: string }
-
-// Harga & bonus contoh, sesuaikan dengan ekonomi game.
-const PACKS: Record<TopUpCurrency, Pack[]> = {
-  gems: [
-    { id: 'g1', amount: 300, bonus: 20, rupiah: 5000 },
-    { id: 'g2', amount: 700, bonus: 70, rupiah: 10000 },
-    { id: 'g3', amount: 1500, bonus: 200, rupiah: 20000, tag: 'Populer' },
-    { id: 'g4', amount: 4000, bonus: 600, rupiah: 50000, tag: 'Terlaris' },
-    { id: 'g5', amount: 8500, bonus: 1700, rupiah: 100000 },
-    { id: 'g6', amount: 18000, bonus: 4500, rupiah: 200000, tag: 'Paling hemat' },
-  ],
-  crystal: [
-    { id: 'c1', amount: 10000, bonus: 500, rupiah: 5000 },
-    { id: 'c2', amount: 25000, bonus: 2500, rupiah: 10000 },
-    { id: 'c3', amount: 60000, bonus: 9000, rupiah: 20000, tag: 'Populer' },
-    { id: 'c4', amount: 160000, bonus: 32000, rupiah: 50000, tag: 'Terlaris' },
-    { id: 'c5', amount: 340000, bonus: 85000, rupiah: 100000 },
-    { id: 'c6', amount: 720000, bonus: 216000, rupiah: 200000, tag: 'Paling hemat' },
-  ],
-};
 
 const THEME = {
   gems: { name: 'Gems', main: '#c43ae0', grad: 'linear-gradient(180deg,#e060f5,#b02ad0)', edge: '#7a1a96', card: '#e9b6f2', bg: 'linear-gradient(180deg,#ffffff,#fbeefd)', use: 'Dipakai untuk Baju Limited, Gacha Rumah, Pet, dan Etalase' },

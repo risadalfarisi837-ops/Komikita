@@ -47,6 +47,7 @@ interface Props {
   pity?: number;
   starterClaimed?: boolean;
   gems?: number;
+  onTopUp?: (currency: 'gems' | 'crystal', packId: string) => void;
   onClaimStarter?: () => Promise<boolean>;
   onExit: () => void;
   room?: string; // kode pulau dari lobi (kosong = pulau utama)
@@ -1250,7 +1251,7 @@ export default function FishingGame(props: Props) {
       {/* Toko & Gacha */}
       {shopOpen && (
         <ShopScreen
-          px={(n: number) => px(n * 0.64)} font={HUD} crystal={crystal} gems={props.gems ?? 0} onPack={() => say('Pembelian pakai Rupiah belum tersedia')} rods={rods} equippedRod={equippedRod}
+          px={(n: number) => px(n * 0.64)} font={HUD} crystal={crystal} gems={props.gems ?? 0} onTopUp={props.onTopUp} onPack={() => say('Pembelian pakai Rupiah belum tersedia')} rods={rods} equippedRod={equippedRod}
           tab={shopTab} onTab={setShopTab} buying={buying} pulling={pulling}
           onClose={() => setShopOpen(false)} onBuy={buyRod} onEquip={props.onEquipRod} onPull={pullGachaN}
           pity={props.pity ?? 0} starterClaimed={!!props.starterClaimed} onClaimStarter={claimStarter}
