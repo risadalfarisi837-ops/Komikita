@@ -154,7 +154,8 @@ async function latestReadable(id: string): Promise<Latest> {
 async function resolveLatest(list: any[], chMap: Record<string, any>) {
     const res = await Promise.all(list.map(async (m) => {
         const l = chMap[m.attributes?.latestUploadedChapter];
-        if (l && l.pages > 0 && !l.externalUrl && LANGS.includes(l.translatedLanguage)) {
+        const future = l?.publishAt && new Date(l.publishAt).getTime() > Date.now();
+        if (l && l.pages > 0 && !l.externalUrl && !future && LANGS.includes(l.translatedLanguage)) {
             return { m, chapter: String(l.chapter ?? ''), publishAt: l.publishAt as string | undefined };
         }
         const info = await latestReadable(m.id);
@@ -169,14 +170,15 @@ async function toCards(list: any[]) {
     const ids = list.map((m) => m.id);
     const latestIds = list.map((m) => m.attributes?.latestUploadedChapter).filter(Boolean);
 
-    const [stats, chapters] = await Promise.all([
+    const chunks: string[][] = [];
+    for (let i = 0; i < latestIds.length; i += 100) chunks.push(latestIds.slice(i, i + 100));
+
+    const [stats, ...chapterPages] = await Promise.all([
         md('/statistics/manga', { 'manga[]': ids }).catch(() => null),
-        latestIds.length
-            ? md('/chapter', { 'ids[]': latestIds, limit: 100, 'contentRating[]': ['safe', 'suggestive', 'erotica', 'pornographic'] }).catch(() => null)
-            : Promise.resolve(null),
+        ...chunks.map((c) => md('/chapter', { 'ids[]': c, limit: 100, 'contentRating[]': ['safe', 'suggestive', 'erotica', 'pornographic'] }).catch(() => null)),
     ]);
     const chMap: Record<string, any> = {};
-    (chapters?.data || []).forEach((c: any) => { chMap[c.id] = c.attributes; });
+    chapterPages.forEach((pg: any) => (pg?.data || []).forEach((c: any) => { chMap[c.id] = c.attributes; }));
 
     const shown = await resolveLatest(list, chMap);
     return shown.map(({ m, chapter, publishAt }) => {

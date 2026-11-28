@@ -759,7 +759,7 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const CACHE_KEY = 'komiku_home_v3'; // v2: data sekarang punya chapter/waktu/views
+    const CACHE_KEY = 'komiku_home_v4'; // v4: buang cache lama yang chapternya ngawur (chapter bahasa lain)
     const CACHE_TTL = 5 * 60 * 1000;
     try {
       const raw = localStorage.getItem(CACHE_KEY);
