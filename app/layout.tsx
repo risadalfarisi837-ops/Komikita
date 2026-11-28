@@ -1,6 +1,6 @@
 import type {Metadata} from 'next';
 import './globals.css';
-import { Plus_Jakarta_Sans, Montserrat } from 'next/font/google';
+import { Plus_Jakarta_Sans } from 'next/font/google';
 import Link from 'next/link';
 import { Home, Compass, Search, User } from 'lucide-react';
 
@@ -12,7 +12,6 @@ import NoPageZoom from '@/components/NoPageZoom';
 import { LevelSheetHost } from '@/components/LevelPill';
 
 const jakarta = Plus_Jakarta_Sans({ subsets: ['latin'], weight: ['500', '700', '800'], display: 'swap', variable: '--font-jakarta' });
-const montserrat = Montserrat({ subsets: ['latin'], weight: ['500', '600', '700', '800'], display: 'swap', variable: '--font-montserrat' });
 
 export const metadata: Metadata = {
   title: 'Komikita',
@@ -31,7 +30,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
-    <html lang="id" className={`${jakarta.variable} ${montserrat.variable}`}>
+    <html lang="id" className={jakarta.variable}>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&display=swap" />
+      </head>
       <body className="font-sans bg-[#1B1A20] text-white flex flex-col min-h-screen items-center" suppressHydrationWarning>
         <div className="w-full max-w-md bg-[#1B1A20] relative shadow-sm overflow-x-hidden flex flex-col">
           
