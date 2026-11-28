@@ -68,14 +68,14 @@ const OUTFITS: { name: string; rarity: string; pct: string; color: string; sprit
   { name: 'Jubah Kilat Bara', rarity: 'Legendary', pct: '2,4%', color: C.legend, sprite: 'flame', bonus: [['gem', '+500%'], ['luck', '+30%'], ['xp', '+30%']] },
 ];
 
-const OTHERS: { name: string; rarity: string; pct: string; color: string; sprite: SpriteKey; qty: string }[] = [
+const OTHERS: { name: string; rarity: string; pct: string; color: string; sprite: SpriteKey; qty: string; crystal?: boolean }[] = [
   { name: 'Debu Bintang', rarity: 'Epic', pct: '12%', color: C.epic, sprite: 'star', qty: '×5' },
-  { name: 'Cumi', rarity: 'Rare', pct: '11,7%', color: C.rare, sprite: 'squid', qty: '×10' },
-  { name: 'Umpan Glow', rarity: 'Rare', pct: '11,7%', color: C.rare, sprite: 'glow', qty: '×10' },
-  { name: 'Jangkrik Emas', rarity: 'Rare', pct: '11,7%', color: C.rare, sprite: 'cricket', qty: '×10' },
-  { name: 'Wibugem', rarity: 'Common', pct: '16,8%', color: C.common, sprite: 'gem', qty: '×10' },
-  { name: 'Cacing', rarity: 'Common', pct: '16,8%', color: C.common, sprite: 'worm', qty: '×20' },
-  { name: 'Udang', rarity: 'Common', pct: '16,8%', color: C.common, sprite: 'shrimp', qty: '×10' },
+  { name: 'Cumi', rarity: 'Rare', pct: '11,67%', color: C.rare, sprite: 'squid', qty: '×10' },
+  { name: 'Umpan Glow', rarity: 'Rare', pct: '11,67%', color: C.rare, sprite: 'glow', qty: '×10' },
+  { name: 'Jangkrik Emas', rarity: 'Rare', pct: '11,67%', color: C.rare, sprite: 'cricket', qty: '×10' },
+  { name: 'Wibugem', rarity: 'Common', pct: '16,83%', color: C.common, sprite: 'crystal', qty: '10', crystal: true },
+  { name: 'Cacing', rarity: 'Common', pct: '16,83%', color: C.common, sprite: 'worm', qty: '×20' },
+  { name: 'Udang', rarity: 'Common', pct: '16,83%', color: C.common, sprite: 'shrimp', qty: '×10' },
 ];
 
 /** Adegan malam bawaan: laut, bulan, ikan pink menyala, dermaga. */
@@ -182,7 +182,7 @@ export default function ShopBajuLimited({ px, font, gems, onOpen, banner }: Prop
       </div>
       {label('Selain baju · 97,5%')}
       <div style={panel}>
-        {OTHERS.map((o, i) => row(i, o.sprite, o.name, o.rarity, o.color, o.pct, <b style={{ fontSize: px(19), color: BROWN }}>{o.qty}</b>))}
+        {OTHERS.map((o, i) => row(i, o.sprite, o.name, o.rarity, o.color, o.pct, <span style={{ display: 'inline-flex', alignItems: 'center', gap: px(5) }}>{o.crystal && <Sprite k="crystal" size={px(22)} />}<b style={{ fontSize: px(19), color: BROWN }}>{o.qty}</b></span>))}
       </div>
 
       {odds && (

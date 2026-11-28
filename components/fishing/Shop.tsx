@@ -5,6 +5,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { GACHA_ODDS, GACHA_PITY, GACHA_PRICE, GACHA_RODS, RARITY, RODS, formatNum } from '@/lib/fishing';
 import PixelRod from './RodArt';
 import ShopBajuLimited from './ShopBajuLimited';
+import { Sprite } from './ShopSprites';
 
 export type ShopTab = 'toko' | 'bajulimited' | 'gacha' | 'gachagaya' | 'gacharumah' | 'gaya' | 'pet' | 'aksesoris' | 'setaksesoris' | 'pass' | 'tas';
 
@@ -27,7 +28,9 @@ interface Props {
   starterClaimed: boolean;
   onClaimStarter: () => void;
   onAddGems?: () => void;
-  onPack?: (id: 'monthly' | 'monsun' | 'kenalan' | 'buah') => void;
+  onPack?: (id: 'monthly' | 'monsun' | 'kenalan' | 'buah' | 'perdana' | 'lanjut' | 'bekal') => void;
+  /** Opsional: waktu berakhir Paket Lanjut (ms). Kosong = akhir bulan. */
+  lanjutEndsAt?: number;
   freeBaitClaimed?: boolean;
   onClaimBait?: () => void;
   onOpenLimited?: (n: 1 | 10) => void;
@@ -42,6 +45,9 @@ export const PRICE_MONTHLY = 99000;
 export const PRICE_MONSUN = 129000;
 export const PRICE_KENALAN = 5000;
 export const PRICE_BUAH = 15000;
+export const PRICE_PERDANA = 29000;
+export const PRICE_LANJUT = 99000;
+export const PRICE_BEKAL = 49000; // harga tidak terlihat di video, sesuaikan
 
 // ---------- ikon piksel ----------
 export function GemIcon({ size }: { size: number }) {
@@ -301,6 +307,9 @@ export default function ShopScreen(p: Props) {
   const leftMs = Math.max(0, new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).getTime() - Date.now());
   const leftD = Math.floor(leftMs / 86400000);
   const leftH = Math.floor((leftMs % 86400000) / 3600000);
+  const lanjutMs = p.lanjutEndsAt ? Math.max(0, p.lanjutEndsAt - Date.now()) : leftMs;
+  const lanjutD = Math.floor(lanjutMs / 86400000);
+  const lanjutH = Math.floor((lanjutMs % 86400000) / 3600000);
   const ownedG = gachaRods.filter((r) => rods.includes(r.id)).length;
   const topG = [...gachaRods].sort((a, b) => (GACHA_ODDS[a.id] ?? 0) - (GACHA_ODDS[b.id] ?? 0));
   const rarest = topG[0];
@@ -320,7 +329,7 @@ export default function ShopScreen(p: Props) {
   const Slot = ({ children, n }: { children: ReactNode; n?: number }) => (
     <span style={{ position: 'relative', width: px(46), height: px(46), borderRadius: px(12), background: 'linear-gradient(180deg,#fffaf0,#f1e4c8)', border: `${px(2)}px solid #e2d2ae`, boxShadow: `0 ${px(1.5)}px 0 #d8c59c`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box' }}>
       {children}
-      {n != null && <span style={{ position: 'absolute', right: px(-5), bottom: px(-6), minWidth: px(22), textAlign: 'center', background: '#3b3b44', color: '#fff', fontWeight: 800, fontSize: px(13), lineHeight: 1, borderRadius: 99, padding: `${px(3)}px ${px(5)}px`, boxSizing: 'border-box', border: `${px(1.5)}px solid #fffaf0` }}>{n}</span>}
+      {n != null && <span style={{ position: 'absolute', right: px(-5), bottom: px(-6), minWidth: px(22), textAlign: 'center', background: '#3b3b44', color: '#fff', fontWeight: 800, fontSize: px(13), lineHeight: 1, borderRadius: 99, padding: `${px(3)}px ${px(5)}px`, boxSizing: 'border-box', border: `${px(1.5)}px solid #fffaf0` }}>{n.toLocaleString('id-ID')}</span>}
     </span>
   );
   const PackCard = ({ title, items, note, action }: { title: string; items: ReactNode; note: string; action: ReactNode }) => (
@@ -357,10 +366,8 @@ export default function ShopScreen(p: Props) {
             </div>
           </div>
           <div style={{ flex: 'none', paddingRight: px(2) }}>
-            {equippedRod === monthly.id ? (
-              <div style={{ background: '#e1f5e6', border: `${px(2.5)}px solid #9ad8ae`, color: '#1f7a3c', fontWeight: 800, fontSize: px(18), borderRadius: px(12), padding: `${px(8)}px ${px(18)}px` }}>✓ Dipakai</div>
-            ) : rods.includes(monthly.id) ? (
-              <button onClick={() => p.onEquip(monthly.id)} style={{ ...BLUE, fontSize: px(20), padding: `${px(10)}px ${px(24)}px` }}>Pakai</button>
+            {rods.includes(monthly.id) ? (
+              <div style={{ background: '#e1f5e6', border: `${px(2.5)}px solid #9ad8ae`, color: '#1f7a3c', fontWeight: 800, fontSize: px(22), borderRadius: px(14), padding: `${px(12)}px ${px(26)}px` }}>✓ Punyamu</div>
             ) : (
               <button onClick={() => p.onPack?.('monthly')} disabled={buying === monthly.id} style={{ ...SKY, fontSize: px(24), padding: `${px(12)}px ${px(28)}px`, borderRadius: px(12), boxShadow: `0 ${px(4)}px 0 #1a78b8`, opacity: buying === monthly.id ? 0.6 : 1 }}>{rupiah(PRICE_MONTHLY)}</button>
             )}
@@ -369,18 +376,21 @@ export default function ShopScreen(p: Props) {
       )}
       <div style={{ fontSize: px(17), fontWeight: 800, color: '#6a5a48', margin: `${px(10)}px 0 ${px(6)}px` }}>Paket terbatas</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: px(10), alignItems: 'start' }}>
-        <PackCard title={`Paket ${monsunName}`} note="Sekali per akun"
-          items={<>{monthly ? <Slot><PixelRod id={monthly.id} size={px(40)} /></Slot> : null}<Slot n={20}><StarIcon size={px(32)} /></Slot><Slot n={10}><FeatherIcon size={px(32)} /></Slot></>}
-          action={priceBtn(rupiah(PRICE_MONSUN), () => p.onPack?.('monsun'))} />
         <PackCard title="Umpan Gratis" note="Sekali sehari"
-          items={<Slot n={3}><BaitIcon size={px(32)} /></Slot>}
+          items={<Slot n={10}><Sprite k="worm" size={px(24)} /></Slot>}
           action={p.freeBaitClaimed === false ? priceBtn('Ambil gratis', p.onClaimBait) : doneBtn('✓ Besok lagi')} />
-        <PackCard title="Paket Kenalan" note="Sekali per akun"
-          items={<><Slot n={600}><PermataIcon size={px(32)} /></Slot><Slot n={10}><StarIcon size={px(32)} /></Slot></>}
-          action={priceBtn(rupiah(PRICE_KENALAN), () => p.onPack?.('kenalan'))} />
+        <PackCard title="Paket Perdana" note="Sekali per akun"
+          items={<><Slot n={3000}><PermataIcon size={px(32)} /></Slot>{monthly ? <Slot><PixelRod id={monthly.id} size={px(40)} /></Slot> : null}</>}
+          action={priceBtn(rupiah(PRICE_PERDANA), () => p.onPack?.('perdana'))} />
+        <PackCard title="Paket Lanjut" note={`Sisa ${lanjutD} hari ${lanjutH} jam`}
+          items={<><Slot n={6000}><PermataIcon size={px(32)} /></Slot><Slot><Sprite k="ticket" size={px(22)} /></Slot><Slot n={10}><FeatherIcon size={px(32)} /></Slot></>}
+          action={priceBtn(rupiah(PRICE_LANJUT), () => p.onPack?.('lanjut'))} />
         <PackCard title="Paket Musim Buah" note="Sekali per akun"
           items={<><Slot><FruitIcon size={px(32)} /></Slot><Slot n={10}><FeatherIcon size={px(32)} /></Slot></>}
           action={priceBtn(rupiah(PRICE_BUAH), () => p.onPack?.('buah'))} />
+        <PackCard title="Bekal Mingguan" note="Sekali per minggu"
+          items={<><Slot n={6000}><PermataIcon size={px(32)} /></Slot><Slot n={300}><StarIcon size={px(32)} /></Slot></>}
+          action={priceBtn(rupiah(PRICE_BEKAL), () => p.onPack?.('bekal'))} />
       </div>
     </div>
   );

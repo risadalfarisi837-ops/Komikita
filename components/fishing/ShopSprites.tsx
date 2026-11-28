@@ -93,16 +93,17 @@ const SQUID: string[] = [
 const SQUID_P: Pal = { P: '#ff8fb0', p: '#d9608a', w: '#ffffff', k: '#222030' };
 
 const GLOW: string[] = [
-  '...cccc...',
-  '..cCCCCc..',
-  '.cCwwCCCc.',
-  '.cCwCCCCc.',
-  '.cCCCCCCc.',
-  '..cCCCCc..',
-  '...cccc...',
+  '...rrrr...',
+  '..rRRRRr..',
+  '..rRwRRr..',
+  '..yyyyyy..',
+  '..wwwwww..',
+  '..wwwwww..',
   '....kk....',
+  '...k..k...',
+  '...kkkk...',
 ];
-const GLOW_P: Pal = { C: '#7cf3ff', c: '#1fb6d6', w: '#ffffff', k: '#5a6272' };
+const GLOW_P: Pal = { r: '#8a1d1d', R: '#e03a3a', w: '#f3efe4', y: '#f5c33a', k: '#3a3f4d' };
 
 const CRICKET: string[] = [
   'y.......y.',
@@ -145,6 +146,30 @@ const GEM: string[] = [
 ];
 const GEM_P: Pal = { P: '#d23fe6', p: '#f08cff', d: '#a51ec0' };
 
+const CRYSTAL: string[] = [
+  '...pPPp...',
+  '..pPPPPp..',
+  '.pPPwPPPp.',
+  '.PPwPPPPP.',
+  '.PPPPPPPd.',
+  '.PPPPPPdd.',
+  '..PPPPdd..',
+  '..PPPPdd..',
+  '...PPdd...',
+  '....dd....',
+];
+const CRYSTAL_P: Pal = { P: '#4db8ff', p: '#b8e6ff', w: '#ffffff', d: '#1f78c8' };
+
+const TICKET: string[] = [
+  '.yyyyyyyyy.',
+  'yYYYYYYYYYy',
+  'yYYYYrYYYYy',
+  'yYYYrrrYYYy',
+  'yYYYYrYYYYy',
+  '.yyyyyyyyy.',
+];
+const TICKET_P: Pal = { y: '#b87a10', Y: '#ffc83a', r: '#e03a3a' };
+
 const CHEST: string[] = [
   '..SSSSSSSSSS..',
   '.SLLLLLLLLLLS.',
@@ -158,10 +183,10 @@ const CHEST: string[] = [
 ];
 const CHEST_P: Pal = { S: '#8e9ab5', L: '#6b7690', s: '#aab4cc', b: '#454d63', P: '#ff5fb0' };
 
-export type SpriteKey = 'night' | 'flame' | 'star' | 'squid' | 'glow' | 'cricket' | 'worm' | 'shrimp' | 'gem' | 'chest';
+export type SpriteKey = 'night' | 'flame' | 'star' | 'squid' | 'glow' | 'cricket' | 'worm' | 'shrimp' | 'gem' | 'chest' | 'crystal' | 'ticket';
 const SPRITES: Record<SpriteKey, [string[], Pal]> = {
   night: [NIGHT, NIGHT_P], flame: [FLAME, FLAME_P], star: [STAR, STAR_P], squid: [SQUID, SQUID_P], glow: [GLOW, GLOW_P],
-  cricket: [CRICKET, CRICKET_P], worm: [WORM, WORM_P], shrimp: [SHRIMP, SHRIMP_P], gem: [GEM, GEM_P], chest: [CHEST, CHEST_P],
+  cricket: [CRICKET, CRICKET_P], worm: [WORM, WORM_P], shrimp: [SHRIMP, SHRIMP_P], gem: [GEM, GEM_P], chest: [CHEST, CHEST_P], crystal: [CRYSTAL, CRYSTAL_P], ticket: [TICKET, TICKET_P],
 };
 
 export function Sprite({ k, size }: { k: SpriteKey; size: number }) {
