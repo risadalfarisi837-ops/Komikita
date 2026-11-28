@@ -1211,7 +1211,7 @@ export default function ProfilePage() {
     <div style={{ background: '#1B1A20', color: '#fff', minHeight: '100vh', paddingBottom: 130 }}>
 
       {/* Header */}
-      <div style={{ position: 'relative', isolation: 'isolate', padding: userData?.activeBackground ? '24px 16px 22px' : '24px 16px 0', textAlign: 'center', overflow: 'hidden' }}>
+      <div style={{ position: 'relative', isolation: 'isolate', padding: userData?.activeBackground ? '24px 16px 22px' : '24px 16px 0', textAlign: 'left', overflow: 'hidden' }}>
         <ProfileBg k={userData?.activeBackground} fade />
         {activeEffect && <ProfileEffect effectKey={activeEffect} />}
         <div style={{ position: 'absolute', top: 14, right: 10, display: 'flex', gap: 2 }}>
@@ -1224,26 +1224,59 @@ export default function ProfilePage() {
           </Link>
         </div>
 
-        <AvatarWithBorder src={photoURL} size={72} borderKey={activeBorder || undefined} onClick={() => void 0} />
-
-        <div style={{ fontSize: 23, fontWeight: 800, letterSpacing: -1.2, lineHeight: 1.15, marginTop: 22 }}>
-          <PremiumName premium={isPremium && !isDev} dev={isDev}>{userData?.displayName || user.displayName || 'User'}</PremiumName>
-          {isPremium && !isDev && <span style={{ marginLeft: 8 }}><VerifiedBadge size={22} /></span>}
-          {isDev && <span style={{ marginLeft: 8 }}><DevBadge size={26} /></span>}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, paddingRight: 84, textAlign: 'left' }}>
+          <div style={{ flex: '0 0 auto' }}>
+            <AvatarWithBorder src={photoURL} size={66} borderKey={activeBorder || undefined} onClick={() => void 0} />
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 21, fontWeight: 800, letterSpacing: -0.9, lineHeight: 1.2 }}>
+              <PremiumName premium={isPremium && !isDev} dev={isDev} style={{ wordBreak: 'break-word' }}>{userData?.displayName || user.displayName || 'User'}</PremiumName>
+              <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: -0.2, color: MUTED }}>{formatShortId(userData?.shortId, user.uid)}</span>
+              {isPremium && !isDev && <VerifiedBadge size={20} />}
+              {isDev && <DevBadge size={24} />}
+              {isAdmin && (
+                <svg width={20} height={20} viewBox="0 0 24 24" aria-label="Admin" role="img" style={{ flex: '0 0 auto' }}>
+                  <circle cx={12} cy={12} r={10.5} fill="#E5383B" />
+                  <path d="M7.6 12.3l3 3 5.8-6.2" fill="none" stroke="#fff" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '2px 13px 2px 4px', borderRadius: 99, background: rank.bg, fontSize: 14, fontWeight: 800, letterSpacing: -0.2, whiteSpace: 'nowrap' }}>
+                <span style={{ width: 22, height: 22, borderRadius: '50%', background: 'rgba(0,0,0,.28)', border: '1.5px solid #F5C84B', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width={12} height={12} viewBox="0 0 24 24" fill="#F5C84B"><path d="M12 2l3 6.5 7 .9-5.2 4.8 1.4 7L12 17.8 5.8 21.2l1.4-7L2 9.4l7-.9z" /></svg>
+                </span>
+                {rank.name}
+              </span>
+              <LevelPill level={level} label="Lvl." fontSize="14px" iconSize={16} style={{ padding: '2px 12px 2px 7px' }} />
+              {isDev && (
+                <span style={{ background: 'linear-gradient(90deg,#22d3ee,#818cf8,#e879f9)', color: '#0b0b14', padding: '3px 12px', borderRadius: 99, fontSize: 13, fontWeight: 800 }}>DEVELOPER</span>
+              )}
+              {isAdmin && (
+                <span style={{ background: 'linear-gradient(90deg,#B91C1C,#7f1d1d)', border: '1.5px solid #F5C84B', color: '#fff', padding: '2px 12px', borderRadius: 99, fontSize: 13, fontWeight: 800 }}>ADMIN</span>
+              )}
+              {isPremium && !isDev && (
+                <span style={{ background: GOLD, color: '#2E2615', padding: '3px 12px', borderRadius: 99, fontSize: 13, fontWeight: 800 }}>PREMIUM</span>
+              )}
+            </div>
+          </div>
         </div>
+      </div>
 
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-          <LevelPill level={level} label="Lvl." fontSize="15px" iconSize={18} style={{ padding: '3px 14px 3px 8px' }} />
-          {isDev && (
-            <span style={{ background: 'linear-gradient(90deg,#22d3ee,#818cf8,#e879f9)', color: '#0b0b14', padding: '3px 12px', borderRadius: 99, fontSize: 13, fontWeight: 800 }}>DEVELOPER</span>
-          )}
-          {isAdmin && (
-            <span style={{ background: '#0E8A6A', color: '#fff', padding: '3px 12px', borderRadius: 99, fontSize: 13, fontWeight: 800 }}>ADMIN</span>
-          )}
-          {isPremium && !isDev && (
-            <span style={{ background: GOLD, color: '#2E2615', padding: '3px 12px', borderRadius: 99, fontSize: 13, fontWeight: 800 }}>PREMIUM</span>
-          )}
-        </div>
+      {/* Crystal & streak */}
+      <div style={{ display: 'flex', gap: 10, margin: '14px 16px 0' }}>
+        {[
+          { icon: <svg width={26} height={26} viewBox="0 0 24 24"><path d="M6 3h12l4 6-10 12L2 9l4-6z" fill="#4cc3f0" /><path d="M2 9h20M9 3l3 18M15 3l-3 18" stroke="rgba(255,255,255,.55)" fill="none" strokeWidth={1} /></svg>, v: fmt(koin), l: 'Crystal' },
+          { icon: <Flame size={26} color="#F59E0B" fill="#F59E0B" />, v: String(streak), l: 'Streak (hari)' },
+        ].map((x) => (
+          <div key={x.l} style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 12, background: CARD, border: '1px solid rgba(255,255,255,.1)', borderRadius: 18, padding: '12px 16px' }}>
+            {x.icon}
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.8, lineHeight: 1.1 }}>{x.v}</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: MUTED, letterSpacing: -0.3 }}>{x.l}</div>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Ringkasan: peringkat / tingkat / poin */}
