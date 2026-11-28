@@ -1189,23 +1189,61 @@ export class FishingEngine {
       ctx.textBaseline = 'middle';
       ctx.fillText(pr.title, sxp - w / 2 + 20 * u, cy + sz * 0.05);
     }
-    // pil role (Developer / Admin / Premium) di atas gelar
+    // pil role (Developer / Admin / Premium) bentuknya seperti pil gelar, dengan animasi: gradien geser, kilau lewat, glow berdenyut
     const cols = this.roleColors(pr.role);
     if (cols && pr.role) {
+      const tt = performance.now() / 1000;
       const label = pr.role === 'dev' ? 'DEVELOPER' : pr.role === 'admin' ? 'ADMIN' : 'PREMIUM';
-      ctx.font = '700 ' + sz * 0.8 + 'px "Pixelify Sans", ui-monospace, monospace';
-      const w = ctx.measureText(label).width + 16 * u;
-      const h = sz * 1.4;
-      const cy2 = syHead - 46 * u - sz * 1.6 - 2 * u;
-      const g = ctx.createLinearGradient(sxp - w / 2, 0, sxp + w / 2, 0);
-      cols.forEach((c, i) => g.addColorStop(i / (cols.length - 1), c));
+      ctx.font = '700 ' + sz * 0.9 + 'px "Pixelify Sans", ui-monospace, monospace';
+      const tw = ctx.measureText(label).width;
+      const w = tw + 30 * u;
+      const h = sz * 1.6;
+      const cy2 = syHead - 46 * u - h - 3 * u;
+      const x0 = sxp - w / 2;
+      // gradien berulang yang bergeser pelan
+      const shift = (tt * 0.3) % 1;
+      const gx = x0 - w * shift;
+      const g = ctx.createLinearGradient(gx, 0, gx + w * 2, 0);
+      const seq = [...cols, ...cols, cols[0]];
+      seq.forEach((c, i) => g.addColorStop(i / (seq.length - 1), c));
+      ctx.save();
+      ctx.shadowColor = cols[0];
+      ctx.shadowBlur = (7 + 4 * Math.sin(tt * 3)) * u;
       ctx.fillStyle = g;
-      this.rrect(sxp - w / 2, cy2 - h / 2, w, h, h / 2.4);
+      this.rrect(x0, cy2 - h / 2, w, h, h / 2.4);
       ctx.fill();
-      ctx.fillStyle = pr.role === 'admin' ? '#ffffff' : '#0b0b14';
-      ctx.textAlign = 'center';
+      ctx.restore();
+      ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+      ctx.lineWidth = Math.max(1, u * 0.9);
+      this.rrect(x0, cy2 - h / 2, w, h, h / 2.4);
+      ctx.stroke();
+      // kilau putih miring yang lewat berkala
+      ctx.save();
+      this.rrect(x0, cy2 - h / 2, w, h, h / 2.4);
+      ctx.clip();
+      const k = (tt * 0.55) % 2; // 0..1 melintas, 1..2 jeda
+      if (k < 1) {
+        const sx2 = x0 - h + k * (w + h * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.beginPath();
+        ctx.moveTo(sx2 + h * 0.5, cy2 - h / 2);
+        ctx.lineTo(sx2 + h * 1.1, cy2 - h / 2);
+        ctx.lineTo(sx2 + h * 0.6, cy2 + h / 2);
+        ctx.lineTo(sx2, cy2 + h / 2);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+      // ikon lencana di kiri (di atas lingkaran putih)
+      const ix = x0 + 4 * u + h * 0.34;
+      ctx.fillStyle = 'rgba(255,255,255,0.92)';
+      ctx.beginPath(); ctx.arc(ix, cy2, h * 0.37, 0, Math.PI * 2); ctx.fill();
+      this.drawRoleBadge(pr.role, ix, cy2, h * 0.29, u);
+      ctx.font = '700 ' + sz * 0.9 + 'px "Pixelify Sans", ui-monospace, monospace';
+      ctx.fillStyle = pr.role === 'admin' ? '#ffffff' : pr.role === 'premium' ? '#3b2a05' : '#0b0b14';
+      ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      ctx.fillText(label, sxp, cy2 + sz * 0.05);
+      ctx.fillText(label, x0 + 20 * u, cy2 + sz * 0.05);
     }
     this.roleTag(pr.name || 'Tamu', ' · Lv' + pr.level, pr.role, sxp, syHead - 24 * u, sz * 1.05, u, null);
   }
