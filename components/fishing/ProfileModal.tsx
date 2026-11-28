@@ -64,6 +64,39 @@ function FishCanvas({ id, scale }: { id: string; scale: number }) {
   return <canvas ref={ref} width={FISH_W} height={FISH_H} style={{ width: FISH_W * scale, height: FISH_H * scale, imageRendering: 'pixelated' }} />;
 }
 
+type IconKind = 'overall' | 'kemeja' | 'celana';
+const ICON_LINE = '#14110f';
+function darkenHex(hex: string, f: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  const ch = (v: number) => Math.max(0, Math.min(255, Math.round(v * (1 - f))));
+  return '#' + [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => ch(v).toString(16).padStart(2, '0')).join('');
+}
+// Ikon pixel-art pakaian (kemeja / overall / celana) untuk kartu item di Lemari > Baju.
+function ItemIcon({ kind, color, size, dim }: { kind: IconKind; color: string; size: number; dim: boolean }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const ctx = ref.current?.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, 16, 16);
+    ctx.imageSmoothingEnabled = false;
+    const d = darkenHex(color, 0.22);
+    const dd = darkenHex(color, 0.4);
+    type Rc = [number, number, number, number, string];
+    let rects: Rc[];
+    if (kind === 'kemeja') {
+      rects = [[4, 4, 8, 9, color], [2, 4, 2, 4, color], [12, 4, 2, 4, color], [2, 7, 2, 1, d], [12, 7, 2, 1, d], [6, 4, 4, 1, dd], [4, 11, 8, 2, d], [7, 5, 2, 5, d]];
+    } else if (kind === 'overall') {
+      rects = [[4, 6, 8, 7, color], [5, 2, 2, 5, color], [9, 2, 2, 5, color], [6, 8, 4, 2, d], [4, 12, 8, 1, dd], [5, 6, 1, 1, dd], [10, 6, 1, 1, dd]];
+    } else {
+      rects = [[4, 2, 8, 2, d], [4, 4, 8, 4, color], [4, 8, 3, 6, color], [9, 8, 3, 6, color], [7, 4, 2, 4, d], [4, 12, 3, 2, d], [9, 12, 3, 2, d]];
+    }
+    ctx.fillStyle = ICON_LINE;
+    rects.forEach(([x, y, w, h]) => ctx.fillRect(x - 1, y - 1, w + 2, h + 2));
+    rects.forEach(([x, y, w, h, c]) => { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); });
+  }, [kind, color]);
+  return <canvas ref={ref} width={16} height={16} style={{ width: size, height: size, imageRendering: 'pixelated', display: 'block', opacity: dim ? 0.4 : 1 }} />;
+}
+
 export default function ProfileModal(p: Props) {
   const { px, font } = p;
   const [view, setView] = useState<View>('profil');
@@ -115,6 +148,17 @@ export default function ProfileModal(p: Props) {
     );
   };
   const grid = (kids: ReactNode) => <div style={{ display: 'flex', flexWrap: 'wrap', gap: px(10) }}>{kids}</div>;
+  const itemGrid = (kids: ReactNode) => <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(${px(62)}px, 1fr))`, gap: px(8) }}>{kids}</div>;
+  const itemTile = (key: string, kind: IconKind, color: string, on: boolean, need: number, pick: () => void) => {
+    const ok = open(need);
+    return (
+      <button key={key} onClick={() => { if (ok) pick(); }} aria-label={ok ? 'Pilih' : `Terkunci, butuh level ${need}`} style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', padding: 0, borderRadius: px(14), cursor: ok ? 'pointer' : 'default', background: ok ? '#fffdf4' : '#e3d6b6', border: `${px(3.5)}px solid ${on ? '#1f5fbf' : EDGE}`, boxShadow: on ? '0 0 0 2px #9cc4ff' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <ItemIcon kind={kind} color={color} size={px(42)} dim={!ok} />
+        {on && <span style={{ position: 'absolute', top: px(-7), right: px(-7), width: px(22), height: px(22), borderRadius: '50%', background: '#2f9e44', color: '#fff', fontSize: px(14), fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `${px(2)}px solid #fff` }}>✓</span>}
+        {!ok && <span style={{ position: 'absolute', bottom: px(2), left: 0, right: 0, textAlign: 'center', fontSize: px(11), fontWeight: 800, color: '#7a6a45' }}>🔒 Lv{need}</span>}
+      </button>
+    );
+  };
   const count = (list: { lv: number }[]) => <span style={{ fontSize: px(14), fontWeight: 800, opacity: 0.7 }}>{list.filter((x) => open(x.lv)).length}/{list.length}</span>;
 
   const tabs: [Tab, string, string][] = [['tubuh', '🙂', 'Tubuh'], ['baju', '👕', 'Baju'], ['topi', '👒', 'Topi'], ['limited', '✨', 'Limited']];
@@ -328,11 +372,11 @@ export default function ProfileModal(p: Props) {
         {tab === 'baju' && (
           <>
             {label('Overall', count(SHIRTS))}
-            {grid(SHIRTS.map((s, i) => swatch('o' + i, s.c, o.shirt === i, s.lv, () => set({ shirt: i }))))}
+            {itemGrid(SHIRTS.map((s, i) => itemTile('o' + i, 'overall', s.c, o.shirt === i, s.lv, () => set({ shirt: i }))))}
             {label('Kemeja', count(TOPS))}
-            {grid(TOPS.map((s, i) => swatch('t' + i, s.c, o.top === i, s.lv, () => set({ top: i }))))}
+            {itemGrid(TOPS.map((s, i) => itemTile('t' + i, 'kemeja', s.c, o.top === i, s.lv, () => set({ top: i }))))}
             {label('Celana', count(PANTS))}
-            {grid(PANTS.map((s, i) => swatch('c' + i, s.c, o.pants === i, s.lv, () => set({ pants: i }))))}
+            {itemGrid(PANTS.map((s, i) => itemTile('c' + i, 'celana', s.c, o.pants === i, s.lv, () => set({ pants: i }))))}
           </>
         )}
         {tab === 'limited' && (
