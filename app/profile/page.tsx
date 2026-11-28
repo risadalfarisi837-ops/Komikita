@@ -1322,7 +1322,7 @@ export default function ProfilePage() {
       <div style={{ padding: '18px 16px 0' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ flex: '0 0 auto' }}>
-            <AvatarWithBorder src={photoURL} size={44} borderKey={activeBorder || undefined} onClick={() => { window.location.assign('/profile/edit'); }} />
+            <AvatarWithBorder src={photoURL} size={44} borderKey={activeBorder || undefined} onClick={() => { window.location.assign('/user?uid=' + encodeURIComponent(user.uid)); }} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', fontSize: 15, fontWeight: 800, letterSpacing: -0.4, lineHeight: 1.2 }}>
