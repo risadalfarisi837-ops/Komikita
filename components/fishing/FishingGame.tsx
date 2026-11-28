@@ -348,6 +348,10 @@ export default function FishingGame(props: Props) {
   const [popup, setPopup] = useState<{ item: BagItem; gain: number; up: number; record: boolean } | null>(null);
   const [bagOpen, setBagOpen] = useState(false);
   const [held, setHeld] = useState<BagItem | null>(null);
+  const [rodOut, setRodOutState] = useState(true); // joran di tangan (hotbar): bisa dipakai / disimpan
+  const holdFish = (b: BagItem | null) => { setHeld(b); if (b) setRodOutState(false); };
+  const toggleHold = (b: BagItem) => { if (held && held.id === b.id) setHeld(null); else holdFish(b); };
+  const toggleRod = () => { if (rodOut) setRodOutState(false); else { setRodOutState(true); setHeld(null); } };
   const [sel, setSel] = useState('');
   const [shopOpen, setShopOpen] = useState(false);
   const [sellOpen, setSellOpen] = useState(false);
@@ -477,6 +481,7 @@ export default function FishingGame(props: Props) {
       onToast: (m) => { if (/kabur|lepas/i.test(m)) setFails((f) => f + 1); say(m); },
       onBite: () => { try { navigator.vibrate?.(60); } catch { /* abaikan */ } },
       onNearShop: (n) => setNearShop(n),
+      onRodOut: () => { setRodOutState(true); setHeld(null); },
       onAuto: (on) => { autoRef.current = on; setAuto(on); if (on) { setPopup(null); setDstats((d) => (d.since ? d : { ...d, since: Date.now() })); } },
       onCatch: (c: Catch) => {
         const item: BagItem = { id: newId(), s: c.species.id, w: c.weight };
@@ -636,6 +641,7 @@ export default function FishingGame(props: Props) {
     const sp = held ? SPECIES_BY_ID[held.s] : null;
     engineRef.current?.setHeld(held && sp ? { species: sp, weight: held.w } : null);
   }, [held]);
+  useEffect(() => { engineRef.current?.setRodOut(rodOut); }, [rodOut]);
 
   // ---- Mode Developer: sinkron pengaturan ke engine, jaga layar tetap nyala, auto-jual ----
   const dev = !!props.dev;
@@ -998,20 +1004,20 @@ export default function FishingGame(props: Props) {
               <button onClick={() => setBuffOpen((o) => !o)} aria-label="Buff" style={{ width: hx(22), height: hx(22), borderRadius: '50%', background: '#1f6fe0', border: `${hx(2)}px solid #6aa8ff`, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}><Svg d={buffOpen ? 'M14 6l-6 6 6 6' : 'M10 6l6 6-6 6'} size={hx(12)} w={3.6} /></button>
             </div>
             <div style={{ display: 'flex', gap: hx(7), alignItems: 'flex-end' }}>
-              <button style={slot(true, '#4a9bff')} onClick={() => setRodOpen(true)} aria-label="Joran"><PixelRod id={rod.id} size={hx(46)} /></button>
+              <button style={slot(rodOut, '#4a9bff')} onClick={toggleRod} aria-label="Joran"><PixelRod id={rod.id} size={hx(46)} /></button>
               {recent.map((b) => {
                 const sp = SPECIES_BY_ID[b.s];
                 const xl = isXL(sp, b.w);
                 return (
-                  <button key={b.id} style={slot(false, rarityBorder(sp.rarity, xl))} onClick={() => { setSel(b.id); setBagOpen(true); }} aria-label={sp.name}>
+                  <button key={b.id} style={slot(!!held && held.id === b.id, rarityBorder(sp.rarity, xl))} onClick={() => toggleHold(b)} aria-label={sp.name}>
                     {xl && <span style={xlTag()}>XL</span>}
                     <FishIcon id={sp.id} scale={0.86 * u * HUD_SCALE} />
                     <span style={wLabel()}>{wl(b.w)}</span>
                   </button>
                 );
               })}
-              {held && (
-                <button style={slot(false, '#34d27a')} onClick={() => setHeld(null)} aria-label="Lepas ikan">
+              {held && !recent.some((r) => r.id === held.id) && (
+                <button style={slot(true, '#34d27a')} onClick={() => setHeld(null)} aria-label="Lepas ikan">
                   <span style={{ fontSize: hx(24) }}>🙌</span>
                   <span style={wLabel()}>Lepas</span>
                 </button>
@@ -1136,7 +1142,7 @@ export default function FishingGame(props: Props) {
         const bc = (r: keyof typeof RARITY) => (r === 'common' ? SLOT_EDGE : r === 'uncommon' ? '#4fc261' : r === 'rare' ? '#4aa3ff' : r === 'epic' ? '#b48cff' : r === 'divine' ? '#7df9ff' : r === 'secret' ? '#e879f9' : '#f5c451');
         const nc = (r: keyof typeof RARITY) => (r === 'common' ? '#fff' : r === 'uncommon' ? '#a4f0a4' : r === 'rare' ? '#9ad0ff' : r === 'epic' ? '#d6bfff' : r === 'divine' ? '#b8fbff' : r === 'secret' ? '#f5c6ff' : '#ffd96a');
         const cb = (extra: CSSProperties = {}): CSSProperties => ({ border: `${px(2)}px solid ${CREAM_EDGE}`, borderRadius: px(13), background: CREAM_BG, color: '#6b4a2a', fontFamily: HUD, fontWeight: 700, fontSize: px(13), height: px(34), padding: `0 ${px(14)}px`, cursor: 'pointer', boxShadow: '0 3px 0 #d9c08a', display: 'inline-flex', alignItems: 'center', gap: px(4), boxSizing: 'border-box', whiteSpace: 'nowrap', ...extra });
-        const cell = (b: BagItem, onClick: () => void) => {
+        const cell = (b: BagItem, onClick: () => void, selected = false) => {
           const sp = SPECIES_BY_ID[b.s];
           const parts = sp.name.split(' ');
           const nameEl = sp.name.endsWith(' Emas') && parts.length > 1
@@ -1144,7 +1150,7 @@ export default function FishingGame(props: Props) {
             : sp.name;
           return (
             <div key={b.id} style={{ position: 'relative', width: '100%', paddingTop: '100%' }}>
-            <button onClick={onClick} style={{ position: 'absolute', inset: 0, borderRadius: px(14), background: SLOT_BG, border: `${px(3)}px solid ${bc(sp.rarity)}`, boxSizing: 'border-box', padding: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', overflow: 'hidden', boxShadow: sp.rarity === 'legendary' ? '0 0 0 2px rgba(245,196,81,0.35)' : sp.rarity === 'divine' ? '0 0 0 2px rgba(125,249,255,0.55)' : sp.rarity === 'secret' ? '0 0 0 2px rgba(232,121,249,0.6)' : 'none' }}>
+            <button onClick={onClick} style={{ position: 'absolute', inset: 0, borderRadius: px(14), background: SLOT_BG, border: `${px(3)}px solid ${selected ? '#fff' : bc(sp.rarity)}`, isolation: 'isolate', boxSizing: 'border-box', padding: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', overflow: 'hidden', boxShadow: sp.rarity === 'legendary' ? '0 0 0 2px rgba(245,196,81,0.35)' : sp.rarity === 'divine' ? '0 0 0 2px rgba(125,249,255,0.55)' : sp.rarity === 'secret' ? '0 0 0 2px rgba(232,121,249,0.6)' : 'none' }}>
               <span style={{ fontSize: px(9.5), fontWeight: 700, color: nc(sp.rarity), marginTop: px(2), textShadow: stroke, lineHeight: 1.02, maxWidth: '96%', textAlign: 'center', fontFamily: HUD, zIndex: 1 }}>{nameEl}</span>
               <span style={{ position: 'absolute', left: 0, right: 0, top: '50%', transform: 'translateY(-38%)', display: 'flex', justifyContent: 'center' }}><FishIcon id={sp.id} scale={0.95 * u} /></span>
               <span style={{ fontSize: px(13), fontWeight: 700, color: '#fff', marginBottom: px(1), textShadow: stroke, fontFamily: HUD, lineHeight: 1.1, zIndex: 1 }}>{wl(b.w)}</span>
@@ -1189,10 +1195,10 @@ export default function FishingGame(props: Props) {
               <div style={{ padding: `${px(4)}px ${px(14)}px ${px(10)}px`, flex: '0 0 auto' }}>
                 <div style={{ fontSize: px(14), fontWeight: 700, color: '#8a6a4a', paddingBottom: px(3), borderBottom: `${px(2)}px dashed #e3d3ad`, marginBottom: px(7) }}>Hotbar</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(9, 1fr)', gap: px(6) }}>
-                  <div style={{ position: 'relative', width: '100%', paddingTop: '100%' }}><button onClick={() => { setBagOpen(false); setShopOpen(true); }} aria-label="Joran" style={{ position: 'absolute', inset: 0, borderRadius: px(14), background: SLOT_BG, border: `${px(3.5)}px solid #ffc531`, boxShadow: '0 0 0 2px rgba(255,197,49,0.28)', boxSizing: 'border-box', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ position: 'relative', width: '100%', paddingTop: '100%' }}><button onClick={toggleRod} aria-label="Joran" style={{ position: 'absolute', inset: 0, borderRadius: px(14), background: SLOT_BG, border: `${px(3.5)}px solid ${rodOut ? '#fff' : '#ffc531'}`, isolation: 'isolate', boxShadow: '0 0 0 2px rgba(255,197,49,0.28)', boxSizing: 'border-box', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <PixelRod id={rod.id} size={px(46)} />
                   </button></div>
-                  {hotCells.map((b, i) => b ? cell(b, () => setSel(b.id)) : emptySlot('h' + i, false))}
+                  {hotCells.map((b, i) => b ? cell(b, () => toggleHold(b), !!held && held.id === b.id) : emptySlot('h' + i, false))}
                 </div>
               </div>
             </div>
@@ -1201,14 +1207,14 @@ export default function FishingGame(props: Props) {
               const rar = RARITY[sp.rarity];
               const btn: CSSProperties = { borderRadius: px(10), border: 0, fontFamily: HUD, fontWeight: 700, fontSize: px(14), padding: `${px(8)}px 0`, cursor: 'pointer' };
               return (
-                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(20,24,40,0.45)' }} onClick={(e) => { e.stopPropagation(); setSel(''); }}>
+                <div style={{ position: 'absolute', inset: 0, zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(20,24,40,0.45)' }} onClick={(e) => { e.stopPropagation(); setSel(''); }}>
                   <div style={{ width: px(230), borderRadius: px(16), border: `${px(3)}px solid ${rar.color}`, background: '#fff9ec', padding: px(10), textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
                     <div style={{ display: 'flex', justifyContent: 'center', background: SLOT_BG, borderRadius: px(12) }}><FishIcon id={sp.id} scale={2 * u} /></div>
                     <div style={{ fontSize: px(16), fontWeight: 700, color: '#3b2f1a', marginTop: px(5) }}>{sp.name}</div>
                     <div style={{ fontSize: px(12), fontWeight: 700, color: '#8a6d0f' }}>{rar.label} · {formatWeight(dsel.w)}</div>
                     <div style={{ display: 'grid', gap: px(6), marginTop: px(8) }}>
                       {isShowoff(sp, dsel.w) && <button onClick={() => share(dsel)} style={{ ...btn, background: 'linear-gradient(90deg,#c36bff,#f5c451)', color: '#1a1020' }}>Pamerkan</button>}
-                      <button onClick={() => { setHeld(held && held.id === dsel.id ? null : dsel); setSel(''); setBagOpen(false); }} style={{ ...btn, background: '#38a3d8', color: '#fff' }}>{held && held.id === dsel.id ? 'Lepas ikan' : '🙌 Pegang'}</button>
+                      <button onClick={() => { toggleHold(dsel); setSel(''); setBagOpen(false); }} style={{ ...btn, background: '#38a3d8', color: '#fff' }}>{held && held.id === dsel.id ? 'Lepas ikan' : '🙌 Pegang'}</button>
                       <button onClick={() => { sell([dsel.id]); setSel(''); }} style={{ ...btn, background: '#f5a623', color: '#2a1d00' }}>Jual 💎{formatNum(fishPrice(sp, dsel.w, rod.money))}</button>
                     </div>
                   </div>
