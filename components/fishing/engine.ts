@@ -5,7 +5,7 @@ import type { Rarity, SizeTier, Species } from '@/lib/fishing';
 import {
   TILE, generateWorld, drawPlayer, drawPalm, drawRock, drawLamp, drawBobber, drawRipple, drawLine,
   drawBubbleAlert, drawStarPop, drawFish, drawShowFish, showFishLift, rodGeometry, PAL_PLAYER, drawFountain, drawBench, drawTable, drawStool, drawSign, drawBush, drawNpc,
-  drawStall, drawFlowers, drawPine, drawLighthouse, drawBigTree, drawBarrel, drawCrate, drawNet, drawUmbrella, drawBoat, drawGiantFish, drawShop, palForId, mulberry32,
+  drawStall, drawFlowers, rodBurst, rodCatchKind, drawDragon, drawDragonPeek, drawTentacles, dragonPoint, drawPine, drawLighthouse, drawBigTree, drawBarrel, drawCrate, drawNet, drawUmbrella, drawBoat, drawGiantFish, drawShop, palForId, mulberry32,
 } from './art';
 import type { Dir, Pal, World } from './art';
 import { palFromCode, palFromOutfit } from './outfit';
@@ -40,7 +40,7 @@ const DIRV: Record<Dir, { x: number; y: number }> = { down: { x: 0, y: 1 }, up: 
 const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
 const isWater = (t: string) => t === 'deep' || t === 'shallow';
 
-interface Particle { x: number; y: number; vx: number; vy: number; life: number; max: number; col: string }
+interface Particle { x: number; y: number; vx: number; vy: number; life: number; max: number; col: string; s?: number }
 interface Ripple { x: number; y: number; t: number }
 interface Target { tx: number; ty: number; wx: number; wy: number }
 interface Reel { fishPos: number; fishTarget: number; tNext: number; zone: number; zoneV: number; zoneH: number; prog: number; time: number; diff: number }
@@ -542,11 +542,20 @@ export class FishingEngine {
   }
 
   private splash(x: number, y: number, n: number) {
-    for (let i = 0; i < n; i++) {
+    // warna & jumlah percikan mengikuti joran yang dipakai (tiap joran beda)
+    const b = rodBurst(this.profile.rodId || 'default');
+    const total = Math.round(n * b.nm);
+    for (let i = 0; i < total; i++) {
       const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.2;
       const v = 20 + Math.random() * 36;
-      this.parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0, max: 0.5 + Math.random() * 0.4, col: Math.random() < 0.6 ? '#ffffff' : '#bfeaff' });
+      this.parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0, max: 0.5 + Math.random() * 0.4, col: b.cols[Math.floor(Math.random() * b.cols.length)], s: b.size });
     }
+  }
+
+  // joran naga: naga muncul saat ikan ditangkap, jadi tahap menangkap sedikit lebih lama
+  private catchDur() {
+    const kd = rodCatchKind(this.profile.rodId || 'default');
+    return kd === 'dragon' || kd === 'seadragon' ? 1.4 : kd === 'tentacle' ? 1.1 : 0.9;
   }
 
   private inputVec(): { x: number; y: number } {
@@ -654,7 +663,17 @@ export class FishingEngine {
       this.updateReel(dt);
     } else if (this.phase === 'catching') {
       this.catchT += dt;
-      if (this.catchT >= 0.9 && this.fish) {
+      const kd = rodCatchKind(this.profile.rodId || 'default');
+      if (kd && this.target && (kd === 'dragon' || kd === 'seadragon')) {
+        // api (naga api) atau tetesan air (naga laut) keluar dari mulut naga
+        const kk = Math.min(1, this.catchT / this.catchDur());
+        const e = 1 - Math.pow(1 - kk, 2);
+        const [hx, hy] = dragonPoint(this.target.wx, this.target.wy, this.px, this.py - 14, e);
+        for (let i = 0; i < 2; i++) {
+          this.parts.push({ x: hx, y: hy, vx: (Math.random() - 0.5) * 22, vy: -10 - Math.random() * 18, life: 0, max: 0.35 + Math.random() * 0.3, col: kd === 'dragon' ? ['#ffd27a', '#ff7a3a', '#ff6a3a'][Math.floor(Math.random() * 3)] : ['#bff3ff', '#2fd0ff', '#6fe3ff'][Math.floor(Math.random() * 3)], s: 1 + (Math.random() < 0.3 ? 1 : 0) });
+        }
+      }
+      if (this.catchT >= this.catchDur() && this.fish) {
         const c = this.fish;
         this.setPhase('result');
         this.ev.onCatch?.(c);
@@ -832,6 +851,8 @@ export class FishingEngine {
       drawBobber(ctx, bx, by, 0, this.profile.rodId || 'default');
     } else if (tg && ph === 'reel') {
       bx = tg.wx; by = tg.wy;
+      const rk = rodCatchKind(this.profile.rodId || 'default');
+      if (rk === 'dragon' || rk === 'seadragon') drawDragonPeek(ctx, tg.wx + 12, tg.wy + 2, t, rk);
     }
 
     // objek berurutan menurut y
@@ -901,17 +922,26 @@ export class FishingEngine {
 
     // ikan melompat ke tangan
     if (ph === 'catching' && tg && this.fish) {
-      const k = Math.min(1, this.catchT / 0.9);
-      const x = tg.wx + (this.px - tg.wx) * k;
-      const y = tg.wy + (this.py - 14 - tg.wy) * k - Math.sin(k * Math.PI) * 26;
-      drawFish(ctx, this.fish.species, x, y, 0.55, -0.9 + k * 1.8 + Math.sin(k * 20) * 0.1, this.px < tg.wx);
+      const k = Math.min(1, this.catchT / this.catchDur());
+      const kind = rodCatchKind(this.profile.rodId || 'default');
+      if (kind === 'dragon' || kind === 'seadragon') {
+        // naga muncul dari air, menggigit ikan lalu melengkung ke karakter
+        const [hx, hy] = drawDragon(ctx, tg.wx, tg.wy, this.px, this.py - 14, k, t, kind);
+        const sgn = this.px >= tg.wx ? 1 : -1;
+        drawFish(ctx, this.fish.species, hx + sgn * 8, hy + 1, 0.4, -0.3 * sgn + Math.sin(t * 14) * 0.15, this.px < tg.wx);
+      } else {
+        const x = tg.wx + (this.px - tg.wx) * k;
+        const y = tg.wy + (this.py - 14 - tg.wy) * k - Math.sin(k * Math.PI) * 26;
+        if (kind === 'tentacle') drawTentacles(ctx, tg.wx, tg.wy, x, y, k, t);
+        drawFish(ctx, this.fish.species, x, y, 0.55, -0.9 + k * 1.8 + Math.sin(k * 20) * 0.1, this.px < tg.wx);
+      }
     }
 
     for (const p of this.parts) {
       const a = 1 - p.life / p.max;
       ctx.globalAlpha = Math.max(0, a);
       ctx.fillStyle = p.col;
-      ctx.fillRect(Math.round(p.x), Math.round(p.y), 1, 1);
+      ctx.fillRect(Math.round(p.x), Math.round(p.y), p.s || 1, p.s || 1);
     }
     ctx.globalAlpha = 1;
 

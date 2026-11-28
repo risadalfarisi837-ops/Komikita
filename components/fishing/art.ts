@@ -1829,6 +1829,122 @@ export function drawStarPop(ctx: CanvasRenderingContext2D, x: number, y: number,
   ctx.restore();
 }
 
+// ---------- efek tangkapan khas tiap joran ----------
+export type CatchKind = 'dragon' | 'seadragon' | 'tentacle' | null;
+export function rodCatchKind(rodId: string): CatchKind {
+  const st = (ROD_SKINS[rodId] || ROD_SKINS.default).style;
+  return st === 'dragon' || st === 'seadragon' || st === 'tentacle' ? st : null;
+}
+/** Warna & jumlah percikan sesuai joran (cipratan air saat gigitan / tarik / tangkap). */
+export function rodBurst(rodId: string): { cols: string[]; nm: number; size: number } {
+  const sk = ROD_SKINS[rodId];
+  if (!rodId || rodId === 'default' || !sk) return { cols: ['#ffffff', '#ffffff', '#bfeaff'], nm: 1, size: 1 };
+  const cols = [sk.glow, sk.spark, sk.ring, sk.shaft, sk.tip].filter(Boolean) as string[];
+  return { cols, nm: sk.glow ? 1.8 : 1.2, size: sk.style === 'gem' ? 2 : 1 };
+}
+
+/** Titik di lintasan lengkung dari air (x0,y0) ke tangan karakter (x1,y1). */
+export function dragonPoint(x0: number, y0: number, x1: number, y1: number, u: number): [number, number] {
+  const cx = (x0 + x1) / 2;
+  const cy = Math.min(y0, y1) - 42;
+  const v = 1 - u;
+  return [v * v * x0 + 2 * v * u * cx + u * u * x1, v * v * y0 + 2 * v * u * cy + u * u * y1];
+}
+
+const DRAGON_COL = {
+  dragon: { b: '#d9482b', d: '#7a1d14', l: '#ffe27a', f: '#ff7a3a', eye: '#ffe27a' },
+  seadragon: { b: '#1f9bd1', d: '#0d4f7a', l: '#c9f6ff', f: '#6fe3ff', eye: '#ffffff' },
+};
+
+function dragonHead(ctx: CanvasRenderingContext2D, hx: number, hy: number, s: 1 | -1, kind: 'dragon' | 'seadragon', open: boolean) {
+  const c = DRAGON_COL[kind];
+  const M = (dx: number, dy: number, w: number, h: number, col: string) => R(ctx, s > 0 ? hx + dx : hx - dx - w + 1, hy + dy, w, h, col);
+  M(-3, -4, 2, 2, c.f); M(-4, -2, 2, 2, c.f); // surai api / sirip
+  M(-2, -3, 6, 5, c.b); // kepala
+  M(4, -2, 3, 3, c.b); // moncong
+  M(-2, 1, 6, 1, c.d);
+  if (open) { M(3, 1, 5, 1, '#3a0f1f'); M(5, 1, 1, 1, '#ffffff'); M(7, 1, 1, 1, '#ffffff'); M(3, 2, 4, 1, c.d); } else M(3, 1, 4, 1, c.d);
+  M(-2, -6, 1, 3, c.l); M(0, -6, 1, 3, c.l); // tanduk
+  M(1, -2, 2, 1, c.eye); // mata
+  M(6, -2, 1, 1, c.d); // lubang hidung
+}
+
+/** Naga muncul dari air, melengkung ke karakter sambil membawa ikan, lalu memudar. Mengembalikan posisi kepala. */
+export function drawDragon(ctx: CanvasRenderingContext2D, x0: number, y0: number, x1: number, y1: number, k: number, t: number, kind: 'dragon' | 'seadragon'): [number, number] {
+  const c = DRAGON_COL[kind];
+  const e = 1 - Math.pow(1 - Math.min(1, k), 2);
+  const N = 16;
+  const gap = 0.055;
+  const s: 1 | -1 = x1 >= x0 ? 1 : -1;
+  const alpha = k > 0.8 ? Math.max(0, 1 - (k - 0.8) / 0.2) : 1;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  for (let i = N; i >= 1; i--) {
+    const u = e - i * gap;
+    if (u < 0) continue;
+    const [px, py] = dragonPoint(x0, y0, x1, y1, u);
+    const X = Math.round(px);
+    const Y = Math.round(py + Math.sin(t * 10 + i * 0.9) * 1.4);
+    const sz = Math.max(2, Math.round(5 - i * 0.2));
+    const h = Math.floor(sz / 2);
+    R(ctx, X - h, Y - h, sz, sz, c.b);
+    R(ctx, X - h, Y + sz - h - 1, sz, 1, c.l);
+    if (i % 2 === 0) R(ctx, X, Y - h - 1, 1, 1, c.d);
+    if (i % 4 === 1) R(ctx, X - h, Y - h, 1, 1, c.f);
+  }
+  const [hx0, hy0] = dragonPoint(x0, y0, x1, y1, e);
+  const hx = Math.round(hx0);
+  const hy = Math.round(hy0 + Math.sin(t * 10) * 0.8);
+  dragonHead(ctx, hx, hy, s, kind, true);
+  ctx.restore();
+  return [hx0, hy0];
+}
+
+/** Kepala naga mengintip dari air di dekat pelampung saat ikan ditarik. */
+export function drawDragonPeek(ctx: CanvasRenderingContext2D, x: number, y: number, t: number, kind: 'dragon' | 'seadragon') {
+  const c = DRAGON_COL[kind];
+  const bob = Math.sin(t * 3) * 1.5;
+  const X = Math.round(x);
+  const Y = Math.round(y);
+  ctx.save();
+  ctx.globalAlpha = 0.92;
+  for (let i = 4; i >= 1; i--) {
+    const sx = X + Math.round(Math.sin(t * 2.5 + i) * 1.5);
+    const sy = Math.round(Y - i * 3 + bob);
+    R(ctx, sx - 2, sy - 1, 4, 3, c.b);
+    R(ctx, sx - 2, sy + 1, 4, 1, c.l);
+    if (i % 2 === 0) R(ctx, sx - 1, sy - 2, 1, 1, c.d);
+  }
+  dragonHead(ctx, X, Math.round(Y - 16 + bob), -1, kind, Math.sin(t * 4) > 0);
+  ctx.restore();
+  // cincin air di pangkal leher
+  ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.ellipse(X + 0.5, Y + 1, 5 + Math.sin(t * 3) * 1, 1.8, 0, 0, Math.PI * 2); ctx.stroke();
+}
+
+/** Tiga tentakel ungu menjulur dari air menangkap ikan (Joran Tentakel Laut Dalam). */
+export function drawTentacles(ctx: CanvasRenderingContext2D, x0: number, y0: number, fx: number, fy: number, k: number, t: number) {
+  const alpha = k > 0.85 ? Math.max(0, 1 - (k - 0.85) / 0.15) : 1;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  for (let j = 0; j < 3; j++) {
+    const bx = x0 + (j - 1) * 6;
+    const n = 14;
+    for (let i = 0; i <= n; i++) {
+      const u = i / n;
+      const wave = Math.sin(t * 7 + j * 2 + u * 6) * (1 + u * 2.2);
+      const X = Math.round(bx + (fx + (j - 1) * 2 - bx) * u + wave);
+      const Y = Math.round(y0 + (fy + 3 - y0) * u);
+      const th = i < 4 ? 3 : 2;
+      R(ctx, X - 1, Y, th, 2, i % 3 === 0 ? '#c58bff' : '#8e44d6');
+      if (i % 3 === 1) R(ctx, X + th - 1, Y, 1, 1, '#f6d6ff');
+    }
+    R(ctx, Math.round(fx + (j - 1) * 2), Math.round(fy + 2), 2, 2, '#f6d6ff');
+  }
+  ctx.restore();
+}
+
 // ---------- ikan ----------
 export const FISH_W = 44;
 export const FISH_H = 28;
