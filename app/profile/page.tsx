@@ -2,12 +2,13 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { X, Check, Bell, Pencil, Crown, Gift, Bug, ChevronRight, BookOpen, Flame, Moon, Lock, ShoppingBag, Target } from 'lucide-react';
+import { X, Check, Bell, Pencil, Crown, Gift, Bug, ChevronRight, BookOpen, Flame, Moon, Lock, ShoppingBag, Target, Users, MessageCircle, Trash2, Send } from 'lucide-react';
 import { useFavorites, useHistory, useUserStats } from '@/lib/store';
 import { numericId, formatShortId } from '@/lib/utils';
 import { ensureShortId } from '@/lib/shortid';
 import VerifiedBadge from '@/components/VerifiedBadge';
 import DevBadge from '@/components/DevBadge';
+import StaffHeader from '@/components/StaffHeader';
 import PremiumName from '@/components/PremiumName';
 import { currentSeason, RANKS, rankFor, fmt, fmtC, TARGETS, Track } from '@/lib/season';
 import { pushSeasonScore, ACTIVE_DAYS, getFirebase } from '@/lib/leaderboard';
@@ -924,6 +925,131 @@ function Sheet({ open, onClose, title, children }: { open: boolean; onClose: () 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 interface UserState { uid: string; displayName: string | null; photoURL: string | null; }
 
+// ─── Pengumuman Admin/Dev (node Firebase `pengumuman`) ────────────────────────
+type PostItem = { id: string; uid: string; judul: string; isi: string; gambar?: string; waktu: number };
+type PostAuthor = { nama: string; foto: string; role: 'Developer' | 'Admin'; idText?: string };
+function agoPost(ts: number) {
+  const m = Math.floor((Date.now() - ts) / 60000);
+  if (m < 1) return 'baru saja';
+  if (m < 60) return `${m} menit lalu`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h} jam lalu`;
+  const d = Math.floor(h / 24);
+  return d === 1 ? 'kemarin' : `${d} hari lalu`;
+}
+
+function Announcements({ uid, role }: { uid: string; role: string }) {
+  const staff = role === 'Developer' || role === 'Admin';
+  const [posts, setPosts] = useState<PostItem[] | null>(null);
+  const [authors, setAuthors] = useState<Record<string, PostAuthor>>({});
+  const [open, setOpen] = useState(false);
+  const [judul, setJudul] = useState('');
+  const [isi, setIsi] = useState('');
+  const [gambar, setGambar] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      const { db } = await getFirebase();
+      const v = (await db.ref('pengumuman').limitToLast(30).get()).val() || {};
+      const arr: PostItem[] = Object.entries(v as Record<string, any>)
+        .map(([id, x]) => ({ id, uid: String(x.uid || ''), judul: String(x.judul || ''), isi: String(x.isi || ''), gambar: x.gambar ? String(x.gambar) : undefined, waktu: Number(x.waktu) || 0 }))
+        .sort((a, b) => b.waktu - a.waktu);
+      const got: Record<string, PostAuthor> = {};
+      await Promise.all(Array.from(new Set(arr.map((a) => a.uid).filter(Boolean))).map(async (u) => {
+        try {
+          const p = (await db.ref(`users/${u}`).get()).val();
+          if (p) got[u] = { nama: p.displayName || 'Komikita', foto: p.photoURL || '', role: p.role === 'Admin' ? 'Admin' : 'Developer', idText: formatShortId(p.shortId, u) };
+        } catch { /* profil pengirim gagal dimuat: pakai bawaan */ }
+      }));
+      setAuthors(got);
+      setPosts(arr);
+    } catch { setPosts([]); }
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  const submit = async () => {
+    const t = judul.trim(), b = isi.trim(), g = gambar.trim();
+    if (!b) { alert('Isi pengumuman belum diisi.'); return; }
+    if (g && !/^https?:\/\//i.test(g)) { alert('Link gambar harus diawali http:// atau https://'); return; }
+    setBusy(true);
+    try {
+      const { db } = await getFirebase();
+      const data: Record<string, any> = { uid, isi: b.slice(0, 1000), waktu: Date.now() };
+      if (t) data.judul = t.slice(0, 100);
+      if (g) data.gambar = g;
+      await db.ref('pengumuman').push(data);
+      setJudul(''); setIsi(''); setGambar(''); setOpen(false);
+      await load();
+    } catch (e: any) { alert('Gagal mengirim: ' + (e?.message || 'izin ditolak. Pastikan aturan Firebase sudah diperbarui.')); }
+    finally { setBusy(false); }
+  };
+
+  const remove = async (id: string) => {
+    if (!confirm('Hapus pengumuman ini?')) return;
+    try {
+      const { db } = await getFirebase();
+      await db.ref(`pengumuman/${id}`).remove();
+      setPosts((prev) => (prev ? prev.filter((x) => x.id !== id) : prev));
+    } catch (e: any) { alert('Gagal menghapus: ' + (e?.message || '')); }
+  };
+
+  const FIELD: React.CSSProperties = { width: '100%', boxSizing: 'border-box', background: '#1B1A20', border: '1px solid rgba(255,255,255,.12)', borderRadius: 14, padding: '11px 14px', color: '#fff', fontSize: 16, fontWeight: 700, fontFamily: 'inherit', outline: 'none' };
+
+  return (
+    <div style={{ padding: '0 16px' }}>
+      {staff && (
+        <div style={{ margin: '14px 0 0', background: CARD, borderRadius: 18, padding: open ? 14 : 0, overflow: 'hidden' }}>
+          {!open ? (
+            <button onClick={() => setOpen(true)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 0, color: MUTED, padding: '14px 16px', fontSize: 16, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left' }}>
+              <Send size={18} color={ICON} /> Tulis pengumuman untuk semua user…
+            </button>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <input style={FIELD} value={judul} onChange={(e) => setJudul(e.target.value)} maxLength={100} placeholder="Judul (opsional)" />
+              <textarea style={{ ...FIELD, minHeight: 96, resize: 'vertical' }} value={isi} onChange={(e) => setIsi(e.target.value)} maxLength={1000} placeholder="Isi pengumuman…" />
+              <input style={FIELD} value={gambar} onChange={(e) => setGambar(e.target.value)} placeholder="Link gambar (opsional)" inputMode="url" />
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button onClick={() => setOpen(false)} style={{ flex: 1, height: 42, borderRadius: 99, border: 0, background: 'rgba(255,255,255,.08)', color: '#C8C6D2', fontSize: 16, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' }}>Batal</button>
+                <button onClick={submit} disabled={busy || !isi.trim()} style={{ flex: 1, height: 42, borderRadius: 99, border: 0, background: GOLD, color: '#2E2615', fontSize: 16, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', opacity: busy || !isi.trim() ? 0.5 : 1 }}>{busy ? '…' : 'Kirim'}</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {posts === null && <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><div className="w-6 h-6 border-2 border-white/20 border-t-transparent rounded-full animate-spin" /></div>}
+      {posts && posts.length === 0 && (
+        <div style={{ textAlign: 'center', color: MUTED, fontSize: 16, fontWeight: 700, padding: '56px 8px' }}>Belum ada pengumuman dari admin atau developer.</div>
+      )}
+      {posts && posts.map((p) => {
+        const a: PostAuthor = authors[p.uid] || { nama: 'Komikita', foto: '/icon-192.png', role: 'Developer' };
+        const canDelete = role === 'Developer' || (role === 'Admin' && p.uid === uid);
+        return (
+          <div key={p.id} style={{ padding: '20px 0', borderBottom: '1px solid rgba(255,255,255,.08)' }}>
+            <div style={{ position: 'relative' }}>
+              <StaffHeader nama={a.nama} foto={a.foto} role={a.role} idText={a.idText} waktu={p.waktu ? agoPost(p.waktu) : undefined} />
+              {canDelete && (
+                <button onClick={() => remove(p.id)} aria-label="Hapus pengumuman" style={{ position: 'absolute', top: 0, right: 0, background: 'none', border: 0, padding: 6, cursor: 'pointer', display: 'flex' }}>
+                  <Trash2 size={18} color={MUTED} />
+                </button>
+              )}
+            </div>
+            <div style={{ paddingLeft: 68, marginTop: 10 }}>
+              {p.judul && <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: -0.5, lineHeight: 1.3 }}>{p.judul}</div>}
+              <div style={{ fontSize: 17, fontWeight: 600, letterSpacing: -0.3, lineHeight: 1.45, marginTop: p.judul ? 4 : 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{p.isi}</div>
+              {p.gambar && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={p.gambar} alt="" referrerPolicy="no-referrer" loading="lazy" style={{ display: 'block', width: '100%', maxWidth: 420, marginTop: 12, borderRadius: 22, background: '#2A2931' }} />
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function ProfilePage() {
   const season = currentSeason();
   const mine = useUserStats((st) => st.season);
@@ -1198,7 +1324,7 @@ export default function ProfilePage() {
       <div style={{ padding: '24px 16px 0' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{ flex: '0 0 auto' }}>
-            <AvatarWithBorder src={photoURL} size={66} borderKey={activeBorder || undefined} onClick={() => void 0} />
+            <AvatarWithBorder src={photoURL} size={66} borderKey={activeBorder || undefined} onClick={() => { window.location.assign('/profile/edit'); }} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 19, fontWeight: 800, letterSpacing: -0.7, lineHeight: 1.2 }}>
@@ -1268,38 +1394,19 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* Premium */}
-      {!isPremium && (
-        <div style={{ margin: '16px 16px 0', background: '#2E2615', border: '1.5px solid #7A6322', borderRadius: 22, padding: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ flex: 1, minWidth: 0, color: GOLD }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 800, letterSpacing: -0.2 }}>
-              <Crown size={16} fill={GOLD} color={GOLD} /> KOMIKITA PREMIUM
-            </div>
-            <div style={{ fontSize: 21, fontWeight: 800, letterSpacing: -0.9, lineHeight: 1.2, marginTop: 4 }}>Baca tanpa iklan</div>
-            <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: -0.5, lineHeight: 1.4, marginTop: 2 }}>Plus unduh massal dan cincin profil emas.</div>
-          </div>
-          <button onClick={() => { window.location.assign("/premium"); }} style={{ background: GOLD, color: '#2E2615', border: 0, borderRadius: 99, padding: '0 22px', height: 38, fontSize: 17, fontWeight: 800, letterSpacing: -0.5, flexShrink: 0, cursor: 'pointer', fontFamily: 'inherit' }}>
-            Upgrade
-          </button>
-        </div>
-      )}
+      {/* Pengumuman admin/dev */}
+      <Announcements uid={user.uid} role={role} />
 
-      {/* Menu: Kamu */}
-      <SectionLabel>Kamu</SectionLabel>
-      <div style={{ margin: '0 16px', background: CARD, borderRadius: 18, overflow: 'hidden' }}>
-        <MenuRow icon={<Pencil size={20} color={ICON} />} title="Edit profil" sub="Nama dan avatar" onClick={() => { window.location.assign('/profile/edit'); }} />
-        <MenuRow border icon={<Crown size={21} color={ICON} />} title="Lencana" sub={`${unlocked} terbuka · ${rank.name} dipakai`} onClick={() => window.location.assign('/ranking/lencana')} />
-        <MenuRow border icon={<Bell size={20} color={ICON} />} title="Notifikasi" right={newChapters > 0 ? `${newChapters} baru` : undefined} href="/notifikasi" />
-        {!isPremium && <MenuRow border icon={<Gift size={20} color={ICON} />} title="Jadi Premium" sub="Bebas iklan, unduh massal" onClick={() => { window.location.assign("/premium"); }} />}
-      </div>
-
-      {/* Menu: Aplikasi */}
-      <SectionLabel>Aplikasi</SectionLabel>
-      <div style={{ margin: '0 16px', background: CARD, borderRadius: 18, overflow: 'hidden' }}>
-        <MenuRow icon={<Target size={20} color={ICON} />} title="Misi" sub="Harian dan mingguan, hadiah Crystal" href="/misi" />
-        <MenuRow border icon={<ShoppingBag size={20} color={ICON} />} title="KomikStore" sub="Menu spesial Komikita" href="/komikstore" />
-        <MenuRow border icon={<HexIcon size={21} />} title="Pengaturan" sub="Akun, data, dan notifikasi" href="/settings" />
-        <MenuRow border icon={<Bug size={20} color={ICON} />} title="Laporkan bug" onClick={() => window.open('https://wa.me/6281315059849?text=Halo%2C%20saya%20mau%20lapor%20bug%20Komiku.%0A%0AHalaman%2Fmenu%3A%20%0AYang%20terjadi%3A%20%0AYang%20seharusnya%3A%20%0AHP%2Fbrowser%3A%20', '_blank')} />
+      {/* Tombol melayang */}
+      <div style={{ position: 'fixed', right: 16, bottom: 96, zIndex: 40, display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {[
+          { href: '/ranking', label: 'Peringkat', icon: <Users size={30} color="#1B1A20" /> },
+          { href: '/notifikasi', label: 'Notifikasi', icon: <MessageCircle size={30} color="#1B1A20" /> },
+        ].map((b) => (
+          <Link key={b.href} href={b.href} aria-label={b.label} style={{ width: 64, height: 64, borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(0,0,0,.45)' }}>
+            {b.icon}
+          </Link>
+        ))}
       </div>
 
       {/* Sheets */}
