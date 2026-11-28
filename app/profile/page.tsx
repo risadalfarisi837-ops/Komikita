@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { X, Check, Bell, Pencil, Crown, Gift, Bug, ChevronRight, BookOpen, Flame, Moon, Lock, ShoppingBag, Target, Users, MessageCircle, Trash2, Send, MoreVertical } from 'lucide-react';
+import { X, Check, Bell, Pencil, Crown, Gift, Bug, ChevronRight, BookOpen, Moon, Lock, ShoppingBag, Target, Users, MessageCircle, Trash2, Send, MoreVertical } from 'lucide-react';
 import { useFavorites, useHistory, useUserStats } from '@/lib/store';
 import { numericId, formatShortId } from '@/lib/utils';
 import { ensureShortId } from '@/lib/shortid';
@@ -1127,7 +1127,6 @@ export default function ProfilePage() {
   const pts      = mounted && mine.id === season.id ? mine.points + (mine.bonus || 0) : 0;
   const chapters = mounted && mine.id === season.id ? mine.chapters : 0;
   const night    = mounted && mine.id === season.id ? mine.night : 0;
-  const streak   = mounted ? mine.streak : 0;
   const { rank, next } = rankFor(pts);
 
   // Peringkat musim = jumlah pemain dengan poin lebih tinggi + 1
@@ -1254,6 +1253,7 @@ export default function ProfilePage() {
   const isPremium    = role === 'Komikita Premium';
   const level        = userData?.level ?? 1;
   const koin         = userData?.koin ?? 0;
+  const gems         = typeof userData?.gems === 'number' ? userData.gems : 0;
   const freeRenameUsed = userData?.freeRenameUsed ?? false;
   const activeBorder = userData?.activeBorder ?? '';
   const activeEffect = userData?.activeEffect ?? '';
@@ -1338,11 +1338,10 @@ export default function ProfilePage() {
               )}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '2px 10px 2px 3px', borderRadius: 99, background: rank.bg, fontSize: 12, fontWeight: 800, letterSpacing: -0.2, whiteSpace: 'nowrap' }}>
-                <span style={{ width: 18, height: 18, borderRadius: '50%', background: 'rgba(0,0,0,.28)', border: '1.5px solid #F5C84B', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <svg width={10} height={10} viewBox="0 0 24 24" fill="#F5C84B"><path d="M12 2l3 6.5 7 .9-5.2 4.8 1.4 7L12 17.8 5.8 21.2l1.4-7L2 9.4l7-.9z" /></svg>
+              <span title={rank.name} aria-label={rank.name} role="img" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, borderRadius: '50%', background: rank.bg, flex: '0 0 auto' }}>
+                <span style={{ width: 20, height: 20, borderRadius: '50%', background: 'rgba(0,0,0,.28)', border: '1.5px solid #F5C84B', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width={11} height={11} viewBox="0 0 24 24" fill="#F5C84B"><path d="M12 2l3 6.5 7 .9-5.2 4.8 1.4 7L12 17.8 5.8 21.2l1.4-7L2 9.4l7-.9z" /></svg>
                 </span>
-                {rank.name}
               </span>
               <LevelPill level={level} label="Lvl." fontSize="12.5px" iconSize={14} style={{ padding: '2px 10px 2px 6px' }} />
               {isDev && (
@@ -1366,7 +1365,7 @@ export default function ProfilePage() {
         <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
           {[
             { icon: <svg width={22} height={22} viewBox="0 0 24 24"><path d="M6 3h12l4 6-10 12L2 9l4-6z" fill="#4cc3f0" /><path d="M2 9h20M9 3l3 18M15 3l-3 18" stroke="rgba(255,255,255,.55)" fill="none" strokeWidth={1} /></svg>, v: fmt(koin), l: 'Crystal' },
-            { icon: <Flame size={22} color="#F59E0B" fill="#F59E0B" />, v: String(streak), l: 'Streak (hari)' },
+            { icon: <svg width={22} height={22} viewBox="0 0 24 24" aria-hidden><path d="M6 3h12l4.5 6L12 21.5 1.5 9z" fill="#d23fe6" /><path d="M6 3h12l4.5 6h-21z" fill="#f08cff" /><path d="M12 21.5L7.5 9h9z" fill="#a51ec0" /><path d="M6 3h12l4.5 6L12 21.5 1.5 9z" fill="none" stroke="#7a1090" strokeWidth={1.1} strokeLinejoin="round" /></svg>, v: fmt(gems), l: 'Gems' },
           ].map((x) => (
             <div key={x.l} style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 10, background: CARD, border: '1px solid rgba(255,255,255,.14)', borderRadius: 15, padding: '9px 14px' }}>
               {x.icon}
