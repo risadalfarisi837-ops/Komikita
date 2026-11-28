@@ -1467,7 +1467,7 @@ export function drawPlayerRaw(ctx: CanvasRenderingContext2D, x: number, y: numbe
   const cape=top, capeD=darken(top,0.28), flameA='#ffd27a', flameB=pal.band||'#ff9b3a';
   const eye='#1d1d2b', blush='rgba(240,110,120,0.55)', mouth='#b5543f';
   const al=moving?(fr===1?1:fr===3?-1:0):0;
-  const flameHem=(x0,w,y)=>{ for(let i=0;i<w;i++){ R(ctx,x0+i,y,1,(i%2)?2:1,i%3===0?flameA:flameB); } };
+  const flameHem=(x0:number,w:number,y:number)=>{ for(let i=0;i<w;i++){ R(ctx,x0+i,y,1,(i%2)?2:1,i%3===0?flameA:flameB); } };
   if(dir==='down'||dir==='up'){
     const lf=legA<0?-1:0, rf=legA>0?-1:0;
     if(fx==='flame'&&dir==='down'){ R(ctx,ox+3,oy+10,10,8,capeD); R(ctx,ox+3,oy+10,1,8,cape); R(ctx,ox+12,oy+10,1,8,cape); flameHem(ox+3,10,oy+18); }
