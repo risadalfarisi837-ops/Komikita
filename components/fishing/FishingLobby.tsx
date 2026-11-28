@@ -155,9 +155,10 @@ function wavePattern(): string {
   const blob = (x: number, y: number, w: number, fill: string, op: number) =>
     `<g fill="${fill}" fill-opacity="${op}"><rect x="${x}" y="${y}" width="${w}" height="3"/><rect x="${x + 3}" y="${y - 3}" width="${w - 6}" height="3"/></g>`;
   const parts = [
-    blob(4, 14, 30, '#ffffff', 0.9), blob(78, 14, 42, '#ffffff', 0.9), blob(150, 14, 24, '#ffffff', 0.9), blob(198, 14, 36, '#ffffff', 0.9),
-    blob(40, 46, 36, '#a8d2f7', 0.85), blob(110, 46, 26, '#a8d2f7', 0.85), blob(168, 46, 44, '#a8d2f7', 0.85),
-    blob(10, 76, 28, '#7ab8f0', 0.7), blob(86, 76, 40, '#7ab8f0', 0.7), blob(156, 76, 26, '#7ab8f0', 0.7), blob(204, 76, 30, '#7ab8f0', 0.7),
+    blob(2, 14, 26, '#ffffff', 0.92), blob(40, 14, 34, '#ffffff', 0.92), blob(88, 14, 24, '#ffffff', 0.92), blob(126, 14, 30, '#ffffff', 0.92),
+    blob(168, 14, 22, '#ffffff', 0.92), blob(200, 14, 34, '#ffffff', 0.92),
+    blob(18, 46, 38, '#a8d2f7', 0.85), blob(72, 46, 28, '#a8d2f7', 0.85), blob(116, 46, 40, '#a8d2f7', 0.85), blob(172, 46, 30, '#a8d2f7', 0.85), blob(212, 46, 22, '#a8d2f7', 0.85),
+    blob(6, 76, 28, '#7ab8f0', 0.7), blob(70, 76, 36, '#7ab8f0', 0.7), blob(136, 76, 26, '#7ab8f0', 0.7), blob(190, 76, 36, '#7ab8f0', 0.7),
   ];
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="240" height="100" shape-rendering="crispEdges">${parts.join('')}</svg>`;
   return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
@@ -170,7 +171,7 @@ const CSS = `
 .kf-btn:active:not(:disabled) { transform: translateY(2px); }
 .kf-btn:disabled { cursor: default; }
 .kf-list::-webkit-scrollbar { width: 0; height: 0; }
-.kf-input::placeholder { color: ${MUTED}; font-weight: 600; opacity: 1; }
+.kf-input::placeholder { color: ${MUTED}; font-weight: 600; font-size: 15px; letter-spacing: 0; opacity: 1; }
 .kf-input:focus { outline: none; border-color: #f5c451 !important; }
 @media (prefers-reduced-motion: reduce) { .kf-anim { animation: none !important; } }
 `;
@@ -318,6 +319,12 @@ export default function FishLobby({ name, onPlay }: Props) {
             <div style={{ position: 'absolute', left: 345 - 23, top: 49 - 23, width: 46, height: 46, borderRadius: '50%', background: 'rgba(214,236,150,0.55)' }} />
             <div style={{ position: 'absolute', left: 345 - 18, top: 49 - 18, width: 36, height: 36, borderRadius: '50%', background: '#fbe26a' }} />
 
+            {/* ikan melompat + riak */}
+            <div className="kf-anim" style={{ position: 'absolute', left: 262, top: 284, animation: 'kfBob 2.6s ease-in-out infinite' }}>
+              <Sprite rows={GREEN_FISH} pal={GREEN_FISH_PAL} block={3} />
+            </div>
+            <div style={{ position: 'absolute', left: 246, top: 322, width: 44, height: 6, borderRadius: '50%', border: '1.5px solid rgba(255,255,255,0.4)', boxSizing: 'border-box' }} />
+
             {/* pulau & perahu */}
             <Sprite rows={PALM} pal={PALM_PAL} block={5} style={{ position: 'absolute', left: 378, top: 205 }} />
             <div className="kf-anim" style={{ position: 'absolute', left: 5, top: 284, animation: 'kfBob 3.2s ease-in-out infinite' }}>
@@ -325,7 +332,7 @@ export default function FishLobby({ name, onPlay }: Props) {
             </div>
 
             {/* banner musim */}
-            <div style={{ position: 'absolute', left: 20, top: 18, width: 207, height: 38, boxSizing: 'border-box', borderRadius: 14, background: 'rgba(255,251,238,0.94)', border: '1.5px solid #e9d9ae', boxShadow: '0 2px 0 rgba(120,90,40,0.25)', display: 'flex', alignItems: 'center', padding: '0 8px', gap: 8 }}>
+            <div style={{ position: 'absolute', left: 20, top: 18, width: 'fit-content', minWidth: 207, height: 38, boxSizing: 'border-box', borderRadius: 14, background: 'rgba(255,251,238,0.94)', border: '1.5px solid #e9d9ae', boxShadow: '0 2px 0 rgba(120,90,40,0.25)', display: 'flex', alignItems: 'center', padding: '0 12px 0 8px', gap: 8 }}>
               <div style={{ position: 'relative', width: 44, height: 24, flex: '0 0 auto' }}>
                 <Sprite rows={PUFFER} pal={PUFFER_PAL} block={1.6} style={{ position: 'absolute', left: 0, top: 3 }} />
                 <Sprite rows={GREEN_FISH} pal={GREEN_FISH_PAL} block={1.6} style={{ position: 'absolute', left: 21, top: 9 }} />
@@ -338,7 +345,7 @@ export default function FishLobby({ name, onPlay }: Props) {
 
             {/* judul */}
             <svg width={W} height={0} style={{ position: 'absolute' }} aria-hidden />
-            <svg viewBox="0 0 340 70" width={340} height={70} style={{ position: 'absolute', left: 48, top: 56, overflow: 'visible' }} role="img" aria-label="Komik Fish">
+            <svg viewBox="0 0 340 70" width={340} height={70} style={{ position: 'absolute', left: 48, top: 45, overflow: 'visible' }} role="img" aria-label="Komik Fish">
               <g fontFamily={TITLE} fontWeight={700} fontSize={50} textAnchor="middle" strokeLinejoin="round" style={{ paintOrder: 'stroke fill' }}>
                 <text x={170} y={56} fill="#06286b" stroke="#06286b" strokeWidth={9}>Komik Fish</text>
                 <text x={170} y={52} stroke="#0a3d9c" strokeWidth={9} fill="#ffffff">
@@ -348,7 +355,7 @@ export default function FishLobby({ name, onPlay }: Props) {
             </svg>
 
             {/* sapaan */}
-            <div style={{ position: 'absolute', left: 102, top: 107, width: 231, height: 27, boxSizing: 'border-box', borderRadius: 14, background: 'rgba(255,251,238,0.96)', border: '2px solid #ecd9a6', boxShadow: '0 2px 0 rgba(120,90,40,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px', fontWeight: 800, fontSize: 15, color: '#3b2a1c', whiteSpace: 'nowrap', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', left: 90, top: 107, width: 256, height: 27, boxSizing: 'border-box', borderRadius: 14, background: 'rgba(255,251,238,0.96)', border: '2px solid #ecd9a6', boxShadow: '0 2px 0 rgba(120,90,40,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px', fontWeight: 800, fontSize: 14.5, color: '#3b2a1c', whiteSpace: 'nowrap', overflow: 'hidden' }}>
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 Halo, <span style={{ color: '#1d56b0' }}>{hello}</span>! Siap mancing?
               </span>
@@ -378,7 +385,7 @@ export default function FishLobby({ name, onPlay }: Props) {
             <div style={{ position: 'absolute', left: 424, top: 14, width: 360, height: 330, boxSizing: 'border-box', borderRadius: 26, background: '#0c2f7c', padding: 3.5, boxShadow: '0 8px 18px rgba(0,20,80,0.35)' }}>
               <div style={{ width: '100%', height: '100%', boxSizing: 'border-box', borderRadius: 23, border: '3px solid #ecd49c', background: 'linear-gradient(180deg,#fffaee,#fcf3de)', padding: '8px 12px 10px', display: 'flex', flexDirection: 'column', position: 'relative' }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-                  <div style={{ fontFamily: TITLE, fontWeight: 700, fontSize: 25, color: '#4a2c1a' }}>Pilih pulau</div>
+                  <div style={{ fontFamily: TITLE, fontWeight: 600, fontSize: 24, color: '#4a2c1a' }}>Pilih pulau</div>
                   <div style={{ fontWeight: 700, fontSize: 12.5, color: INK }}>
                     <b style={{ fontWeight: 900 }}>{fmt(islands.length)}</b> pulau · <b style={{ fontWeight: 900 }}>{fmt(totalPlayers)}</b> lagi main
                   </div>
@@ -409,11 +416,11 @@ export default function FishLobby({ name, onPlay }: Props) {
                   {sorted.map((it, i) => {
                     const full = it.count >= ISLAND_CAP;
                     return (
-                      <div key={it.room} style={{ display: 'flex', alignItems: 'center', gap: 8, height: 40, padding: '0 8px 0 8px', borderTop: i ? '1.5px solid #efe3c6' : 'none' }}>
+                      <div key={it.room} style={{ display: 'flex', alignItems: 'center', gap: 8, height: 44, padding: '0 8px 0 8px', borderTop: i ? '1.5px solid #efe3c6' : 'none' }}>
                         <IslandIcon size={18} theme={it.theme} />
                         <div style={{ flex: 1, minWidth: 0, fontWeight: 700, fontSize: 17, color: '#4a2c1a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.name}</div>
                         <div style={{ fontWeight: 800, fontSize: 15, color: full ? '#c0392f' : '#4a2c1a', width: 46, textAlign: 'center' }}>{it.count}/{ISLAND_CAP}</div>
-                        <Blue onClick={() => joinRoom(it.room)} disabled={busy || full} light={full} style={{ width: 62, height: 30, borderRadius: 10, fontSize: 15 }}>{full ? 'Penuh' : 'Masuk'}</Blue>
+                        <Blue onClick={() => joinRoom(it.room)} disabled={busy || full} light={full} style={{ width: 66, height: 31, borderRadius: 11, fontSize: 16 }}>{full ? 'Penuh' : 'Masuk'}</Blue>
                       </div>
                     );
                   })}
