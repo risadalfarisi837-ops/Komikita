@@ -23,7 +23,7 @@ import VerifiedBadge from '@/components/VerifiedBadge';
 import { cleanNameRole } from '@/lib/premium';
 import { MAIN_ROOM, islandName } from '@/lib/fishingIslands';
 import { getFirebase } from '@/lib/firebase-client';
-import ShopScreen, { CrystalIcon } from './Shop';
+import ShopScreen, { CrystalIcon, PermataIcon } from './Shop';
 import SellFish from './SellFish';
 import LimitedSpin from './LimitedSpin';
 import type { LimitedDrop, LimitedRarity } from '@/lib/limitedGacha';
@@ -368,6 +368,7 @@ export default function FishingGame(props: Props) {
   const toggleRod = () => { if (rodOut) setRodOutState(false); else { setRodOutState(true); setHeld(null); } };
   const [sel, setSel] = useState('');
   const [shopOpen, setShopOpen] = useState(false);
+  const [shopTopup, setShopTopup] = useState<'crystal' | 'gems' | null>(null);
   const [sellOpen, setSellOpen] = useState(false);
   const [nearShop, setNearShop] = useState(false);
   const [rodOpen, setRodOpen] = useState(false);
@@ -948,14 +949,15 @@ export default function FishingGame(props: Props) {
       {/* kanan atas: mata uang + pengaturan; di bawahnya kartu lokasi dan kolom tombol (menu, toko, hadiah) */}
       <div style={{ position: 'absolute', right: `calc(env(safe-area-inset-right, 0px) + ${hx(10)}px)`, top: `calc(env(safe-area-inset-top, 0px) + ${hx(6)}px)`, display: fishing ? 'none' : 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: hx(8) }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: hx(6) }}>
-          <div style={{ ...dockPill('#b08cff'), padding: `0 ${hx(14)}px 0 ${hx(10)}px`, marginBottom: 0, height: hx(40), borderRadius: hx(20) }}>
-            <SparkIcon size={hx(20)} />
-            <span style={{ fontSize: hx(16), fontWeight: 800, color: '#7a3fd0' }}>{formatNum(xp)}</span>
-          </div>
           <div style={{ ...dockPill('#6bb6ff'), padding: `0 ${hx(5)}px 0 ${hx(11)}px`, gap: hx(7), marginBottom: 0, height: hx(40), borderRadius: hx(20) }}>
             <CrystalIcon size={hx(22)} />
             <span style={{ fontSize: hx(16), fontWeight: 800, color: '#1c6fe0' }}>{formatNum(crystal)}</span>
-            <button onClick={() => setShopOpen(true)} aria-label="Tambah" style={{ width: hx(26), height: hx(26), borderRadius: '50%', background: 'radial-gradient(circle at 35% 30%,#58e89a,#1fa85a)', border: `${hx(2)}px solid #fff`, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}><Svg d="M12 5v14M5 12h14" size={hx(14)} w={3.4} /></button>
+            <button onClick={() => { setShopTopup('crystal'); setShopOpen(true); }} aria-label="Top up Crystal" style={{ width: hx(26), height: hx(26), borderRadius: '50%', background: 'radial-gradient(circle at 35% 30%,#58e89a,#1fa85a)', border: `${hx(2)}px solid #fff`, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}><Svg d="M12 5v14M5 12h14" size={hx(14)} w={3.4} /></button>
+          </div>
+          <div style={{ ...dockPill('#b08cff'), padding: `0 ${hx(5)}px 0 ${hx(11)}px`, gap: hx(7), marginBottom: 0, height: hx(40), borderRadius: hx(20) }}>
+            <PermataIcon size={hx(22)} />
+            <span style={{ fontSize: hx(16), fontWeight: 800, color: '#7a3fd0' }}>{formatNum(props.gems ?? 0)}</span>
+            <button onClick={() => { setShopTopup('gems'); setShopOpen(true); }} aria-label="Top up Gems" style={{ width: hx(26), height: hx(26), borderRadius: '50%', background: 'radial-gradient(circle at 35% 30%,#58e89a,#1fa85a)', border: `${hx(2)}px solid #fff`, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}><Svg d="M12 5v14M5 12h14" size={hx(14)} w={3.4} /></button>
           </div>
           <button onClick={() => setMenuOpen(true)} aria-label="Pengaturan" style={sqBtn}><GearInk size={hx(22)} /></button>
         </div>
@@ -1301,9 +1303,10 @@ export default function FishingGame(props: Props) {
       {/* Toko & Gacha */}
       {shopOpen && (
         <ShopScreen
+          initialTopup={shopTopup}
           px={(n: number) => px(n * 0.64)} font={HUD} crystal={crystal} gems={props.gems ?? 0} onTopUp={props.onTopUp} onTopUpPoll={props.onTopUpPoll} onTopUpPaid={props.onTopUpPaid} onOpenLimited={props.onOpenLimited ? async (n) => { const r = await props.onOpenLimited!(n, !!props.dev && gachaFree, props.dev ? limitedMin : ''); if (Array.isArray(r)) setLimitedDrops(r); return r; } : undefined} limitedFree={!!props.dev && gachaFree} limitedPity={props.limitedPity} limitedOwned={props.limitedOwned} freeBaitClaimed={props.freeBaitClaimed} onClaimBait={claimBait} promoBought={props.promoBought} onPromoPaid={props.onPromoPaid} rods={rods} equippedRod={equippedRod}
           tab={shopTab} onTab={setShopTab} buying={buying} pulling={pulling}
-          onClose={() => setShopOpen(false)} onBuy={buyRod} onEquip={props.onEquipRod} onPull={pullGachaN}
+          onClose={() => { setShopOpen(false); setShopTopup(null); }} onBuy={buyRod} onEquip={props.onEquipRod} onPull={pullGachaN}
           pity={props.pity ?? 0} starterClaimed={!!props.starterClaimed} onClaimStarter={claimStarter}
         />
       )}

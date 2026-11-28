@@ -35,6 +35,8 @@ interface Props {
   starterClaimed: boolean;
   onClaimStarter: () => void;
   onAddGems?: () => void;
+  /** Buka langsung jendela top up (dari tombol + di HUD). */
+  initialTopup?: 'crystal' | 'gems' | null;
   onPack?: (id: 'monthly' | 'monsun' | 'kenalan' | 'buah' | 'perdana' | 'lanjut' | 'bekal') => void;
   /** Opsional: waktu berakhir Paket Lanjut (ms). Kosong = akhir bulan. */
   lanjutEndsAt?: number;
@@ -299,7 +301,7 @@ export default function ShopScreen(p: Props) {
   const { px, font, crystal, rods, equippedRod, tab, onTab, buying, pulling } = p;
   const gems = p.gems ?? 0;
   const [odds, setOdds] = useState(false);
-  const [topup, setTopup] = useState<TopUpCurrency | null>(null);
+  const [topup, setTopup] = useState<TopUpCurrency | null>((p.initialTopup as TopUpCurrency | null | undefined) ?? null);
   const [payPack, setPayPack] = useState<PromoPackId | null>(null);
   const sideRef = useRef<HTMLDivElement>(null);
 
