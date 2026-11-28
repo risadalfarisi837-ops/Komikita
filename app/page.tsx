@@ -8,6 +8,7 @@ import { primeGameFullscreen } from '@/components/GameMode';
 import { currentSeason } from '@/lib/season';
 import { charismaBuckets } from '@/lib/charisma';
 import { LevelPill } from '@/components/LevelPill';
+import ExpBar from '@/components/ExpBar';
 
 // ─── Firebase ────────────────────────────────────────────────────────────────
 declare global { interface Window { firebase: any; _fbReady: boolean; } }
@@ -97,7 +98,7 @@ const ell: React.CSSProperties = { whiteSpace: 'nowrap', overflow: 'hidden', tex
 function Header({ onSearch }: { onSearch: () => void }) {
   const router = useRouter();
   const [hasGift, setHasGift] = useState(false);
-  const [me, setMe] = useState<{ name: string; photo: string; level: number } | null>(null);
+  const [me, setMe] = useState<{ name: string; photo: string; level: number; exp: number } | null>(null);
   useEffect(() => {
     let alive = true;
     const t = setTimeout(async () => {
@@ -107,7 +108,9 @@ function Header({ onSearch }: { onSearch: () => void }) {
         if (!u || !alive) return;
         const d = (await db.ref(`users/${u.uid}`).get()).val() || {};
         if (!alive) return;
-        setMe({ name: d.displayName || u.displayName || 'User', photo: d.photoURL || u.photoURL || '', level: Math.max(1, Math.floor(Number(d.level) || 1)) });
+        const lv = Math.max(1, Math.floor(Number(d.level) || 1));
+        const rawExp = d.exp === undefined || d.exp === null || !Number.isFinite(Number(d.exp)) ? (lv - 1) * 200 : Number(d.exp);
+        setMe({ name: d.displayName || u.displayName || 'User', photo: d.photoURL || u.photoURL || '', level: lv, exp: Math.max(0, Math.min(199, Math.floor(rawExp - (lv - 1) * 200))) });
         const v = d.gifts || {};
         setHasGift(Object.values(v).some((g: any) => g && !g.claimed));
       } catch {}
@@ -138,6 +141,7 @@ function Header({ onSearch }: { onSearch: () => void }) {
           {hasGift && <span style={{ position: 'absolute', top: 12, right: 13, width: 9, height: 9, borderRadius: '50%', background: ACCENT }} />}
         </button>
       </div>
+      <div style={{ marginTop: 14 }}><ExpBar level={level} exp={me ? me.exp : 0} max={200} /></div>
       </div>
       <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
         <button onClick={onSearch} style={{ ...BOX, flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 12, padding: '0 16px', height: 54, color: MUTED, fontSize: 16, textAlign: 'left' }}>
@@ -833,9 +837,9 @@ export default function Home() {
       `}</style>
 
       <div style={{ position: 'relative', isolation: 'isolate', background: '#1B1A20', color: '#fff', minHeight: '100vh', paddingBottom: 24 }}>
-        <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 600, zIndex: -1, pointerEvents: 'none' }}>
+        <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 760, zIndex: -1, pointerEvents: 'none' }}>
           {Object.entries(GLOW).map(([id, c]) => (
-            <div key={id} className="bs-glow" style={{ position: 'absolute', inset: 0, willChange: 'opacity', opacity: glow === id ? 1 : 0, transition: 'opacity .8s ease', background: `radial-gradient(130% 62% at 50% 40%, ${c} 0%, transparent 72%)` }} />
+            <div key={id} className="bs-glow" style={{ position: 'absolute', inset: 0, willChange: 'opacity', opacity: glow === id ? 1 : 0, transition: 'opacity .8s ease', background: `radial-gradient(190% 60% at 50% 34%, ${c} 0%, transparent 80%)` }} />
           ))}
         </div>
         <Header onSearch={goSearch} />
