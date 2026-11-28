@@ -44,7 +44,6 @@ export const RANKS: RankDef[] = [
   { name: 'Duke',           min: 1500, track: 'Noble', bg: '#27479E', ch: 130, streak: 12, night: 45 },
   { name: 'Imp',            min: 3000, track: 'Demon', bg: '#8A1F34', ch: 260, streak: 20, night: 90 },
   { name: 'Demon King',     min: 5000, track: 'Demon', bg: '#9A1740', ch: 430, streak: 28, night: 150 },
-  { name: 'Heavenly Demon', min: 8000, track: 'Demon', bg: '#B01238', ch: 700, streak: 36, night: 350 },
 ];
 export function rankFor(points: number) {
   let i = 0;

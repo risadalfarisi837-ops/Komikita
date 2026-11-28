@@ -13,7 +13,7 @@ export const TRACK_COLOR: Record<TrackName, string> = { Noble: '#27479E', Murim:
 const R: Rarity[] = ['Common', 'Common', 'Rare', 'Rare', 'Epic', 'Epic', 'Legendary', 'Legendary', 'Mythic', 'Mythic'];
 const NAMES: Record<TrackName, string[]> = {
   Noble: ['Villager', 'Squire', 'Knight', 'Baron', 'Viscount', 'Count', 'Marquess', 'Duke', 'Prince', 'Emperor'],
-  Murim: ['Outer Disciple', 'Inner Disciple', 'Core Disciple', 'Martial Artist', 'Martial Master', 'Grandmaster', 'Supreme Elder', 'Martial Saint', 'Martial Emperor', 'Heavenly Demon'],
+  Murim: ['Outer Disciple', 'Inner Disciple', 'Core Disciple', 'Martial Artist', 'Martial Master', 'Grandmaster', 'Supreme Elder', 'Martial Saint', 'Martial Emperor'],
   Demon: ['Imp', 'Fiend', 'Hellion', 'Baron of Embers', 'Archfiend', 'Infernal Duke', 'Overlord', 'Archdemon', 'Demon King', 'Abyssal Monarch'],
 };
 
@@ -28,7 +28,7 @@ export const findLencana = (id?: string | null) => CATALOG.find((l) => l.id === 
 
 export const TRACK_INFO: Record<TrackName, { first: string; last: string; desc: string }> = {
   Noble: { first: 'Villager', last: 'Emperor', desc: 'Gelar bangsawan' },
-  Murim: { first: 'Outer Disciple', last: 'Heavenly Demon', desc: 'Jalan bela diri' },
+  Murim: { first: 'Outer Disciple', last: 'Martial Emperor', desc: 'Jalan bela diri' },
   Demon: { first: 'Imp', last: 'Abyssal Monarch', desc: 'Istana iblis' },
 };
 
