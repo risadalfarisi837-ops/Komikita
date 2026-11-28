@@ -11,6 +11,7 @@ import {
 } from '@/lib/fishing';
 import { SPECIES as KSPECIES, sizeRatio as kSizeRatio } from '@/lib/fishing';
 import type { BagItem, Rarity, Rod, SizeTier } from '@/lib/fishing';
+import { BAITS as KBAITS } from '@/lib/fishing';
 import DevTools, { DevFab, EMPTY_STATS } from './DevTools';
 import ProfileModal from './ProfileModal';
 import { DEFAULT_OUTFIT, encodeOutfit, titleOf, roleLabel } from './outfit';
@@ -66,6 +67,7 @@ interface Props {
   limitedOwned?: string[];
   onClaimStarter?: () => Promise<boolean>;
   freeBaitClaimed?: boolean;
+  baits?: Record<string, number>; // stok umpan (id -> jumlah)
   onClaimBait?: () => Promise<boolean>;
   promoBought?: Record<string, number>;
   onPromoPaid?: () => void;
@@ -243,6 +245,38 @@ const PIX: Record<string, { pal: Record<string, string>; rows: string[] }> = {
     '.OOOOOOOOOOOOOO.', '.OOWWWWWWWWWWOO.', '.OWOWWWWWWWWOWO.', '.OWWOWWWWWWOWWO.', '.OWWWOWWWWOWWWO.', '.OWWWWOOOOWWWWO.',
     '.OWWOWWWWWWOWWO.', '.OWOWWWWWWWWOWO.', '.OOWWWWWWWWWWOO.', '.OOOOOOOOOOOOOO.'] },
 };
+// ---------- ikon HUD tambahan (meniru referensi) ----------
+function HeartIcon({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20"><path d="M10 17.2S2.6 12.4 2.6 7.3A3.9 3.9 0 0110 5.6a3.9 3.9 0 017.4 1.7c0 5.1-7.4 9.9-7.4 9.9z" fill="#ff5c86" stroke="#fff" strokeWidth="1.8" strokeLinejoin="round" /></svg>
+  );
+}
+function StackIcon({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20"><g fill="#4b4646" stroke="#7a7373" strokeWidth="1"><rect x="2" y="4" width="16" height="3.4" rx="1.7" /><rect x="2" y="8.3" width="16" height="3.4" rx="1.7" /><rect x="2" y="12.6" width="16" height="3.4" rx="1.7" /></g></svg>
+  );
+}
+function FishUpIcon({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20"><path d="M3 13.2c2-3.2 5.6-4.4 8.8-3l3.2-1.6-.8 3 .8 3-3.2-1.6c-3.2 1.4-6.8.2-8.8-3z" fill="#4aa8ff" stroke="#1f64cc" strokeWidth="1" strokeLinejoin="round" /><path d="M13 1.6l2.6 3.2h-1.7V8h-1.8V4.8h-1.7z" fill="#ffd23f" stroke="#a86a00" strokeWidth=".7" strokeLinejoin="round" /></svg>
+  );
+}
+function BobberIcon({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20"><path d="M10 1v4" stroke="#e8e8e8" strokeWidth="1.6" strokeLinecap="round" /><path d="M5.2 10.6a4.8 4.8 0 019.6 0z" fill="#ff4d4d" stroke="#fff" strokeWidth="1" /><path d="M5.2 10.6a4.8 4.8 0 009.6 0z" fill="#fff" stroke="#c9c9c9" strokeWidth="1" /><path d="M10 15.6V19" stroke="#e8e8e8" strokeWidth="1.6" strokeLinecap="round" /></svg>
+  );
+}
+const BAIT_IMG: Record<string, string> = { cacing: '/shop/worm.png', udang: '/shop/shrimp.png' };
+const BAIT_EMO: Record<string, string> = { teri: '🐟', emas: '✨' };
+function BaitSprite({ id, size, dim = false }: { id: string; size: number; dim?: boolean }) {
+  const st: CSSProperties = { opacity: dim ? 0.4 : 1, display: 'block', imageRendering: 'pixelated' };
+  if (BAIT_IMG[id]) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={BAIT_IMG[id]} alt="" width={size} height={size} draggable={false} style={{ ...st, objectFit: 'contain' }} />;
+  }
+  return <span style={{ ...st, fontSize: size * 0.82, lineHeight: 1 }}>{BAIT_EMO[id] || '🪱'}</span>;
+}
+
 function PixIcon({ k, size }: { k: string; size: number }) {
   const d = PIX[k];
   if (!d) return null;
@@ -426,6 +460,9 @@ export default function FishingGame(props: Props) {
   const [chat, setChat] = useState<{ who: string; msg: string; t: number; rl?: string }[]>([]);
   const [chatOpen, setChatOpen] = useState(false);
   const [buffOpen, setBuffOpen] = useState(true);
+  const [baitSel, setBaitSel] = useState('');
+  const [seenChat, setSeenChat] = useState(0);
+  const [menuSeen, setMenuSeen] = useState(false);
   const [bagSort, setBagSort] = useState<'baru' | 'nilai'>('baru');
   const [menu2, setMenu2] = useState(false);
   // ---- Mode Developer (auto fishing dll) ----
@@ -810,20 +847,20 @@ export default function FishingGame(props: Props) {
   const mmss = (s: number) => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
 
   const btnLabel = phase === 'idle' ? 'Mancing' : phase === 'cast' || phase === 'wait' ? 'Angkat' : phase === 'bite' ? 'Strike!' : phase === 'reel' ? 'Tarik' : '...';
-  const btnBg = phase === 'bite' ? 'radial-gradient(circle at 40% 30%,#ff9d8a,#ee6b57)' : phase === 'reel' ? 'radial-gradient(circle at 40% 28%,#33a850,#1b7a36)' : phase === 'cast' || phase === 'wait' ? 'radial-gradient(circle at 40% 28%,#a7b1c0,#707c8f)' : 'radial-gradient(circle at 40% 28%,#3f73ba,#274f8d)';
-  const btnSz = phase === 'reel' ? 108 : 92;
+  const btnBg = phase === 'bite' ? 'radial-gradient(circle at 40% 30%,#ff9d8a,#ee6b57)' : phase === 'reel' ? 'radial-gradient(circle at 40% 28%,#33a850,#1b7a36)' : phase === 'cast' || phase === 'wait' ? 'radial-gradient(circle at 40% 28%,#a7b1c0,#707c8f)' : 'radial-gradient(circle at 40% 28%,#3f7fae,#25577f)';
+  const btnSz = phase === 'reel' ? 112 : 104;
 
   const circleBtn: CSSProperties = { width: hx(40), height: hx(40), borderRadius: '50%', background: PANEL, border: `${hx(2)}px solid ${GOLD}88`, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 };
   const pillBox: CSSProperties = { background: CREAM_BG, borderRadius: hx(18), border: `${hx(2)}px solid ${CREAM_EDGE}`, boxShadow: `0 ${hx(3)}px 0 #d9c08a`, color: CREAM_INK, fontFamily: HUD };
   // slot hotbar: kotak membulat biru-abu gelap, bingkai tebal (putih = terpilih, warna = kelangkaan)
   const slot = (selected: boolean, color: string): CSSProperties => ({
-    position: 'relative', width: hx(56), height: hx(56), borderRadius: hx(15), boxSizing: 'border-box',
+    position: 'relative', width: hx(52), height: hx(52), borderRadius: hx(14), boxSizing: 'border-box',
     background: 'linear-gradient(180deg,rgba(66,100,110,0.94),rgba(40,66,76,0.96))',
     border: `${hx(3.2)}px solid ${selected ? '#eef2f4' : color}`,
     boxShadow: selected ? `0 0 0 ${hx(2)}px rgba(104,124,132,0.95), 0 ${hx(3)}px 0 rgba(0,0,0,0.3)` : `0 ${hx(3)}px 0 rgba(0,0,0,0.3)`,
     display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto', cursor: 'pointer', padding: 0,
   });
-  const xlTag = (): CSSProperties => ({ position: 'absolute', top: hx(-5), right: hx(-4), background: '#f08a24', color: '#fff', fontSize: hx(8.5), fontWeight: 700, borderRadius: hx(4), padding: `0 ${hx(3.5)}px`, zIndex: 1, border: `${hx(1)}px solid rgba(255,255,255,0.55)` });
+  const xlTag = (): CSSProperties => ({ position: 'absolute', top: hx(15), right: hx(-5), background: '#f08a24', color: '#fff', fontSize: hx(8.5), fontWeight: 700, borderRadius: hx(4), padding: `0 ${hx(3.5)}px`, zIndex: 1, border: `${hx(1)}px solid rgba(255,255,255,0.55)` });
   const wLabel = (): CSSProperties => ({ position: 'absolute', bottom: hx(2), left: 0, right: 0, textAlign: 'center', fontFamily: '"Pixelify Sans", ui-monospace, monospace', fontSize: hx(12), fontWeight: 700, lineHeight: 1, color: '#fff', textShadow: '-1px 0 #1d2d33, 1px 0 #1d2d33, 0 -1px #1d2d33, 0 1px #1d2d33, 0 2px 0 #1d2d33' });
   const wl = (w: number) => formatWeight(w).replace(' ', '');
   const ringBtn = (ring: string): CSSProperties => ({
@@ -831,7 +868,7 @@ export default function FishingGame(props: Props) {
     boxShadow: `0 ${hx(3)}px 0 ${ring}`, color: CREAM_INK, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0, flex: '0 0 auto', margin: hx(2),
   });
   const sqBtn: CSSProperties = {
-    width: hx(40), height: hx(40), borderRadius: hx(12), boxSizing: 'border-box', background: CREAM_BG, border: `${hx(2)}px solid ${CREAM_EDGE}`,
+    width: hx(39), height: hx(39), borderRadius: hx(12), boxSizing: 'border-box', background: CREAM_BG, border: `${hx(2)}px solid ${CREAM_EDGE}`,
     boxShadow: `0 ${hx(3)}px 0 #d9c08a`, color: CREAM_INK, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0, flex: '0 0 auto',
   };
   const soon = () => say('Fitur ini segera hadir');
@@ -840,12 +877,25 @@ export default function FishingGame(props: Props) {
     boxShadow: `0 ${hx(3)}px 0 ${accent}`, marginBottom: hx(3),
   });
   const chipSt = (white: boolean, hi = false): CSSProperties => ({
-    display: 'inline-flex', alignItems: 'center', gap: hx(4), height: hx(26), boxSizing: 'border-box', padding: `0 ${hx(11)}px`, borderRadius: 99,
+    display: 'inline-flex', alignItems: 'center', gap: hx(4), height: hx(23.5), boxSizing: 'border-box', padding: `0 ${hx(9)}px`, borderRadius: 99,
     background: white ? '#fff8e8' : 'rgba(22,20,20,0.94)', color: white ? '#1d3a24' : hi ? '#7dffa5' : '#fff', border: `${hx(1.5)}px solid ${white ? '#f1e2bd' : '#2c2828'}`,
-    fontSize: hx(15), fontWeight: 800, boxShadow: `0 ${hx(2)}px 0 rgba(0,0,0,0.3)`, whiteSpace: 'nowrap',
+    fontSize: hx(13), fontWeight: 800, boxShadow: `0 ${hx(2)}px 0 rgba(0,0,0,0.3)`, whiteSpace: 'nowrap',
   });
   const ov: CSSProperties = { position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 30 };
 
+  const baitStock = props.baits ?? {};
+  const ownedBaits = KBAITS.filter((b) => (baitStock[b.id] ?? 0) > 0);
+  const activeBait = (baitSel && (baitStock[baitSel] ?? 0) > 0 ? KBAITS.find((b) => b.id === baitSel) : ownedBaits[0]) ?? null;
+  const baitCount = activeBait ? baitStock[activeBait.id] ?? 0 : 0;
+  const cycleBait = () => {
+    if (!ownedBaits.length) { say('Belum punya umpan. Ambil gratis / beli di Toko'); return; }
+    const i = ownedBaits.findIndex((b) => b.id === activeBait?.id);
+    const n = ownedBaits[(i + 1) % ownedBaits.length];
+    setBaitSel(n.id);
+    say('Umpan: ' + n.name);
+  };
+  const unreadChat = !chatOpen && chat.length > seenChat;
+  const redDot: CSSProperties = { position: 'absolute', top: hx(-5), right: hx(-4), width: hx(14), height: hx(14), borderRadius: '50%', background: '#ff3b3b', border: `${hx(2)}px solid #fff`, boxSizing: 'border-box', pointerEvents: 'none' };
   const guide = status.shoal;
   const rotate = guide ? (guide.ang * 180) / Math.PI + 90 : 0;
 
@@ -855,41 +905,41 @@ export default function FishingGame(props: Props) {
       {exiting && <div style={{ position: 'absolute', inset: 0, background: '#0b1a2b', zIndex: 200 }} />}
 
       {/* kiri atas: kartu pemain + pulau, lalu deretan tombol (chat, mic, headset, emoji) */}
-      <div style={{ position: 'absolute', left: `calc(env(safe-area-inset-left, 0px) + ${hx(6)}px)`, top: `calc(env(safe-area-inset-top, 0px) + ${hx(6)}px)`, display: fishing ? 'none' : 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: hx(8) }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: hx(8) }}>
-          <div role="button" aria-label="Buka profil" onClick={() => setProfileOpen(true)} style={{ ...pillBox, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: hx(8), width: hx(215), height: hx(72), boxSizing: 'border-box', padding: `${hx(8)}px ${hx(10)}px ${hx(8)}px ${hx(7)}px`, borderRadius: hx(36) }}>
-            <div style={{ width: hx(44), height: hx(44), borderRadius: '50%', overflow: 'hidden', border: `${hx(2.5)}px solid ${CREAM_EDGE}`, boxSizing: 'border-box', background: '#35405c', flex: '0 0 auto' }}>
+      <div style={{ position: 'absolute', left: `calc(env(safe-area-inset-left, 0px) + ${hx(14)}px)`, top: `calc(env(safe-area-inset-top, 0px) + ${hx(11.5)}px)`, display: fishing ? 'none' : 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: hx(7) }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: hx(7) }}>
+          <div role="button" aria-label="Buka profil" onClick={() => setProfileOpen(true)} style={{ ...pillBox, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: hx(8), width: hx(186), height: hx(53), boxSizing: 'border-box', padding: `${hx(4)}px ${hx(8)}px ${hx(4)}px ${hx(5)}px`, borderRadius: hx(27) }}>
+            <div style={{ width: hx(34), height: hx(34), borderRadius: '50%', overflow: 'hidden', border: `${hx(2)}px solid ${CREAM_EDGE}`, boxSizing: 'border-box', background: '#35405c', flex: '0 0 auto' }}>
               {photo ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={photo} alt="" referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : null}
             </div>
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              <div style={{ fontSize: hx(14.5), fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', lineHeight: 1.25, paddingTop: hx(1), display: 'flex', alignItems: 'center', gap: hx(4) }}><RoleName role={props.role} nameStyle={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{name || 'Tamu'}</RoleName></div>
+              <div style={{ fontSize: hx(12.5), fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', lineHeight: 1.2, paddingTop: 0, display: 'flex', alignItems: 'center', gap: hx(4) }}><RoleName role={props.role} nameStyle={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{name || 'Tamu'}</RoleName></div>
               {roleLabel(props.role) ? (
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: hx(3), marginTop: hx(2), padding: `0 ${hx(8)}px`, borderRadius: 99, background: props.role === 'dev' ? 'linear-gradient(90deg,#22d3ee,#818cf8,#e879f9)' : props.role === 'admin' ? 'linear-gradient(90deg,#ff6b6b,#ffd0d0,#e5383b)' : 'linear-gradient(90deg,#f5c84b,#fff3b0,#ff9a3c)', border: `${hx(1.5)}px solid rgba(255,255,255,.85)`, fontSize: hx(11.5), fontWeight: 800, color: props.role === 'premium' ? '#3b2a05' : props.role === 'admin' ? '#fff' : '#0b0b14', lineHeight: 1.35, whiteSpace: 'nowrap', maxWidth: '100%' }}>{roleLabel(props.role)}</div>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: hx(3), marginTop: hx(1), padding: `0 ${hx(7)}px`, borderRadius: 99, background: props.role === 'dev' ? 'linear-gradient(90deg,#22d3ee,#818cf8,#e879f9)' : props.role === 'admin' ? 'linear-gradient(90deg,#ff6b6b,#ffd0d0,#e5383b)' : 'linear-gradient(90deg,#f5c84b,#fff3b0,#ff9a3c)', border: `${hx(1.5)}px solid rgba(255,255,255,.85)`, fontSize: hx(10.5), fontWeight: 800, color: props.role === 'premium' ? '#3b2a05' : props.role === 'admin' ? '#fff' : '#0b0b14', lineHeight: 1.35, whiteSpace: 'nowrap', maxWidth: '100%' }}>{roleLabel(props.role)}</div>
               ) : (
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: hx(3), marginTop: hx(2), padding: `0 ${hx(7)}px`, borderRadius: 99, background: '#e6f6df', border: `${hx(1.5)}px solid #5fbf6a`, fontSize: hx(11.5), fontWeight: 800, color: '#1f7a35', lineHeight: 1.35, whiteSpace: 'nowrap', maxWidth: '100%' }}><BoatIcon size={hx(12)} />{titleOf(lv.level, outfit.ttl)}</div>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: hx(3), marginTop: hx(1), padding: `0 ${hx(6)}px`, borderRadius: 99, background: '#e6f6df', border: `${hx(1.5)}px solid #5fbf6a`, fontSize: hx(10.5), fontWeight: 800, color: '#1f7a35', lineHeight: 1.35, whiteSpace: 'nowrap', maxWidth: '100%' }}><BoatIcon size={hx(11)} />{titleOf(lv.level, outfit.ttl)}</div>
               )}
-              <div style={{ display: 'flex', alignItems: 'center', gap: hx(5), marginTop: hx(2) }}>
-                <span style={{ fontSize: hx(11.5), fontWeight: 800, color: '#2b7fc2' }}>Lv{lv.level}</span>
-                <div style={{ flex: 1, height: hx(5), borderRadius: hx(3), background: '#eadfc4', overflow: 'hidden' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: hx(5), marginTop: hx(1) }}>
+                <span style={{ fontSize: hx(10), fontWeight: 800, color: '#2b7fc2' }}>Lv{lv.level}</span>
+                <div style={{ flex: 1, height: hx(4), borderRadius: hx(3), background: '#eadfc4', overflow: 'hidden' }}>
                   <div style={{ width: Math.min(100, (lv.into / lv.need) * 100) + '%', height: '100%', background: 'linear-gradient(90deg,#2fbf8a,#6fdc8c)' }} />
                 </div>
-                <span style={{ fontSize: hx(11), fontWeight: 700, color: '#9a7a4e', whiteSpace: 'nowrap' }}>{lv.into}/{lv.need}</span>
+                <span style={{ fontSize: hx(9.5), fontWeight: 700, color: '#9a7a4e', whiteSpace: 'nowrap' }}>{lv.into}/{lv.need}</span>
               </div>
             </div>
           </div>
-          <button onClick={() => say('Pemain online: ' + online)} aria-label="Pulau" style={{ ...pillBox, display: 'flex', alignItems: 'center', gap: hx(6), height: hx(42), boxSizing: 'border-box', padding: `0 ${hx(6)}px 0 ${hx(10)}px`, borderRadius: hx(21), cursor: 'pointer', fontSize: hx(15), fontWeight: 800 }}>
-            <IslandIcon size={hx(24)} />Pulau
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: hx(4), background: '#f1e6c8', borderRadius: 99, padding: `${hx(3)}px ${hx(9)}px`, color: '#2b7fc2', fontSize: hx(15) }}><PeopleBlue size={hx(15)} />{online}</span>
+          <button onClick={() => say('Pemain online: ' + online)} aria-label="Pulau" style={{ ...pillBox, display: 'flex', alignItems: 'center', gap: hx(6), height: hx(38), boxSizing: 'border-box', padding: `0 ${hx(6)}px 0 ${hx(10)}px`, borderRadius: hx(19), cursor: 'pointer', fontSize: hx(13.5), fontWeight: 800 }}>
+            <IslandIcon size={hx(22)} />Pulau
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: hx(4), background: '#f1e6c8', borderRadius: 99, padding: `${hx(3)}px ${hx(9)}px`, color: '#2b7fc2', fontSize: hx(13.5) }}><PeopleBlue size={hx(14)} />{online}</span>
           </button>
         </div>
-        <div style={{ display: 'flex', gap: hx(8) }}>
-          <button onClick={() => setChatOpen((o) => !o)} aria-label="Chat" style={sqBtn}><ChatInk size={hx(22)} /></button>
-          <button onClick={soon} aria-label="Mikrofon" style={sqBtn}><MicInk size={hx(22)} /></button>
-          <button onClick={soon} aria-label="Suara" style={sqBtn}><HeadsetInk size={hx(22)} /></button>
-          <button onClick={soon} aria-label="Emoji" style={sqBtn}><SmileInk size={hx(22)} /></button>
+        <div style={{ display: 'flex', gap: hx(7) }}>
+          <button onClick={() => { setChatOpen((o) => !o); setSeenChat(chat.length); }} aria-label="Chat" style={{ ...sqBtn, position: 'relative' }}><ChatInk size={hx(21)} />{unreadChat && <span style={redDot} />}</button>
+          <button onClick={soon} aria-label="Mikrofon" style={sqBtn}><MicInk size={hx(21)} /></button>
+          <button onClick={soon} aria-label="Suara" style={sqBtn}><HeadsetInk size={hx(21)} /></button>
+          <button onClick={soon} aria-label="Emoji" style={sqBtn}><SmileInk size={hx(21)} /></button>
         </div>
       </div>
 
@@ -922,52 +972,50 @@ export default function FishingGame(props: Props) {
         );
       })()}
 
-      {/* chat */}
+      {/* chat: 4 pesan terakhir + tab Pulau/Global (kolom ketik muncul saat tombol chat dibuka) */}
       {!fishing && (() => {
-        const last = chat[chat.length - 1];
-        const box: CSSProperties = { position: 'absolute', left: `calc(env(safe-area-inset-left, 0px) + ${hx(6)}px)`, top: `calc(env(safe-area-inset-top, 0px) + ${hx(134)}px)`, maxWidth: hx(277), boxSizing: 'border-box', background: 'transparent', padding: 0, fontSize: hx(13), fontWeight: 700, textShadow: '0 1px 2px rgba(0,0,0,0.7)' };
+        const box: CSSProperties = { position: 'absolute', left: `calc(env(safe-area-inset-left, 0px) + ${hx(14)}px)`, top: `calc(env(safe-area-inset-top, 0px) + ${hx(122)}px)`, maxWidth: hx(256), boxSizing: 'border-box', background: 'transparent', padding: 0, fontSize: hx(12.8), fontWeight: 700, textShadow: '0 1px 2px rgba(0,0,0,0.7)', pointerEvents: 'auto' };
         const line = (m: { who: string; msg: string; rl?: string }, i: number) => (
-          <div key={i} style={{ display: 'block', width: 'fit-content', maxWidth: '100%', boxSizing: 'border-box', background: 'rgba(24,30,22,0.46)', borderRadius: hx(13), padding: `${hx(3)}px ${hx(10)}px`, marginBottom: hx(3), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#fff' }}><span style={{ color: '#ffe9a8' }}><RoleName role={m.rl}>{m.who}</RoleName></span> : {m.msg}</div>
+          <div key={i} style={{ display: 'block', width: 'fit-content', maxWidth: '100%', boxSizing: 'border-box', background: 'rgba(20,32,40,0.62)', borderRadius: hx(11), padding: `${hx(3.5)}px ${hx(10)}px`, marginBottom: hx(3), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#fff' }}><span style={{ color: '#fff', fontWeight: 800 }}><RoleName role={m.rl}>{m.who}</RoleName></span>: {m.msg}</div>
         );
-        if (chatOpen) return (
-          <div style={{ ...box, minWidth: hx(220), maxWidth: hx(300), pointerEvents: 'auto' }}>
-            {chat.length ? chat.slice(-6).map(line) : <span style={{ color: 'rgba(255,255,255,0.6)' }}>Belum ada pesan</span>}
-            <form onSubmit={(e) => { e.preventDefault(); if (!netRef.current) { say('Login dulu buat chat'); return; } netRef.current.send(chatText); setChatText(''); }} style={{ display: 'flex', gap: hx(4), marginTop: hx(4) }}>
-              <input value={chatText} onChange={(e) => setChatText(e.target.value)} maxLength={80} placeholder="Ketik pesan..." onKeyDown={(e) => { e.stopPropagation(); e.nativeEvent.stopPropagation(); }} onKeyUp={(e) => { e.stopPropagation(); e.nativeEvent.stopPropagation(); }} style={{ flex: 1, minWidth: 0, borderRadius: hx(8), border: 0, padding: `${hx(3)}px ${hx(8)}px`, fontSize: hx(13), fontFamily: 'inherit', background: 'rgba(255,255,255,0.92)', color: '#222', outline: 'none' }} />
-              <button type="submit" style={{ border: 0, borderRadius: hx(8), background: '#f6c445', color: '#3b2a00', fontWeight: 700, fontSize: hx(13), padding: `0 ${hx(10)}px`, cursor: 'pointer' }}>Kirim</button>
-            </form>
-            <div style={{ display: 'flex', gap: hx(6), marginTop: hx(5) }}>
-              <span style={{ background: CREAM_BG, color: CREAM_INK, borderRadius: 99, padding: `${hx(4)}px ${hx(18)}px`, fontWeight: 800, fontSize: hx(13), boxShadow: '0 2px 0 #d9c08a' }}>Pulau</span>
-              <button onClick={() => say('Chat Global segera hadir')} style={{ background: 'rgba(24,30,22,0.5)', color: '#fff', border: 0, borderRadius: 99, padding: `${hx(4)}px ${hx(18)}px`, fontWeight: 800, fontSize: hx(13), fontFamily: HUD, cursor: 'pointer' }}>Global</button>
+        return (
+          <div style={box}>
+            {chat.slice(-4).map(line)}
+            {chatOpen && (
+              <form onSubmit={(e) => { e.preventDefault(); if (!netRef.current) { say('Login dulu buat chat'); return; } netRef.current.send(chatText); setChatText(''); }} style={{ display: 'flex', gap: hx(4), marginTop: hx(4) }}>
+                <input value={chatText} onChange={(e) => setChatText(e.target.value)} maxLength={80} placeholder="Ketik pesan..." onKeyDown={(e) => { e.stopPropagation(); e.nativeEvent.stopPropagation(); }} onKeyUp={(e) => { e.stopPropagation(); e.nativeEvent.stopPropagation(); }} style={{ flex: 1, minWidth: 0, borderRadius: hx(8), border: 0, padding: `${hx(3)}px ${hx(8)}px`, fontSize: hx(12.8), fontFamily: 'inherit', background: 'rgba(255,255,255,0.92)', color: '#222', outline: 'none' }} />
+                <button type="submit" style={{ border: 0, borderRadius: hx(8), background: '#f6c445', color: '#3b2a00', fontWeight: 700, fontSize: hx(12.8), padding: `0 ${hx(10)}px`, cursor: 'pointer' }}>Kirim</button>
+              </form>
+            )}
+            <div style={{ display: 'flex', gap: hx(5), marginTop: hx(5) }}>
+              <span style={{ background: CREAM_BG, color: CREAM_INK, borderRadius: 99, height: hx(32), boxSizing: 'border-box', display: 'inline-flex', alignItems: 'center', padding: `0 ${hx(18)}px`, fontWeight: 800, fontSize: hx(13.5), boxShadow: '0 2px 0 #d9c08a', textShadow: 'none' }}>Pulau</span>
+              <button onClick={() => say('Chat Global segera hadir')} style={{ background: 'rgba(20,32,40,0.62)', color: '#fff', border: 0, borderRadius: 99, height: hx(32), padding: `0 ${hx(18)}px`, fontWeight: 800, fontSize: hx(13.5), fontFamily: HUD, cursor: 'pointer' }}>Global</button>
             </div>
           </div>
         );
-        if (last && Date.now() - last.t < 9000) return <div style={box}>{line(last, 0)}</div>;
-        return null;
       })()}
 
-      {/* kanan atas: mata uang + pengaturan; di bawahnya kartu lokasi dan kolom tombol (menu, toko, hadiah) */}
-      <div style={{ position: 'absolute', right: `calc(env(safe-area-inset-right, 0px) + ${hx(10)}px)`, top: `calc(env(safe-area-inset-top, 0px) + ${hx(6)}px)`, display: fishing ? 'none' : 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: hx(8) }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: hx(6) }}>
-          <div style={{ ...dockPill('#6bb6ff'), padding: `0 ${hx(5)}px 0 ${hx(11)}px`, gap: hx(7), marginBottom: 0, height: hx(40), borderRadius: hx(20) }}>
-            <CrystalIcon size={hx(22)} />
-            <span style={{ fontSize: hx(16), fontWeight: 800, color: '#1c6fe0' }}>{formatNum(crystal)}</span>
-            <button onClick={() => { setShopTopup('crystal'); setShopOpen(true); }} aria-label="Top up Crystal" style={{ width: hx(26), height: hx(26), borderRadius: '50%', background: 'radial-gradient(circle at 35% 30%,#58e89a,#1fa85a)', border: `${hx(2)}px solid #fff`, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}><Svg d="M12 5v14M5 12h14" size={hx(14)} w={3.4} /></button>
+      {/* kanan atas: mata uang + pengaturan; di bawahnya kartu misi/lokasi dan kolom tombol (menu, toko) */}
+      <div style={{ position: 'absolute', right: `calc(env(safe-area-inset-right, 0px) + ${hx(13.5)}px)`, top: `calc(env(safe-area-inset-top, 0px) + ${hx(12)}px)`, display: fishing ? 'none' : 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: hx(6) }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: hx(7) }}>
+          <div role="button" aria-label="Top up Crystal" onClick={() => { setShopTopup('crystal'); setShopOpen(true); }} style={{ ...dockPill('#6bb6ff'), cursor: 'pointer', padding: `0 ${hx(14)}px 0 ${hx(9)}px`, gap: hx(7), marginBottom: 0, height: hx(36), borderRadius: hx(18) }}>
+            <CrystalIcon size={hx(21)} />
+            <span style={{ fontSize: hx(15.5), fontWeight: 800, color: '#1c6fe0' }}>{formatNum(crystal)}</span>
           </div>
-          <div style={{ ...dockPill('#b08cff'), padding: `0 ${hx(5)}px 0 ${hx(11)}px`, gap: hx(7), marginBottom: 0, height: hx(40), borderRadius: hx(20) }}>
-            <PermataIcon size={hx(22)} />
-            <span style={{ fontSize: hx(16), fontWeight: 800, color: '#7a3fd0' }}>{formatNum(props.gems ?? 0)}</span>
-            <button onClick={() => { setShopTopup('gems'); setShopOpen(true); }} aria-label="Top up Gems" style={{ width: hx(26), height: hx(26), borderRadius: '50%', background: 'radial-gradient(circle at 35% 30%,#58e89a,#1fa85a)', border: `${hx(2)}px solid #fff`, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}><Svg d="M12 5v14M5 12h14" size={hx(14)} w={3.4} /></button>
+          <div style={{ ...dockPill('#b08cff'), padding: `0 ${hx(4)}px 0 ${hx(9)}px`, gap: hx(7), marginBottom: 0, height: hx(36), borderRadius: hx(18) }}>
+            <PermataIcon size={hx(21)} />
+            <span style={{ fontSize: hx(15.5), fontWeight: 800, color: '#7a3fd0' }}>{formatNum(props.gems ?? 0)}</span>
+            <button onClick={() => { setShopTopup('gems'); setShopOpen(true); }} aria-label="Top up Gems" style={{ width: hx(25), height: hx(25), borderRadius: '50%', background: 'radial-gradient(circle at 35% 30%,#58e89a,#1fa85a)', border: `${hx(2)}px solid #fff`, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}><Svg d="M12 5v14M5 12h14" size={hx(13)} w={3.4} /></button>
           </div>
-          <button onClick={() => setMenuOpen(true)} aria-label="Pengaturan" style={sqBtn}><GearInk size={hx(22)} /></button>
+          <button onClick={() => setMenuOpen(true)} aria-label="Pengaturan" style={{ ...sqBtn, width: hx(41), height: hx(41) }}><GearInk size={hx(22)} /></button>
         </div>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: hx(8) }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: hx(11) }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: hx(8) }}>
-            <div style={{ ...pillBox, display: 'flex', alignItems: 'center', gap: hx(9), boxSizing: 'border-box', minWidth: hx(168), padding: `${hx(6)}px ${hx(14)}px ${hx(6)}px ${hx(8)}px`, borderRadius: hx(18) }}>
-              <IslandIcon size={hx(28)} />
-              <div>
-                <div style={{ fontSize: hx(14.5), fontWeight: 800, lineHeight: 1.15, whiteSpace: 'nowrap' }}>{islandName(props.room || MAIN_ROOM)}</div>
-                <div style={{ fontSize: hx(12.5), fontWeight: 600, color: '#9a7a4e', marginTop: hx(1), whiteSpace: 'nowrap' }}>{dateStr} · <b style={{ color: CREAM_INK }}>{timeStr}</b> {tz}</div>
+            <div role="button" aria-label="Misi harian" onClick={() => { window.location.assign('/misi'); }} style={{ display: 'flex', alignItems: 'center', gap: hx(8), boxSizing: 'border-box', width: hx(169), height: hx(41), padding: `0 ${hx(10)}px 0 ${hx(8)}px`, borderRadius: hx(13), background: CREAM_BG, border: `${hx(2)}px solid ${CREAM_EDGE}`, boxShadow: `0 ${hx(3)}px 0 #d9c08a`, color: CREAM_INK, fontFamily: HUD, cursor: 'pointer' }}>
+              <PixIcon k="misi" size={hx(24)} />
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: hx(12.5), fontWeight: 800, lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{islandName(props.room || MAIN_ROOM)}</div>
+                <div style={{ fontSize: hx(10.5), fontWeight: 600, color: '#9a7a4e', marginTop: hx(1), whiteSpace: 'nowrap' }}>{timeStr} {tz} · Misi harian</div>
               </div>
             </div>
             {guide && (
@@ -982,10 +1030,9 @@ export default function FishingGame(props: Props) {
               </div>
             )}
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: hx(8) }}>
-            <button onClick={() => setMenu2((o) => !o)} aria-label="Menu" style={sqBtn}><GridInk size={hx(22)} /></button>
-            <button onClick={() => { setShopTab('toko'); setShopOpen(true); }} aria-label="Toko" style={sqBtn}><StoreInk size={hx(22)} /></button>
-            <button onClick={() => say('Belum ada hadiah hari ini 🎁')} aria-label="Hadiah" style={sqBtn}><GiftIcon size={hx(22)} /></button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: hx(7) }}>
+            <button onClick={() => { setMenu2((o) => !o); setMenuSeen(true); }} aria-label="Menu" style={{ ...sqBtn, position: 'relative', width: hx(41), height: hx(43) }}><GridInk size={hx(22)} />{!menuSeen && <span style={redDot} />}</button>
+            <button onClick={() => { setShopTab('toko'); setShopOpen(true); }} aria-label="Toko" style={{ ...sqBtn, width: hx(41), height: hx(41) }}><StoreInk size={hx(22)} /></button>
           </div>
         </div>
       </div>
@@ -1005,34 +1052,46 @@ export default function FishingGame(props: Props) {
         onPointerMove={(e) => joyActive.current && joyMove(e)}
         onPointerUp={joyUp}
         onPointerCancel={joyUp}
-        style={{ position: 'absolute', left: `calc(env(safe-area-inset-left, 0px) + ${hx(9)}px)`, bottom: `calc(env(safe-area-inset-bottom, 0px) + ${hx(27)}px)`, width: hx(105), height: hx(105), borderRadius: '50%', background: 'rgba(255,255,255,0.2)', border: `${hx(2.5)}px solid rgba(255,255,255,0.6)`, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'none' }}
+        style={{ position: 'absolute', left: `calc(env(safe-area-inset-left, 0px) + ${hx(95)}px)`, bottom: `calc(env(safe-area-inset-bottom, 0px) + ${hx(46)}px)`, width: hx(98), height: hx(98), borderRadius: '50%', background: 'rgba(255,255,255,0.2)', border: `${hx(2.5)}px solid rgba(255,255,255,0.6)`, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'none' }}
       >
-        <div style={{ width: hx(45), height: hx(45), borderRadius: '50%', background: 'rgba(255,255,255,0.9)', border: `${hx(2)}px solid #fff`, boxShadow: '0 2px 6px rgba(0,0,0,0.25)', boxSizing: 'border-box', transform: `translate(${knob.x}px, ${knob.y}px)` }} />
+        <div style={{ width: hx(51), height: hx(51), borderRadius: '50%', background: 'rgba(255,255,255,0.92)', border: `${hx(2)}px solid #fff`, boxShadow: '0 2px 6px rgba(0,0,0,0.25)', boxSizing: 'border-box', transform: `translate(${knob.x}px, ${knob.y}px)` }} />
       </div>}
 
-      {/* buff + hotbar ransel */}
+      {/* buff (slot umpan + statistik) + hotbar ransel */}
       {!fishing && (() => {
         const chips = [
-          { k: 'pow', icon: <CloverIcon size={hx(15)} color="#1f7a35" />, t: String(rod.power), white: true, hi: false, tint: '', edge: '' },
-          { k: 'luck', icon: <CloverIcon size={hx(13)} />, t: '+' + luckPct + '%', white: false, hi: status.inShoal, tint: '#2f7d46', edge: '#58b676' },
-          { k: 'money', icon: <CoinIcon size={hx(13)} />, t: '+' + Math.round(rod.money * 100) + '%', white: false, hi: false, tint: '#9a6a12', edge: '#d3a23a' },
-          { k: 'xp', icon: <XpIcon size={hx(12)} />, t: '+' + Math.round(rod.xp * 100) + '%', white: false, hi: false, tint: '#2a5fae', edge: '#6a98e6' },
+          { k: 'luck', icon: <CloverIcon size={hx(15)} color="#3fdc6a" />, t: '+' + luckPct + '%', hi: status.inShoal },
+          { k: 'xp', icon: <XpIcon size={hx(12)} />, t: '+' + Math.round(rod.xp * 100) + '%', hi: false },
+          { k: 'money', icon: <CrystalIcon size={hx(15)} />, t: '+' + Math.round(rod.money * 100) + '%', hi: false },
+          { k: 'size', icon: <FishUpIcon size={hx(16)} />, t: '+' + Math.round(rod.power * 25) + '%', hi: false },
+          { k: 'mut', icon: <SparkIcon size={hx(16)} fill="#e6d0ff" glow="#9b6bff" />, t: '+' + Math.round(rod.luck * 50) + '%', hi: false },
+          { k: 'bite', icon: <BobberIcon size={hx(15)} />, t: '+' + Math.round(rod.power * 10) + '%', hi: false },
         ];
         return (
-          <div style={{ position: 'absolute', left: '50%', bottom: `calc(env(safe-area-inset-bottom, 0px) + ${hx(12)}px)`, transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: hx(5) }}>
+          <div style={{ position: 'absolute', left: '50%', bottom: `calc(env(safe-area-inset-bottom, 0px) + ${hx(19)}px)`, transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: hx(4) }}>
             <div style={{ display: 'flex', gap: hx(5), alignItems: 'center' }}>
-              {chips.slice(0, buffOpen ? chips.length : 1).map((c) => (
-                <span key={c.k} style={{ ...chipSt(c.white, c.hi), ...(c.tint ? { background: c.tint, border: `${hx(2)}px solid ${c.edge}`, color: '#fff' } : {}) }}>{c.icon}{c.t}</span>
-              ))}
-              <button onClick={() => setBuffOpen((o) => !o)} aria-label="Buff" style={{ width: hx(22), height: hx(22), borderRadius: '50%', background: '#1f6fe0', border: `${hx(2)}px solid #6aa8ff`, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}><Svg d={buffOpen ? 'M14 6l-6 6 6 6' : 'M10 6l6 6-6 6'} size={hx(12)} w={3.6} /></button>
+              <span style={{ ...chipSt(true), minWidth: hx(34), justifyContent: 'center' }}><CloverIcon size={hx(15)} color="#1f7a35" />{rod.power}</span>
+              {buffOpen && (
+                <>
+                  <button onClick={cycleBait} aria-label="Slot umpan" style={{ ...chipSt(false), width: hx(24), padding: 0, justifyContent: 'center', cursor: 'pointer' }}>
+                    {activeBait ? <BaitSprite id={activeBait.id} size={hx(15)} /> : <StackIcon size={hx(15)} />}
+                  </button>
+                  {chips.map((c) => (
+                    <span key={c.k} style={chipSt(false, c.hi)}>{c.icon}{c.t}</span>
+                  ))}
+                </>
+              )}
+              <button onClick={() => setBuffOpen((o) => !o)} aria-label="Buff" style={{ width: hx(33), height: hx(24.5), borderRadius: hx(9), background: '#12304f', border: `${hx(2)}px solid #4a8fe0`, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0, marginLeft: hx(3) }}><Svg d={buffOpen ? 'M14 6l-6 6 6 6' : 'M10 6l6 6-6 6'} size={hx(13)} w={3.6} /></button>
             </div>
-            <div style={{ display: 'flex', gap: hx(7), alignItems: 'flex-end' }}>
-              <button style={slot(rodOut, '#4a9bff')} onClick={toggleRod} aria-label="Joran"><PixelRod id={rod.id} size={hx(46)} /></button>
+            <div style={{ display: 'flex', gap: hx(6), alignItems: 'flex-end' }}>
+              <button style={slot(rodOut, '#ffc531')} onClick={toggleRod} aria-label="Joran"><PixelRod id={rod.id} size={hx(44)} /></button>
               {recent.map((b) => {
                 const sp = SPECIES_BY_ID[b.s];
                 const xl = isXL(sp, b.w);
+                const fav = xl || sp.rarity !== 'common';
                 return (
                   <button key={b.id} style={slot(!!held && held.id === b.id, rarityBorder(sp.rarity, xl))} onClick={() => toggleHold(b)} aria-label={sp.name}>
+                    {fav && <span style={{ position: 'absolute', top: hx(-6), right: hx(-5), zIndex: 1, lineHeight: 0 }}><HeartIcon size={hx(15)} /></span>}
                     {xl && <span style={xlTag()}>XL</span>}
                     <FishIcon id={sp.id} scale={0.86 * u * HUD_SCALE} />
                     <span style={wLabel()}>{wl(b.w)}</span>
@@ -1045,18 +1104,17 @@ export default function FishingGame(props: Props) {
                   <span style={wLabel()}>Lepas</span>
                 </button>
               )}
-              <button onClick={() => { setSel(''); setBagOpen(true); }} aria-label="Ransel" style={{ ...slot(false, CREAM_EDGE), background: CREAM_BG, borderColor: CREAM_EDGE, boxShadow: `0 ${hx(3)}px 0 #d9c08a`, marginLeft: hx(4) }}>
-                <BagIcon size={hx(30)} />
-                <span style={{ ...wLabel(), textShadow: 'none', color: bag.length >= BAG_MAX ? '#d6312f' : CREAM_INK, fontSize: hx(11.5) }}>{bag.length}/{BAG_MAX}</span>
+              <button onClick={() => { setSel(''); setBagOpen(true); }} aria-label="Ransel" style={{ ...slot(false, bag.length >= BAG_MAX ? '#d6312f' : CREAM_EDGE), width: hx(48), height: hx(53), background: CREAM_BG, boxShadow: `0 ${hx(3)}px 0 #d9c08a`, marginLeft: hx(3) }}>
+                <BagIcon size={hx(31)} />
               </button>
             </div>
           </div>
         );
       })()}
 
-      {/* penghitung ikan lepas (x0) */}
+      {/* penghitung ikan lepas (x0): dipindah ke tengah atas supaya tidak menabrak slot umpan/joran */}
       {!fishing && (
-        <div style={{ position: 'absolute', right: `calc(env(safe-area-inset-right, 0px) + ${hx(88)}px)`, bottom: `calc(env(safe-area-inset-bottom, 0px) + ${hx(112)}px)`, display: 'flex', alignItems: 'center', gap: hx(5), height: hx(26), boxSizing: 'border-box', padding: `0 ${hx(12)}px 0 ${hx(8)}px`, borderRadius: 99, background: '#fbf1dc', border: `${hx(2)}px solid #d9c196`, boxShadow: '0 2px 0 rgba(120,90,40,0.45)', color: '#c2392b', fontWeight: 700, fontSize: hx(16) }}>
+        <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: `calc(env(safe-area-inset-top, 0px) + ${hx(11.5)}px)`, display: 'flex', alignItems: 'center', gap: hx(5), height: hx(26), boxSizing: 'border-box', padding: `0 ${hx(12)}px 0 ${hx(8)}px`, borderRadius: 99, background: '#fbf1dc', border: `${hx(2)}px solid #d9c196`, boxShadow: '0 2px 0 rgba(120,90,40,0.45)', color: '#c2392b', fontWeight: 700, fontSize: hx(16) }}>
           <CrossRodIcon size={hx(20)} />×{fails}
         </div>
       )}
@@ -1066,29 +1124,34 @@ export default function FishingGame(props: Props) {
         <button
           onClick={() => setSellOpen(true)}
           aria-label="Belanja"
-          style={{ position: 'absolute', zIndex: 20, right: `calc(env(safe-area-inset-right, 0px) + ${hx(14)}px)`, bottom: `calc(env(safe-area-inset-bottom, 0px) + ${hx(32 + btnSz + 14)}px)`, display: 'flex', alignItems: 'center', gap: hx(6), padding: `${hx(8)}px ${hx(18)}px`, borderRadius: 99, border: `${hx(3.5)}px solid #fff`, background: 'linear-gradient(180deg,#ffb23c,#f08a24)', color: '#fff', fontFamily: HUD, fontWeight: 800, fontSize: hx(17), textShadow: '0 2px 3px rgba(120,60,0,0.55)', boxShadow: '0 4px 0 rgba(150,80,10,0.65), 0 6px 16px rgba(0,0,0,0.35)', cursor: 'pointer' }}
+          style={{ position: 'absolute', zIndex: 20, right: `calc(env(safe-area-inset-right, 0px) + ${hx(13.5)}px)`, top: `calc(env(safe-area-inset-top, 0px) + ${hx(150)}px)`, display: 'flex', alignItems: 'center', gap: hx(6), padding: `${hx(8)}px ${hx(18)}px`, borderRadius: 99, border: `${hx(3.5)}px solid #fff`, background: 'linear-gradient(180deg,#ffb23c,#f08a24)', color: '#fff', fontFamily: HUD, fontWeight: 800, fontSize: hx(17), textShadow: '0 2px 3px rgba(120,60,0,0.55)', boxShadow: '0 4px 0 rgba(150,80,10,0.65), 0 6px 16px rgba(0,0,0,0.35)', cursor: 'pointer' }}
         >
           <StoreInk size={hx(22)} />Belanja
         </button>
       )}
 
-      {/* tombol aksi */}
-      <div style={{ position: 'absolute', right: `calc(env(safe-area-inset-right, 0px) + ${hx(14)}px)`, bottom: `calc(env(safe-area-inset-bottom, 0px) + ${hx(32)}px)`, display: 'flex', alignItems: 'flex-end', gap: hx(10) }}>
+      {/* tombol aksi: Mancing + joran terpasang (⚡) + umpan (×jumlah) */}
+      <div style={{ position: 'absolute', right: `calc(env(safe-area-inset-right, 0px) + ${hx(40)}px)`, bottom: `calc(env(safe-area-inset-bottom, 0px) + ${hx(21)}px)`, width: hx(btnSz), height: hx(btnSz) }}>
         <button
           onPointerDown={(e) => { e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId); engineRef.current?.action(true); }}
           onPointerUp={() => engineRef.current?.action(false)}
           onPointerCancel={() => engineRef.current?.action(false)}
           className={phase === 'bite' ? 'komikita-pulse' : undefined}
-          style={{ width: hx(btnSz), height: hx(btnSz), borderRadius: '50%', border: `${hx(4.5)}px solid #fff`, boxSizing: 'border-box', background: btnBg, color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: hx(1), boxShadow: '0 4px 0 rgba(20,60,140,0.6), 0 6px 16px rgba(0,0,0,0.35)', touchAction: 'none', cursor: 'pointer', padding: 0, fontFamily: HUD }}
+          style={{ width: '100%', height: '100%', borderRadius: '50%', border: `${hx(5)}px solid #b4c6d6`, boxSizing: 'border-box', background: btnBg, color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: hx(1), boxShadow: '0 4px 0 rgba(20,50,90,0.55), 0 6px 16px rgba(0,0,0,0.35)', touchAction: 'none', cursor: 'pointer', padding: 0, fontFamily: HUD }}
         >
-          {phase === 'idle' ? <FishRodIcon size={hx(32)} /> : phase === 'reel' ? null : <RodIcon size={hx(28)} color="#fff" />}
-          <span style={{ fontSize: phase === 'reel' ? hx(22) : hx(17), fontWeight: 800, textShadow: '0 2px 3px rgba(20,40,100,0.6)' }}>{btnLabel}</span>
+          {phase === 'idle' ? <FishRodIcon size={hx(34)} /> : phase === 'reel' ? null : <RodIcon size={hx(30)} color="#fff" />}
+          <span style={{ fontSize: phase === 'reel' ? hx(22) : hx(16), fontWeight: 800, textShadow: '-1px 0 #1b3550, 1px 0 #1b3550, 0 -1px #1b3550, 0 1px #1b3550, 0 2px 0 #1b3550' }}>{btnLabel}</span>
           {phase === 'reel' && <span style={{ fontSize: hx(10), fontWeight: 600, opacity: 0.92, marginTop: hx(-2) }}>tahan biar naik</span>}
         </button>
         {/* joran terpasang: ketuk untuk ganti */}
-        <button onClick={() => setRodOpen(true)} aria-label="Joran" style={{ position: 'absolute', right: hx(74), top: hx(-34), width: hx(56), height: hx(56), borderRadius: '50%', padding: 0, cursor: 'pointer', background: CREAM_BG, border: `${hx(3)}px solid ${CREAM_EDGE}`, boxShadow: '0 3px 0 #d9c08a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <PixelRod id={rod.id} size={hx(44)} />
-          <span style={{ position: 'absolute', left: hx(-8), top: hx(-12), display: 'inline-flex', alignItems: 'center', gap: hx(2), background: '#1f64cc', color: '#fff', border: `${hx(2)}px solid #8fc0ff`, borderRadius: 99, padding: `0 ${hx(8)}px`, fontSize: hx(14), fontWeight: 800, fontFamily: HUD }}>⚡{rod.power}</span>
+        <button onClick={() => setRodOpen(true)} aria-label="Joran" style={{ position: 'absolute', left: `calc(50% + ${hx(-125.5)}px)`, top: `calc(50% + ${hx(-59.5)}px)`, width: hx(47), height: hx(47), borderRadius: '50%', padding: 0, cursor: 'pointer', background: '#fffdf6', border: `${hx(2)}px solid #e8eef5`, boxShadow: '0 3px 0 rgba(120,140,160,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <PixelRod id={rod.id} size={hx(38)} />
+          <span style={{ position: 'absolute', left: hx(-8), top: hx(-6), display: 'inline-flex', alignItems: 'center', gap: hx(2), background: '#1f64cc', color: '#fff', border: `${hx(2)}px solid #bcd7ff`, borderRadius: 99, padding: `0 ${hx(7)}px`, fontSize: hx(12), fontWeight: 800, fontFamily: HUD, lineHeight: 1.45 }}>⚡{rod.power}</span>
+        </button>
+        {/* umpan: ketuk untuk ganti jenis */}
+        <button onClick={cycleBait} aria-label="Umpan" style={{ position: 'absolute', left: `calc(50% + ${hx(-58)}px)`, top: `calc(50% + ${hx(-114)}px)`, width: hx(48), height: hx(48), borderRadius: '50%', padding: 0, cursor: 'pointer', background: '#fffdf6', border: `${hx(2)}px solid #e8eef5`, boxShadow: '0 3px 0 rgba(120,140,160,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {activeBait ? <BaitSprite id={activeBait.id} size={hx(30)} /> : <BaitSprite id="cacing" size={hx(30)} dim />}
+          <span style={{ position: 'absolute', left: hx(-8), top: hx(-6), display: 'inline-flex', alignItems: 'center', background: '#1f64cc', color: '#fff', border: `${hx(2)}px solid #bcd7ff`, borderRadius: 99, padding: `0 ${hx(8)}px`, fontSize: hx(12), fontWeight: 800, fontFamily: HUD, lineHeight: 1.45, whiteSpace: 'nowrap' }}>×{baitCount}</span>
         </button>
       </div>
       <style>{`@keyframes kpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}.komikita-pulse{animation:kpulse .5s infinite}`}</style>

@@ -8,7 +8,7 @@ import FishingLobby from '@/components/fishing/FishingLobby';
 import FishLoading from '@/components/fishing/FishLoading';
 import { MAIN_ROOM, islandName } from '@/lib/fishingIslands';
 import {
-  DEFAULT_ROD, GACHA_DUPLICATE_REFUND, GACHA_PITY, GACHA_PRICE, ROD_MAX_LV, RODS_BY_ID, SPECIES_BY_ID, clampRodLv, fishPrice, rodAt, rodUpgradeCost, rollGacha, nextPity, sanitizeBag, sanitizeRodLv, sanitizeRods,
+  DEFAULT_ROD, GACHA_DUPLICATE_REFUND, GACHA_PITY, GACHA_PRICE, ROD_MAX_LV, RODS_BY_ID, SPECIES_BY_ID, clampRodLv, fishPrice, rodAt, rodUpgradeCost, rollGacha, nextPity, sanitizeBag, sanitizeBaits, sanitizeRodLv, sanitizeRods,
 } from '@/lib/fishing';
 import type { BagItem, Rarity, Rod } from '@/lib/fishing';
 import { DEFAULT_OUTFIT, sanitizeOutfit } from '@/components/fishing/outfit';
@@ -42,6 +42,7 @@ export default function MancingPage() {
   const [pity, setPity] = useState(0);
   const [starter, setStarter] = useState(false);
   const [freeBaitDay, setFreeBaitDay] = useState('');
+  const [baits, setBaits] = useState<Record<string, number>>({});
   const [promoBought, setPromoBought] = useState<Record<string, number>>({});
   // layar muat: 0 bangunin pulau, 1 nyambung, 2 baca peta, 3 nyiapin, 4 masuk (urutan sama seperti tampilan acuan)
   const [stage, setStage] = useState(0);
@@ -108,6 +109,7 @@ export default function MancingPage() {
           setPity(pityRef.current);
           freeBaitRef.current = typeof v.fishing?.freeBait === 'string' ? v.fishing.freeBait : '';
           setFreeBaitDay(freeBaitRef.current);
+          setBaits(sanitizeBaits(v.fishing?.baits));
           setPromoBought(sanitizePromoBought(v.fishing?.promo));
           starterRef.current = !!v.fishing?.starter;
           setStarter(starterRef.current);
@@ -401,6 +403,7 @@ export default function MancingPage() {
       const f = fb.current.db.ref('users/' + uid.current + '/fishing');
       await f.update({ freeBait: today });
       await f.child('baits/' + FREE_BAIT.id).transaction((c: any) => (typeof c === 'number' ? c : 0) + FREE_BAIT.qty);
+      setBaits((b) => ({ ...b, [FREE_BAIT.id]: Math.min(9999, (b[FREE_BAIT.id] ?? 0) + FREE_BAIT.qty) }));
       return true;
     } catch {
       freeBaitRef.current = before;
@@ -478,7 +481,7 @@ export default function MancingPage() {
   return (
     <>
       <FishingGame
-        name={name} photo={photo} crystal={crystal} gems={gems} onTopUp={onTopUp} onTopUpPoll={onTopUpPoll} onTopUpPaid={refreshWallet} onPromoPaid={refreshWallet} freeBaitClaimed={freeBaitDay !== dayKey()} onClaimBait={onClaimBait} promoBought={promoBought} onOpenLimited={onOpenLimited} limitedPity={limited.pity} limitedOwned={limited.owned} xp={xp} bag={bag}
+        name={name} photo={photo} crystal={crystal} gems={gems} onTopUp={onTopUp} onTopUpPoll={onTopUpPoll} onTopUpPaid={refreshWallet} onPromoPaid={refreshWallet} freeBaitClaimed={freeBaitDay !== dayKey()} baits={baits} onClaimBait={onClaimBait} promoBought={promoBought} onOpenLimited={onOpenLimited} limitedPity={limited.pity} limitedOwned={limited.owned} xp={xp} bag={bag}
         rods={rods} equippedRod={equippedRod} rodLv={rodLv} onUpgradeRod={onUpgradeRod} dev={isDev} role={nameRole} onDevGive={onDevGive} onDevPity={onDevPity}
         onCatch={onCatch} onSetXp={onSetXp} outfit={outfit} onSaveOutfit={onSaveOutfit} onSell={onSell} onBuyRod={onBuyRod} onEquipRod={onEquipRod} onGacha={onGacha}
         room={room} pity={pity} starterClaimed={starter} onClaimStarter={onClaimStarter}
