@@ -191,7 +191,15 @@ const SPRITES: Record<SpriteKey, [string[], Pal]> = {
   cricket: [CRICKET, CRICKET_P], worm: [WORM, WORM_P], shrimp: [SHRIMP, SHRIMP_P], gem: [GEM, GEM_P], chest: [CHEST, CHEST_P], crystal: [CRYSTAL, CRYSTAL_P], ticket: [TICKET, TICKET_P],
 };
 
+// Sprite item gacha pakai gambar piksel asli (public/shop/*.png), samain dengan referensi.
+const IMG: Partial<Record<SpriteKey, string>> = {
+  night: '/shop/night.png', flame: '/shop/flame.png', star: '/shop/star.png', squid: '/shop/squid.png', glow: '/shop/glow.png',
+  cricket: '/shop/cricket.png', worm: '/shop/worm.png', shrimp: '/shop/shrimp.png', crystal: '/shop/crystal.png',
+};
+
 export function Sprite({ k, size }: { k: SpriteKey; size: number }) {
+  const src = IMG[k];
+  if (src) return <img src={src} alt="" draggable={false} style={{ height: size, width: 'auto', display: 'block', flex: 'none', userSelect: 'none' }} />;
   const [g, pal] = SPRITES[k];
   return <Px g={g} pal={pal} size={size} />;
 }
