@@ -4,7 +4,7 @@ import type { NetPose, RemotePlayer } from '@/lib/fishingNet';
 import type { Rarity, SizeTier, Species } from '@/lib/fishing';
 import {
   TILE, generateWorld, drawPlayer, drawPalm, drawRock, drawLamp, drawBobber, drawRipple, drawLine,
-  drawBubbleAlert, drawStarPop, drawFish, drawShowFish, rodGeometry, PAL_PLAYER, drawFountain, drawBench, drawTable, drawStool, drawSign, drawBush, drawNpc,
+  drawBubbleAlert, drawStarPop, drawFish, drawShowFish, showFishLift, rodGeometry, PAL_PLAYER, drawFountain, drawBench, drawTable, drawStool, drawSign, drawBush, drawNpc,
   drawStall, drawFlowers, drawPine, drawLighthouse, drawBigTree, drawBarrel, drawCrate, drawNet, drawUmbrella, drawBoat, drawGiantFish, drawShop, palForId, mulberry32,
 } from './art';
 import type { Dir, Pal, World } from './art';
@@ -984,7 +984,9 @@ export class FishingEngine {
     const u = Math.min(1.7, Math.max(0.8, this.cssH / 360)) * d;
     const sz = 11 * u;
     const sxp = this.px * S - ox;
-    const syHead = (this.py - 21) * S - oy;
+    // ikan yang diangkat: nama, title & gelembung chat naik di atas ikan supaya ikannya kelihatan
+    const lift = this.held && this.phase === 'idle' ? Math.max(0, showFishLift(this.held.species, this.held.weight) * S - 10 * u) : 0;
+    const syHead = (this.py - 21) * S - oy - lift;
     const syFeet = this.py * S - oy;
     if (this.charging && this.phase === 'idle') {
       // bar tenaga lempar: tegak di samping karakter, hijau (dekat) -> merah (jauh)

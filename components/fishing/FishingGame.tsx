@@ -350,7 +350,8 @@ export default function FishingGame(props: Props) {
   const [held, setHeld] = useState<BagItem | null>(null);
   const [rodOut, setRodOutState] = useState(true); // joran di tangan (hotbar): bisa dipakai / disimpan
   const holdFish = (b: BagItem | null) => { setHeld(b); if (b) setRodOutState(false); };
-  const toggleHold = (b: BagItem) => { if (held && held.id === b.id) setHeld(null); else holdFish(b); };
+  const releaseFish = () => { setHeld(null); setRodOutState(true); }; // lepas ikan → joran kembali ke tangan
+  const toggleHold = (b: BagItem) => { if (held && held.id === b.id) releaseFish(); else holdFish(b); };
   const toggleRod = () => { if (rodOut) setRodOutState(false); else { setRodOutState(true); setHeld(null); } };
   const [sel, setSel] = useState('');
   const [shopOpen, setShopOpen] = useState(false);
@@ -406,7 +407,7 @@ export default function FishingGame(props: Props) {
   const [u, setU] = useState(1);
   const [status, setStatus] = useState<EngineStatus>({ shoal: null, inShoal: false });
   const [now, setNow] = useState(() => new Date());
-  const [intro, setIntro] = useState(true);
+  const [intro, setIntro] = useState(false); // tanpa petunjuk/notif saat baru masuk game
   const [fails, setFails] = useState(0);
   const [chat, setChat] = useState<{ who: string; msg: string; t: number }[]>([]);
   const [chatOpen, setChatOpen] = useState(false);
@@ -1017,7 +1018,7 @@ export default function FishingGame(props: Props) {
                 );
               })}
               {held && !recent.some((r) => r.id === held.id) && (
-                <button style={slot(true, '#34d27a')} onClick={() => setHeld(null)} aria-label="Lepas ikan">
+                <button style={slot(true, '#34d27a')} onClick={releaseFish} aria-label="Lepas ikan">
                   <span style={{ fontSize: hx(24) }}>🙌</span>
                   <span style={wLabel()}>Lepas</span>
                 </button>

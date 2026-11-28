@@ -1974,6 +1974,14 @@ export function fishSprite(sp: Species): HTMLCanvasElement {
 }
 
 const GIANT_SCALE = 10.5; // ikan raksasa: selebar pulau
+/** Tinggi (px dunia) ikan pamer di atas kepala, dihitung dari kepala karakter. Ikan raksasa digambar di belakang: 0. */
+export function showFishLift(sp: Species, weight: number): number {
+  if (sp.giant) return 0;
+  const ratio = sizeRatio(sp, weight);
+  const scale = Math.min(1.7, 0.5 + 0.8 * ratio + (sp.rarity === 'secret' ? 0.55 : sp.rarity === 'divine' ? 0.45 : sp.rarity === 'legendary' ? 0.3 : sp.rarity === 'epic' ? 0.15 : 0));
+  return 7 + FISH_H * scale;
+}
+
 export function drawShowFish(ctx: CanvasRenderingContext2D, x: number, y: number, sp: Species, weight: number) {
   const t = performance.now() / 1000;
   const ratio = sizeRatio(sp, weight);
