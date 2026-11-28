@@ -16,6 +16,7 @@ import type { Outfit } from '@/components/fishing/outfit';
 import { DUP_REFUND, LIMITED_PRICE, rollLimited, sanitizeLimited } from '@/lib/limitedGacha';
 import type { LimitedDrop } from '@/lib/limitedGacha';
 import type { QrOrder, TopUpPoll } from '@/lib/topupPacks';
+import { FREE_BAIT, dayKey, sanitizePromoBought } from '@/lib/promoPacks';
 
 export default function MancingPage() {
   const router = useRouter();
@@ -37,6 +38,8 @@ export default function MancingPage() {
   const [rodLv, setRodLvState] = useState<Record<string, number>>({});
   const [pity, setPity] = useState(0);
   const [starter, setStarter] = useState(false);
+  const [freeBaitDay, setFreeBaitDay] = useState('');
+  const [promoBought, setPromoBought] = useState<Record<string, number>>({});
   // layar muat: 0 bangunin pulau, 1 nyambung, 2 baca peta, 3 nyiapin, 4 masuk (urutan sama seperti tampilan acuan)
   const [stage, setStage] = useState(0);
   const [pct, setPct] = useState(0);
@@ -54,6 +57,7 @@ export default function MancingPage() {
   const pityRef = useRef(0);
   const isDevRef = useRef(false);
   const starterRef = useRef(false);
+  const freeBaitRef = useRef('');
 
   const setBag = (b: BagItem[]) => { bagRef.current = b; setBagState(b); };
   const setRods = (r: string[]) => { rodsRef.current = r; setRodsState(r); };
@@ -97,6 +101,9 @@ export default function MancingPage() {
           const py = v.fishing?.pity;
           pityRef.current = typeof py === 'number' && py >= 0 ? Math.floor(py) : 0;
           setPity(pityRef.current);
+          freeBaitRef.current = typeof v.fishing?.freeBait === 'string' ? v.fishing.freeBait : '';
+          setFreeBaitDay(freeBaitRef.current);
+          setPromoBought(sanitizePromoBought(v.fishing?.promo));
           starterRef.current = !!v.fishing?.starter;
           setStarter(starterRef.current);
           limitedRef.current = sanitizeLimited(v.fishing?.limited);
@@ -338,6 +345,25 @@ export default function MancingPage() {
     }
   }, []);
 
+  const onClaimBait = useCallback(async (): Promise<boolean> => {
+    if (!uid.current || !fb.current) return false;
+    const today = dayKey();
+    if (freeBaitRef.current === today) return false;
+    const before = freeBaitRef.current;
+    freeBaitRef.current = today;
+    setFreeBaitDay(today);
+    try {
+      const f = fb.current.db.ref('users/' + uid.current + '/fishing');
+      await f.update({ freeBait: today });
+      await f.child('baits/' + FREE_BAIT.id).transaction((c: any) => (typeof c === 'number' ? c : 0) + FREE_BAIT.qty);
+      return true;
+    } catch {
+      freeBaitRef.current = before;
+      setFreeBaitDay(before);
+      return false;
+    }
+  }, []);
+
   // saldo diperbarui lagi saat kembali dari halaman pembayaran
   const refreshWallet = useCallback(async () => {
     const f = fb.current;
@@ -346,6 +372,10 @@ export default function MancingPage() {
       const v = (await f.db.ref('users/' + uid.current).get()).val() || {};
       setCrystal(typeof v.koin === 'number' ? v.koin : 0);
       setGems(typeof v.gems === 'number' ? v.gems : 0);
+      if (v.fishing) {
+        setRods(sanitizeRods(v.fishing.rods));
+        setPromoBought(sanitizePromoBought(v.fishing.promo));
+      }
     } catch { /* abaikan */ }
   }, []);
   useEffect(() => {
@@ -403,7 +433,7 @@ export default function MancingPage() {
   return (
     <>
       <FishingGame
-        name={name} photo={photo} crystal={crystal} gems={gems} onTopUp={onTopUp} onTopUpPoll={onTopUpPoll} onTopUpPaid={refreshWallet} onOpenLimited={onOpenLimited} limitedPity={limited.pity} limitedOwned={limited.owned} xp={xp} bag={bag}
+        name={name} photo={photo} crystal={crystal} gems={gems} onTopUp={onTopUp} onTopUpPoll={onTopUpPoll} onTopUpPaid={refreshWallet} onPromoPaid={refreshWallet} freeBaitClaimed={freeBaitDay !== dayKey()} onClaimBait={onClaimBait} promoBought={promoBought} onOpenLimited={onOpenLimited} limitedPity={limited.pity} limitedOwned={limited.owned} xp={xp} bag={bag}
         rods={rods} equippedRod={equippedRod} rodLv={rodLv} onUpgradeRod={onUpgradeRod} dev={isDev}
         onCatch={onCatch} onSetXp={onSetXp} outfit={outfit} onSaveOutfit={onSaveOutfit} onSell={onSell} onBuyRod={onBuyRod} onEquipRod={onEquipRod} onGacha={onGacha}
         room={room} pity={pity} starterClaimed={starter} onClaimStarter={onClaimStarter}

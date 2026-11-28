@@ -18,6 +18,9 @@ import GiftEffect from '@/components/GiftEffect';
 import GiftVisual from '@/components/GiftVisual';
 import { WALLPAPER_CATALOG } from '@/lib/wallpapers';
 import { EFFECT_CATALOG } from '@/lib/effects';
+import { PROMO_PACKS, packLocked, rewardText } from '@/lib/promoPacks';
+import type { PromoPackId } from '@/lib/promoPacks';
+import { sanitizeRods } from '@/lib/fishing';
 
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyDOVdnkjnjTfNMMIBT68WPOMGPH6MGbakI",
@@ -323,15 +326,55 @@ function DevPanel({ open, onClose, uid, db, userData, onUpdate }: {
   // ── Pembayaran Premium manual ──
   const loadOrders = async () => {
     try {
-      const snap = await db.ref('premiumOrders').orderByChild('status').equalTo('pending').get();
       const arr: any[] = [];
-      snap.forEach((c: any) => { arr.push({ id: String(c.key), ...(c.val() || {}) }); });
+      const snap = await db.ref('premiumOrders').orderByChild('status').equalTo('pending').get();
+      snap.forEach((c: any) => { arr.push({ id: String(c.key), kind: 'premium', ...(c.val() || {}) }); });
+      // pesanan Paket Promo di Toko mancing (aturan promoOrders harus sudah dipasang)
+      try {
+        const ps = await db.ref('promoOrders').orderByChild('status').equalTo('pending').get();
+        ps.forEach((c: any) => { arr.push({ id: String(c.key), kind: 'promo', ...(c.val() || {}) }); });
+      } catch (e: any) { showToast('Pesanan promo gagal dimuat: ' + e.message + ' (cek aturan promoOrders)', 'error'); }
       setOrders(arr.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)));
     } catch (e: any) { showToast('Gagal memuat pesanan: ' + e.message + ' (cek aturan premiumOrders)', 'error'); setOrders([]); }
   };
   useEffect(() => { if (tab === 'bayar') loadOrders(); }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Paket Promo: hadiah (Permata, Crystal, joran, barang) langsung masuk ke akun user
+  const approvePromo = async (o: any) => {
+    const pack = PROMO_PACKS[o.pack as PromoPackId];
+    if (!pack) { showToast('Paket promo tidak dikenal.', 'error'); return; }
+    if (!window.confirm(`Setujui ${o.name} · ${pack.nama} · Rp ${Number(o.amount).toLocaleString('id-ID')}? Pastikan dana sudah masuk di DANA.`)) return;
+    setSaving(true);
+    try {
+      const u = (await db.ref('users/' + o.uid).get()).val() || {};
+      const now = Date.now();
+      const bought = Number(u.fishing?.promo?.[pack.id]) || 0;
+      if (packLocked(pack, bought) && !window.confirm('User ini sudah memakai batas beli paket ini. Tetap setujui dan beri hadiah lagi?')) { setSaving(false); return; }
+      const upd: Record<string, any> = {};
+      if (pack.gems) upd[`users/${o.uid}/gems`] = (Number(u.gems) || 0) + pack.gems;
+      if (pack.crystal) upd[`users/${o.uid}/koin`] = (Number(u.koin) || 0) + pack.crystal;
+      if (pack.rods?.length) {
+        const owned = sanitizeRods(u.fishing?.rods);
+        upd[`users/${o.uid}/fishing/rods`] = [...owned, ...pack.rods.filter((r) => !owned.includes(r))];
+      }
+      for (const [k, n] of Object.entries(pack.items || {})) upd[`users/${o.uid}/fishing/promoItems/${k}`] = (Number(u.fishing?.promoItems?.[k]) || 0) + n;
+      upd[`users/${o.uid}/fishing/promo/${pack.id}`] = now;
+      upd[`promoOrders/${o.id}/status`] = 'approved';
+      upd[`promoOrders/${o.id}/approvedAt`] = now;
+      const ikey = db.ref(`users/${o.uid}/inbox`).push().key;
+      upd[`users/${o.uid}/inbox/${ikey}`] = {
+        jenis: 'promo_ok', judul: `${pack.nama} diterima!`, waktu: now,
+        isi: `Pembayaran Rp ${Number(o.amount).toLocaleString('id-ID')} diterima. Hadiah ${rewardText(pack)} sudah masuk ke akunmu. Terima kasih sudah mendukung Komikita!`,
+      };
+      await db.ref().update(upd);
+      setOrders(prev => prev && prev.filter(x => x.id !== o.id));
+      showToast(`${pack.nama} untuk ${o.name} terkirim: ${rewardText(pack)}.`, 'success');
+    } catch (e: any) { showToast('Gagal: ' + e.message, 'error'); }
+    setSaving(false);
+  };
+
   const approveOrder = async (o: any) => {
+    if (o.kind === 'promo') return approvePromo(o);
     const plan = DEV_PLAN_DAYS[o.plan];
     if (!plan) { showToast('Paket tidak dikenal.', 'error'); return; }
     if (!window.confirm(`Setujui ${o.name} · Rp ${Number(o.amount).toLocaleString('id-ID')}? Pastikan dana sudah masuk di DANA.`)) return;
@@ -368,8 +411,8 @@ function DevPanel({ open, onClose, uid, db, userData, onUpdate }: {
       const now = Date.now();
       const ikey = db.ref(`users/${o.uid}/inbox`).push().key;
       await db.ref().update({
-        [`premiumOrders/${o.id}/status`]: 'rejected',
-        [`premiumOrders/${o.id}/rejectedAt`]: now,
+        [`${o.kind === 'promo' ? 'promoOrders' : 'premiumOrders'}/${o.id}/status`]: 'rejected',
+        [`${o.kind === 'promo' ? 'promoOrders' : 'premiumOrders'}/${o.id}/rejectedAt`]: now,
         [`users/${o.uid}/inbox/${ikey}`]: {
           jenis: 'premium_no', judul: 'Pembayaran belum ditemukan', waktu: now,
           isi: `Pesanan Rp ${Number(o.amount).toLocaleString('id-ID')} tidak kami temukan di mutasi. Kalau kamu sudah bayar, hubungi admin atau buat pesanan baru.`,
@@ -706,7 +749,7 @@ function DevPanel({ open, onClose, uid, db, userData, onUpdate }: {
             <button onClick={loadOrders} style={{ ...chip(false), padding: '6px 14px' }}>Muat ulang</button>
           </div>
           {orders === null && <div style={{ color: '#8F8D9B', fontWeight: 700, padding: 10 }}>Memuat...</div>}
-          {orders && orders.length === 0 && <div style={{ color: '#8F8D9B', fontWeight: 700, lineHeight: 1.4, padding: 10 }}>Belum ada pesanan. Pesanan muncul di sini saat user memilih paket Premium.</div>}
+          {orders && orders.length === 0 && <div style={{ color: '#8F8D9B', fontWeight: 700, lineHeight: 1.4, padding: 10 }}>Belum ada pesanan. Pesanan muncul di sini saat user memilih paket Premium atau Paket Promo di Toko mancing.</div>}
           {orders && orders.map(o => {
             const kembar = orders.filter(x => x.amount === o.amount).length > 1;
             const mnt = Math.max(0, Math.round((Date.now() - (o.createdAt || 0)) / 60000));
@@ -717,7 +760,7 @@ function DevPanel({ open, onClose, uid, db, userData, onUpdate }: {
                   {o.claimed && <span style={{ background: 'rgba(111,214,178,.15)', color: '#6FD6B2', fontSize: 11.5, fontWeight: 800, padding: '3px 10px', borderRadius: 99, whiteSpace: 'nowrap' }}>Sudah bayar ✓</span>}
                 </div>
                 <div style={{ fontSize: 25, fontWeight: 800, letterSpacing: -1, color: '#F5C84B', marginTop: 4 }}>Rp {Number(o.amount).toLocaleString('id-ID')}</div>
-                <div style={{ color: '#8F8D9B', fontSize: 13, fontWeight: 700, marginTop: 2 }}>{DEV_PLAN_DAYS[o.plan]?.nama || o.plan} · {mnt < 60 ? `${mnt} menit lalu` : `${Math.floor(mnt / 60)} jam lalu`}</div>
+                <div style={{ color: '#8F8D9B', fontSize: 13, fontWeight: 700, marginTop: 2 }}>{o.kind === 'promo' ? `Promo · ${PROMO_PACKS[o.pack as PromoPackId]?.nama || o.pack} → ${PROMO_PACKS[o.pack as PromoPackId] ? rewardText(PROMO_PACKS[o.pack as PromoPackId]) : '?'}` : (DEV_PLAN_DAYS[o.plan]?.nama || o.plan)} · {mnt < 60 ? `${mnt} menit lalu` : `${Math.floor(mnt / 60)} jam lalu`}</div>
                 {kembar && <div style={{ color: '#FF7A7A', fontSize: 12.5, fontWeight: 800, marginTop: 6 }}>Ada pesanan lain dengan nominal sama. Cocokkan dengan nama pengirim di DANA.</div>}
                 <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                   <button onClick={() => approveOrder(o)} disabled={saving} style={{ ...BTN, flex: 1, width: 'auto', background: '#0E8A6A', color: '#fff', opacity: saving ? 0.5 : 1 }}>Setujui</button>

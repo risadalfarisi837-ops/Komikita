@@ -57,6 +57,10 @@ interface Props {
   limitedPity?: number;
   limitedOwned?: string[];
   onClaimStarter?: () => Promise<boolean>;
+  freeBaitClaimed?: boolean;
+  onClaimBait?: () => Promise<boolean>;
+  promoBought?: Record<string, number>;
+  onPromoPaid?: () => void;
   onExit: () => void;
   room?: string; // kode pulau dari lobi (kosong = pulau utama)
   dev?: boolean; // role Developer: buka Dev Tools (auto fishing dll)
@@ -718,6 +722,10 @@ export default function FishingGame(props: Props) {
     const ok = await props.onClaimStarter?.();
     say(ok ? 'Paket Pemula diambil: 600 Crystal + Joran Fiber!' : 'Gagal mengambil paket, coba lagi');
   };
+  const claimBait = async () => {
+    const ok = await props.onClaimBait?.();
+    say(ok ? 'Umpan Gratis diambil: 10 Cacing!' : 'Gagal mengambil umpan, coba lagi');
+  };
   const closePopup = () => { setPopup(null); engineRef.current?.resume(); };
   const sell = async (ids: string[]) => {
     if (!ids.length) return;
@@ -1260,7 +1268,7 @@ export default function FishingGame(props: Props) {
       {/* Toko & Gacha */}
       {shopOpen && (
         <ShopScreen
-          px={(n: number) => px(n * 0.64)} font={HUD} crystal={crystal} gems={props.gems ?? 0} onTopUp={props.onTopUp} onTopUpPoll={props.onTopUpPoll} onTopUpPaid={props.onTopUpPaid} onOpenLimited={props.onOpenLimited ? async (n) => { const r = await props.onOpenLimited!(n, !!props.dev && gachaFree); if (Array.isArray(r)) setLimitedDrops(r); return r; } : undefined} limitedFree={!!props.dev && gachaFree} limitedPity={props.limitedPity} limitedOwned={props.limitedOwned} onPack={() => say('Pembelian pakai Rupiah belum tersedia')} rods={rods} equippedRod={equippedRod}
+          px={(n: number) => px(n * 0.64)} font={HUD} crystal={crystal} gems={props.gems ?? 0} onTopUp={props.onTopUp} onTopUpPoll={props.onTopUpPoll} onTopUpPaid={props.onTopUpPaid} onOpenLimited={props.onOpenLimited ? async (n) => { const r = await props.onOpenLimited!(n, !!props.dev && gachaFree); if (Array.isArray(r)) setLimitedDrops(r); return r; } : undefined} limitedFree={!!props.dev && gachaFree} limitedPity={props.limitedPity} limitedOwned={props.limitedOwned} freeBaitClaimed={props.freeBaitClaimed} onClaimBait={claimBait} promoBought={props.promoBought} onPromoPaid={props.onPromoPaid} rods={rods} equippedRod={equippedRod}
           tab={shopTab} onTab={setShopTab} buying={buying} pulling={pulling}
           onClose={() => setShopOpen(false)} onBuy={buyRod} onEquip={props.onEquipRod} onPull={pullGachaN}
           pity={props.pity ?? 0} starterClaimed={!!props.starterClaimed} onClaimStarter={claimStarter}

@@ -140,6 +140,18 @@
         }
       }
     },
+    "promoOrders": {
+      ".read": "root.child('users').child(auth.uid).child('role').val() === 'Developer'",
+      ".write": "root.child('users').child(auth.uid).child('role').val() === 'Developer'",
+      ".indexOn": ["status"],
+      "$oid": {
+        ".read": "auth != null && data.child('uid').val() === auth.uid",
+        ".write": "auth != null && !data.exists() && newData.child('uid').val() === auth.uid && newData.child('status').val() === 'pending'",
+        "claimed": {
+          ".write": "auth != null && data.parent().child('uid').val() === auth.uid"
+        }
+      }
+    },
     "notifikasi": {
       ".read": true,
       ".write": "root.child('users').child(auth.uid).child('role').val() === 'Developer'"

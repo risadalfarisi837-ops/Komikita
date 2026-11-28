@@ -7,6 +7,9 @@ import PixelRod from './RodArt';
 import ShopBajuLimited from './ShopBajuLimited';
 import { Sprite } from './ShopSprites';
 import ShopTopUp from './ShopTopUp';
+import ShopPay from './ShopPay';
+import { PROMO_PACKS, packLocked } from '@/lib/promoPacks';
+import type { PromoPackId } from '@/lib/promoPacks';
 import type { LimitedDrop } from '@/lib/limitedGacha';
 import type { QrOrder, TopUpPoll } from '@/lib/topupPacks';
 import type { TopUpCurrency } from './ShopTopUp';
@@ -41,6 +44,8 @@ interface Props {
   onTopUpPaid?: () => void;
   freeBaitClaimed?: boolean;
   onClaimBait?: () => void;
+  promoBought?: Record<string, number>;
+  onPromoPaid?: () => void;
   onOpenLimited?: (n: 1 | 10) => Promise<LimitedDrop[] | 'kurang' | 'gagal'>;
   /** Dev: buka peti Baju Limited tanpa potong Gems. */
   limitedFree?: boolean;
@@ -295,6 +300,7 @@ export default function ShopScreen(p: Props) {
   const gems = p.gems ?? 0;
   const [odds, setOdds] = useState(false);
   const [topup, setTopup] = useState<TopUpCurrency | null>(null);
+  const [payPack, setPayPack] = useState<PromoPackId | null>(null);
   const sideRef = useRef<HTMLDivElement>(null);
 
   const chip: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: px(3), background: '#eaf1ff', color: '#2459c9', fontWeight: 800, fontSize: px(12), borderRadius: 99, padding: `${px(2)}px ${px(8)}px`, whiteSpace: 'nowrap' };
@@ -362,6 +368,12 @@ export default function ShopScreen(p: Props) {
     <div style={{ textAlign: 'center', background: '#e1f6df', border: `${px(2.5)}px solid #86dc86`, color: '#1f7a30', fontWeight: 800, fontSize: px(19), borderRadius: px(10), padding: `${px(5)}px 0` }}>{label}</div>
   );
 
+  const buyAction = (id: PromoPackId) => {
+    const pk = PROMO_PACKS[id];
+    if (packLocked(pk, p.promoBought?.[id])) return doneBtn(pk.limit === 'minggu' ? '✓ Minggu depan' : pk.limit === 'bulan' ? '✓ Bulan depan' : '✓ Sudah dibeli');
+    return priceBtn(rupiah(pk.rupiah), () => setPayPack(id));
+  };
+
   const monsunName = monthly ? monthly.name.replace(/^Joran\s+/, '') : 'Badai Monsun';
 
   const promo = (
@@ -384,7 +396,7 @@ export default function ShopScreen(p: Props) {
             {rods.includes(monthly.id) ? (
               <div style={{ background: '#e1f5e6', border: `${px(2.5)}px solid #9ad8ae`, color: '#1f7a3c', fontWeight: 800, fontSize: px(22), borderRadius: px(14), padding: `${px(12)}px ${px(26)}px` }}>✓ Punyamu</div>
             ) : (
-              <button onClick={() => p.onPack?.('monthly')} disabled={buying === monthly.id} style={{ ...SKY, fontSize: px(24), padding: `${px(12)}px ${px(28)}px`, borderRadius: px(12), boxShadow: `0 ${px(4)}px 0 #1a78b8`, opacity: buying === monthly.id ? 0.6 : 1 }}>{rupiah(PRICE_MONTHLY)}</button>
+              <button onClick={() => setPayPack('monthly')} disabled={buying === monthly.id} style={{ ...SKY, fontSize: px(24), padding: `${px(12)}px ${px(28)}px`, borderRadius: px(12), boxShadow: `0 ${px(4)}px 0 #1a78b8`, opacity: buying === monthly.id ? 0.6 : 1 }}>{rupiah(PRICE_MONTHLY)}</button>
             )}
           </div>
         </div>
@@ -396,16 +408,16 @@ export default function ShopScreen(p: Props) {
           action={p.freeBaitClaimed === false ? priceBtn('Ambil gratis', p.onClaimBait) : doneBtn('✓ Besok lagi')} />
         <PackCard title="Paket Perdana" note="Sekali per akun"
           items={<><Slot n={3000}><PermataIcon size={px(32)} /></Slot>{monthly ? <Slot><PixelRod id={monthly.id} size={px(40)} /></Slot> : null}</>}
-          action={priceBtn(rupiah(PRICE_PERDANA), () => p.onPack?.('perdana'))} />
+          action={buyAction('perdana')} />
         <PackCard title="Paket Lanjut" note={`Sisa ${lanjutD} hari ${lanjutH} jam`}
           items={<><Slot n={6000}><PermataIcon size={px(32)} /></Slot><Slot><Sprite k="ticket" size={px(22)} /></Slot><Slot n={10}><FeatherIcon size={px(32)} /></Slot></>}
-          action={priceBtn(rupiah(PRICE_LANJUT), () => p.onPack?.('lanjut'))} />
+          action={buyAction('lanjut')} />
         <PackCard title="Paket Musim Buah" note="Sekali per akun"
           items={<><Slot><FruitIcon size={px(32)} /></Slot><Slot n={10}><FeatherIcon size={px(32)} /></Slot></>}
-          action={priceBtn(rupiah(PRICE_BUAH), () => p.onPack?.('buah'))} />
+          action={buyAction('buah')} />
         <PackCard title="Bekal Mingguan" note="Sekali per minggu"
           items={<><Slot n={6000}><PermataIcon size={px(32)} /></Slot><Slot n={300}><StarIcon size={px(32)} /></Slot></>}
-          action={priceBtn(rupiah(PRICE_BEKAL), () => p.onPack?.('bekal'))} />
+          action={buyAction('bekal')} />
       </div>
     </div>
   );
@@ -564,6 +576,7 @@ export default function ShopScreen(p: Props) {
           </div>
         </div>
       )}
+      {payPack && <ShopPay px={px} font={font} packId={payPack} onClose={() => setPayPack(null)} onPaid={p.onPromoPaid} />}
       {topup && <ShopTopUp px={px} font={font} initial={topup} gems={gems} crystal={crystal} gemIcon={(z) => <PermataIcon size={z} />} crystalIcon={(z) => <CrystalIcon size={z} />} onClose={() => setTopup(null)} onBuy={p.onTopUp} onPoll={p.onTopUpPoll} onPaid={p.onTopUpPaid} />}
     </div>
   );
