@@ -123,17 +123,17 @@ function Header({ onSearch }: { onSearch: () => void }) {
 
   return (
     <div style={{ padding: '14px 14px 8px' }}>
-      <div style={{ ...BOX, padding: '14px 16px', borderRadius: 24 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+      <div style={{ ...BOX, padding: '12px 15px 11px', borderRadius: 22 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <Link href="/profile" style={{ flex: '0 0 auto' }}>
           {me?.photo ? (
-            <img decoding="async" src={me.photo} alt="" referrerPolicy="no-referrer" style={{ width: 62, height: 62, borderRadius: '50%', objectFit: 'cover', border: '2px solid #3A3942', display: 'block' }} />
+            <img decoding="async" src={me.photo} alt="" referrerPolicy="no-referrer" style={{ width: 54, height: 54, borderRadius: '50%', objectFit: 'cover', border: '2px solid #3A3942', display: 'block' }} />
           ) : (
-            <div style={{ width: 62, height: 62, borderRadius: '50%', background: '#3A3942', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, fontWeight: 800 }}>{(me?.name || 'K').slice(0, 1).toUpperCase()}</div>
+            <div style={{ width: 54, height: 54, borderRadius: '50%', background: '#3A3942', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, fontWeight: 800 }}>{(me?.name || 'K').slice(0, 1).toUpperCase()}</div>
           )}
         </Link>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ ...ell, fontSize: 19, fontWeight: 800, letterSpacing: -0.5 }}>{me?.name || 'Komikita'}</div>
+          <div style={{ ...ell, fontSize: 17, fontWeight: 800, letterSpacing: -0.5 }}>{me?.name || 'Komikita'}</div>
           <div style={{ marginTop: 6 }}><LevelPill level={level} label="Lvl." fontSize="13px" iconSize={15} style={{ padding: '3px 12px 3px 8px' }} /></div>
         </div>
         <button onClick={() => { window.location.assign('/notifikasi'); }} aria-label="Notifikasi" style={{ position: 'relative', flex: '0 0 auto', width: 52, height: 52, borderRadius: '50%', background: '#3A3942', border: 0, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -141,7 +141,7 @@ function Header({ onSearch }: { onSearch: () => void }) {
           {hasGift && <span style={{ position: 'absolute', top: 12, right: 13, width: 9, height: 9, borderRadius: '50%', background: ACCENT }} />}
         </button>
       </div>
-      <div style={{ marginTop: 14 }}><ExpBar level={level} exp={me ? me.exp : 0} max={200} /></div>
+      <div style={{ marginTop: 11 }}><ExpBar level={level} exp={me ? me.exp : 0} max={200} /></div>
       </div>
       <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
         <button onClick={onSearch} style={{ ...BOX, flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 12, padding: '0 16px', height: 54, color: MUTED, fontSize: 16, textAlign: 'left' }}>
@@ -490,24 +490,24 @@ function ContinueReading() {
   return (
     <>
       <SectionTitle title="Lanjut baca" action="Riwayat" href="/history" />
-      <div className="no-scrollbar" style={{ display: 'flex', gap: 12, overflowX: 'auto', padding: '0 14px' }}>
+      <div className="no-scrollbar" style={{ display: 'flex', gap: 11, overflowX: 'auto', padding: '0 14px' }}>
         {list.map((h, i) => {
           const pct = h.totalPages > 0 ? Math.min(100, Math.round((h.pageRead / h.totalPages) * 100)) : 0;
           const ch = (h.chapterNumber || h.chapterTitle || '').toString().replace(/^ch(apter)?\.?\s*/i, '');
           return (
-            <Link key={i} href={`/chapter?url=${encodeURIComponent(h.chapterLink)}&thumb=${encodeURIComponent(h.mangaThumb||'')}&mangaTitle=${encodeURIComponent(h.mangaTitle||'')}`} style={{ flex: '0 0 82%', maxWidth: 330, display: 'flex', gap: 14, background: CARD, borderRadius: 22, padding: 12 }}>
-              <img decoding="async" src={h.mangaThumb} alt="" referrerPolicy="no-referrer" style={{ width: 62, height: 84, borderRadius: 10, objectFit: 'cover', background: '#222' }} />
-              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                <div style={{ fontSize: 15, fontWeight: 800, lineHeight: 1.2, letterSpacing: -0.7, ...clamp(2) }}>{h.mangaTitle}</div>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 6 }}>Ch. {ch} <span style={{ color: MUTED }}>· {pct}%</span></div>
-                  <div style={{ height: 5, borderRadius: 3, background: 'rgba(255,255,255,.08)' }}>
-                    <div style={{ width: `${pct}%`, height: '100%', borderRadius: 3, background: ACCENT }} />
-                  </div>
-                </div>
+            <Link key={i} href={`/chapter?url=${encodeURIComponent(h.chapterLink)}&thumb=${encodeURIComponent(h.mangaThumb||'')}&mangaTitle=${encodeURIComponent(h.mangaTitle||'')}`} style={{ flex: '0 0 108px', minWidth: 0 }}>
+              <div style={{ position: 'relative', aspectRatio: '16 / 10', borderRadius: 14, overflow: 'hidden', background: CARD }}>
+                <img decoding="async" src={h.mangaThumb} alt="" referrerPolicy="no-referrer" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} />
+                <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '55%', background: 'linear-gradient(to top, rgba(0,0,0,.7), rgba(0,0,0,0))' }} />
+                <span style={{ position: 'absolute', left: 8, bottom: 6, fontSize: 14, fontWeight: 800, letterSpacing: -0.4, color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,.6)' }}>Ch. {ch}</span>
               </div>
+              <div style={{ height: 3, borderRadius: 2, background: 'rgba(255,255,255,.12)', marginTop: 4 }}>
+                <div style={{ width: `${pct}%`, height: '100%', borderRadius: 2, background: ACCENT }} />
+              </div>
+              <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: -0.4, marginTop: 6, ...ell }}>{h.mangaTitle}</div>
             </Link>
           );
+        })}
         })}
       </div>
     </>
@@ -605,9 +605,9 @@ const LatestList = memo(function LatestList({ items }: { items: any[] }) {
 // ─── Kartu Premium (strip biru: pill Premium + harga + panah) ────────────────
 function PremiumCard() {
   return (
-    <Link href="/premium" style={{ position: 'relative', overflow: 'hidden', margin: '14px 20px 0', padding: '14px 16px', borderRadius: 22, border: '1.5px solid #2B5A9E', background: 'linear-gradient(90deg, #0F2547 0%, #14325E 55%, #0F2547 100%)', display: 'flex', alignItems: 'center', gap: 12 }}>
+    <Link href="/premium" style={{ position: 'relative', overflow: 'hidden', margin: '12px 20px 0', padding: '11px 14px', borderRadius: 20, border: '1.5px solid #2B5A9E', background: 'linear-gradient(90deg, #0F2547 0%, #14325E 55%, #0F2547 100%)', display: 'flex', alignItems: 'center', gap: 12 }}>
       <span aria-hidden style={{ position: 'absolute', right: -18, top: -30, width: 130, height: 130, background: 'rgba(59,155,255,.14)', transform: 'rotate(35deg)' }} />
-      <span style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 6, background: 'linear-gradient(180deg, #3FA2FF, #1E7BEA)', color: '#fff', fontWeight: 800, fontSize: 17, padding: '10px 16px', borderRadius: 14, whiteSpace: 'nowrap' }}>
+      <span style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 6, background: 'linear-gradient(180deg, #3FA2FF, #1E7BEA)', color: '#fff', fontWeight: 800, fontSize: 16, padding: '8px 14px', borderRadius: 13, whiteSpace: 'nowrap' }}>
         <svg width={22} height={22} viewBox="0 0 24 24" fill="#FFC53D"><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5L3 8z" /></svg>
         Premium
       </span>
