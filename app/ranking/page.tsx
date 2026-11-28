@@ -59,7 +59,7 @@ const THEMES: Record<BoardId, Theme> = {
     chip: (t) => (t === 'all' ? 'Sepanjang masa' : t === 'd30' ? 'Bulan ini' : 'Minggu ini'),
   },
 };
-const BOARD_ORDER: BoardId[] = ['reader', 'premium', 'charisma'];
+const BOARD_ORDER: BoardId[] = ['reader', 'premium'];
 const BOARD_SUB: Record<BoardId, string> = { reader: 'XP baca musim ini', premium: 'Sisa hari premium terbanyak', charisma: 'Hati yang diterima komentar' };
 
 // ───────────────────────── data ─────────────────────────
@@ -304,7 +304,7 @@ function RankingInner() {
 
   // papan & tab mengikuti alamat (?board=reader|premium|charisma &tab=all|d30|d7), jadi banner langsung buka papan yang sesuai
   useEffect(() => {
-    const id: BoardId = spBoard === 'premium' || spBoard === 'charisma' ? spBoard : 'reader';
+    const id: BoardId = spBoard === 'premium' ? spBoard : 'reader';
     setBoard(id);
     setTab(id === 'charisma' ? (spTab === 'd30' || spTab === 'd7' ? spTab : 'all') : 'Semua');
   }, [spBoard, spTab]);
