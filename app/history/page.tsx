@@ -76,7 +76,8 @@ function formatShortDate(ts: number) {
   return new Date(ts).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-type FavView = { item: FavoriteItem; added: number; latestLabel: string; latestAt: number; unread: number; reading: boolean; lastReadAt: number };
+const ratingFromDesc = (d?: string) => { const m = (d || '').match(/Score:\s*([\d.]+)/i); const n = m ? parseFloat(m[1]) : 0; return n > 0 ? n.toFixed(1) : null; };
+type FavView = { item: FavoriteItem; added: number; latestLabel: string; latestAt: number; unread: number; reading: boolean; lastReadAt: number; pct: number; rating: string | null };
 type Sort = 'added' | 'recent' | 'title' | 'new';
 const SORT_LABEL: Record<Sort, string> = { added: 'Baru ditambahkan', recent: 'Terakhir dibaca', title: 'Judul A–Z', new: 'Chapter baru terbanyak' };
 const SORT_ORDER: Sort[] = ['added', 'recent', 'title', 'new'];
@@ -167,6 +168,41 @@ function EmptyState({ tab }: { tab: Tab }) {
   );
 }
 
+const SORT_SHORT: Record<Sort, string> = { added: 'Baru Ditambah', recent: 'Terakhir Dibaca', title: 'Judul A–Z', new: 'Chapter Baru' };
+const SECTION: Record<'all' | 'reading' | 'unread', string> = { all: 'SEMUA KOMIK', reading: 'SEDANG DIBACA', unread: 'BELUM DIBACA' };
+const clamp2: React.CSSProperties = { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' };
+
+// ─── Kartu poster Koleksi (badge New + rating + chapter terbaru + garis progres) ──
+function PosterFav({ v }: { v: FavView }) {
+  const href = `/manga?url=${encodeURIComponent(v.item.link)}`;
+  return (
+    <Link href={href} style={{ minWidth: 0, display: 'block' }}>
+      <div style={{ position: 'relative', paddingTop: '138%', borderRadius: 20, overflow: 'hidden', background: '#26252C' }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img decoding="async" loading="lazy" src={v.item.thumb} alt={v.item.title} referrerPolicy="no-referrer" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+        <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '38%', background: 'linear-gradient(to top, rgba(0,0,0,.72), rgba(0,0,0,0))' }} />
+        {v.unread > 0 && (
+          <span style={{ position: 'absolute', top: 0, left: 0, background: '#2196F3', color: '#fff', fontSize: 14, fontWeight: 800, padding: '7px 14px', borderRadius: '20px 0 14px 0' }}>New</span>
+        )}
+        {v.rating && (
+          <span style={{ position: 'absolute', top: 0, right: 0, display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(20,19,24,.78)', color: '#fff', fontSize: 13, fontWeight: 800, padding: '6px 9px', borderRadius: '0 20px 0 14px' }}>
+            <span style={{ color: '#FBBF24' }}>★</span>{v.rating.replace('.', ',')}
+          </span>
+        )}
+        {v.latestLabel && (
+          <span style={{ position: 'absolute', left: 9, bottom: 9, fontSize: 17, fontWeight: 800, letterSpacing: -0.5, color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,.6)' }}>{v.latestLabel}</span>
+        )}
+        {v.reading && v.pct > 0 && (
+          <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 4, background: 'rgba(255,255,255,.18)' }}>
+            <div style={{ width: v.pct + '%', height: '100%', background: '#E5252A' }} />
+          </div>
+        )}
+      </div>
+      <div style={{ fontSize: 15, fontWeight: 600, letterSpacing: -0.3, lineHeight: 1.25, marginTop: 9, overflowWrap: 'break-word', ...clamp2 }}>{v.item.title}</div>
+    </Link>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function HistoryPage() {
   const { history } = useHistory();
@@ -237,6 +273,8 @@ export default function HistoryPage() {
       latestLabel: m?.latestLabel || '', latestAt: m?.latestAt || 0,
       unread, reading: reads.length > 0,
       lastReadAt: reads.reduce((mx, h) => Math.max(mx, h.readAt), 0),
+      pct: reads[0] && reads[0].totalPages > 0 ? Math.min(100, Math.round((reads[0].pageRead / reads[0].totalPages) * 100)) : 0,
+      rating: ratingFromDesc(item.desc),
     };
   }), [favorites, history, meta]);
 
@@ -286,96 +324,57 @@ export default function HistoryPage() {
     { key: 'unread', label: 'Belum dibaca', n: favViews.length - readingCount },
   ];
 
+  const totalNew = favViews.reduce((s, v) => s + v.unread, 0);
+
   return (
-    <div className="bg-[#1B1A20] min-h-screen text-white max-w-md mx-auto pb-40">
-      {/* Header: search + sort */}
-      <div className="flex items-center justify-end gap-6 px-5 pt-6 pb-4">
-        <button onClick={() => { setShowSearch(s => !s); if (showSearch) setSearch(''); }} aria-label="Cari">
-          <Search className="w-7 h-7" />
-        </button>
-        {activeTab === 'favorite' && (
-          <button onClick={cycleSort} aria-label="Urutkan">
-            <ArrowUpDown className="w-7 h-7" />
+    <div style={{ background: '#1B1A20', color: '#fff', minHeight: '100vh', padding: '20px 18px 140px' }}>
+      <style>{`a{text-decoration:none;color:inherit} button{font-family:inherit;cursor:pointer}`}</style>
+
+      {/* judul + urutkan */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+        <div style={{ minWidth: 0 }}>
+          <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, letterSpacing: -1 }}>Koleksi</h1>
+          <div style={{ marginTop: 3, fontSize: 13, fontWeight: 500, color: '#8F8D9B' }}>{favViews.length} komik · {totalNew} chapter baru</div>
+        </div>
+        {favorites.length > 0 && (
+          <button onClick={cycleSort} aria-label="Urutkan" style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 7, background: 'none', border: 0, color: '#B9B7C4', fontSize: 13, fontWeight: 500, padding: '8px 0 0' }}>
+            <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#B9B7C4" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M8 20V5M4 9l4-4 4 4M16 4v15M12 15l4 4 4-4" /></svg>
+            <span>Urutkan: <b style={{ color: '#fff', fontWeight: 800 }}>{SORT_SHORT[sort]}</b></span>
           </button>
         )}
       </div>
 
-      <div className="px-4">
-        <TabBar active={activeTab} onChange={handleTabChange} />
-        {showSearch && <div className="mt-3"><SearchBar value={search} onChange={setSearch} /></div>}
-      </div>
+      {favorites.length === 0 ? (
+        <EmptyState tab="favorite" />
+      ) : (
+        <>
+          {/* filter */}
+          <div className="no-scrollbar" style={{ display: 'flex', gap: 9, overflowX: 'auto', marginTop: 16 }}>
+            {chips.map(c => {
+              const on = filter === c.key;
+              return (
+                <button key={c.key} onClick={() => setFilter(c.key)} style={{ flex: '0 0 auto', border: 0, borderRadius: 99, height: 36, padding: '0 19px', fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap', background: on ? '#2F6BFF' : '#26252C', color: on ? '#fff' : '#A19FAD', transition: 'background .2s' }}>
+                  {c.label} {c.n}
+                </button>
+              );
+            })}
+          </div>
 
-      {/* Content */}
-      <div className="px-4 pt-5">
-        {activeTab === 'favorite' && (
-          favorites.length === 0
-            ? <EmptyState tab="favorite" />
-            : <>
-                <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-                  {chips.map(c => {
-                    const on = filter === c.key;
-                    return (
-                      <button
-                        key={c.key}
-                        onClick={() => setFilter(c.key)}
-                        className="shrink-0 flex items-center gap-2 px-5 py-3 rounded-full text-[17px] font-extrabold border"
-                        style={on
-                          ? { background: '#ECEAF2', color: '#1B1A20', borderColor: '#ECEAF2' }
-                          : { background: 'transparent', color: '#ECEAF2', borderColor: 'rgba(255,255,255,0.18)' }}
-                      >
-                        {on && <Check className="w-5 h-5" strokeWidth={3} />}
-                        {c.label} · {c.n}
-                      </button>
-                    );
-                  })}
-                </div>
+          {/* judul bagian */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '26px 0 16px' }}>
+            <span style={{ width: 4, height: 18, borderRadius: 2, background: '#E5252A' }} />
+            <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: 1.6 }}>{SECTION[filter]}</span>
+          </div>
 
-                <div className="flex items-center justify-between mt-6 mb-4">
-                  <p className="text-[17px] font-extrabold min-w-0 truncate">
-                    {newCount > 0 && <>{newCount} punya chapter baru<span className="text-[#8F8D9B]"> &nbsp;·&nbsp; </span></>}
-                    <button onClick={cycleSort} className="text-[#8F8D9B]">{SORT_LABEL[sort]}</button>
-                  </p>
-                  <button onClick={() => setMode(m => m === 'grid' ? 'list' : 'grid')} aria-label="Ganti tampilan" className="text-[#8F8D9B] shrink-0 ml-3">
-                    {mode === 'grid' ? <List className="w-7 h-7" /> : <LayoutGrid className="w-7 h-7" />}
-                  </button>
-                </div>
-
-                {shownFavs.length === 0
-                  ? <p className="text-center text-gray-500 py-16 text-sm">Tidak ada hasil</p>
-                  : mode === 'grid'
-                    ? <div className="grid grid-cols-3 gap-x-3 gap-y-5">
-                        {shownFavs.map(v => <FavoriteCard key={v.item.link} v={v} mode="grid" />)}
-                      </div>
-                    : <div className="flex flex-col gap-3">
-                        {shownFavs.map(v => <FavoriteCard key={v.item.link} v={v} mode="list" />)}
-                      </div>}
-              </>
-        )}
-
-        {activeTab === 'history' && (
-          history.length === 0
-            ? <EmptyState tab="history" />
-            : grouped.length === 0
-              ? <p className="text-center text-gray-500 py-16 text-sm">Tidak ada hasil pencarian</p>
-              : <div className="space-y-4">
-                  {grouped.map(([label, items]) => (
-                    <div key={label}>
-                      <div className="flex items-center gap-3 my-3">
-                        <div className="bg-[#2A2931] text-white text-xs font-black px-3 py-1.5 rounded-lg">{label}</div>
-                        <div className="flex-1 h-px bg-white/5" />
-                      </div>
-                      <div className="space-y-0">
-                        {items.map(item => (
-                          <HistoryCard key={item.chapterLink} item={item} />
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-        )}
-
-        {activeTab === 'download' && <EmptyState tab="download" />}
-      </div>
+          {shownFavs.length === 0 ? (
+            <p style={{ textAlign: 'center', color: '#8F8D9B', fontSize: 14, padding: '60px 0' }}>Tidak ada hasil</p>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '20px 9px' }}>
+              {shownFavs.map(v => <PosterFav key={v.item.link} v={v} />)}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
