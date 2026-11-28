@@ -8,7 +8,6 @@ import { Montserrat } from 'next/font/google';
 import { useUserStats } from '@/lib/store';
 import { currentSeason, RANKS, rankFor, fmt, fmtC, targetsFor, POINTS_PER_CHAPTER, NIGHT_BONUS, DAILY_BONUS } from '@/lib/season';
 import { fetchTop, pushSeasonScore, getUser, getFirebase } from '@/lib/leaderboard';
-import { charismaBuckets } from '@/lib/charisma';
 import WallpaperBg from '@/components/WallpaperBg';
 import PremiumName from '@/components/PremiumName';
 import VerifiedBadge from '@/components/VerifiedBadge';
@@ -37,7 +36,7 @@ const GOLD = '#F5C451', SILVER = '#C9D1DA', BRONZE = '#E08A3C';
 const PINK = '#FF5C9A';
 
 // ───────────────────────── papan & tema ─────────────────────────
-type BoardId = 'reader' | 'premium' | 'charisma';
+type BoardId = 'reader' | 'premium';
 type Theme = {
   id: BoardId; title: string; accent: string; accentText: string; border: string; bgTop: string; bgBottom: string;
   unit: string; tabs: { k: string; label: string }[]; section: (tab: string) => string; chip: (tab: string, daysLeft: number, seasonId: number) => string;
@@ -52,15 +51,11 @@ const THEMES: Record<BoardId, Theme> = {
     id: 'premium', title: 'Top Premium', accent: '#2DD4E8', accentText: '#06303A', border: 'rgba(45,212,232,.5)', bgTop: '#0F5266', bgBottom: '#08212C', unit: 'hari',
     tabs: [], section: () => 'Top Premium', chip: () => 'Sisa hari premium',
   },
-  charisma: {
-    id: 'charisma', title: 'Paling Dicintai', accent: PINK, accentText: '#3A0B22', border: 'rgba(255,92,154,.5)', bgTop: '#6E2A55', bgBottom: '#26111E', unit: 'hati',
-    tabs: [{ k: 'all', label: 'All Time' }, { k: 'd30', label: 'Bulan Ini' }, { k: 'd7', label: 'Minggu Ini' }],
-    section: (t) => 'Top Charisma ' + (t === 'all' ? 'Sepanjang Masa' : t === 'd30' ? 'Bulan Ini' : 'Minggu Ini'),
-    chip: (t) => (t === 'all' ? 'Sepanjang masa' : t === 'd30' ? 'Bulan ini' : 'Minggu ini'),
+
   },
 };
 const BOARD_ORDER: BoardId[] = ['reader', 'premium'];
-const BOARD_SUB: Record<BoardId, string> = { reader: 'XP baca musim ini', premium: 'Sisa hari premium terbanyak', charisma: 'Hati yang diterima komentar' };
+const BOARD_SUB: Record<BoardId, string> = { reader: 'XP baca musim ini', premium: 'Sisa hari premium terbanyak' };
 
 // ───────────────────────── data ─────────────────────────
 type BRow = { uid: string; name: string; photo: string; value: number; points?: number };
@@ -94,7 +89,7 @@ async function loadRows(b: BoardId, tab: string, seasonId: number): Promise<BRow
     const top = await fetchTop(seasonId);
     return top.map((r) => ({ uid: r.uid, name: r.name, photo: r.photo, value: r.points, points: r.points }));
   }
-  if (b === 'premium') {
+  {
     const now = Date.now();
     const snap = await db.ref(`leaderboard/s${seasonId}`).orderByChild('prem').limitToLast(100).get();
     const rows: BRow[] = [];
@@ -105,11 +100,6 @@ async function loadRows(b: BoardId, tab: string, seasonId: number): Promise<BRow
     });
     return rows.sort((a, b2) => b2.value - a.value);
   }
-  const key = (charismaBuckets() as Record<string, string>)[tab] || 'all';
-  const snap = await db.ref(`charisma/${key}`).orderByValue().limitToLast(100).get();
-  const rows: BRow[] = [];
-  snap.forEach((c: any) => { const n = Number(c.val()) || 0; if (n > 0) rows.push({ uid: String(c.key), name: 'User', photo: '', value: n }); });
-  return rows.sort((a, b2) => b2.value - a.value);
 }
 
 // ───────────────────────── potongan UI kecil ─────────────────────────
@@ -184,20 +174,18 @@ function MiniStat({ label, value, target, unit }: { label: string; value: number
   );
 }
 
-const BoardIcon = ({ id, color, size = 18 }: { id: BoardId; color: string; size?: number }) => id === 'charisma' ? <HeartIcon size={size} color={color} /> : id === 'premium'
+const BoardIcon = ({ id, color, size = 18 }: { id: BoardId; color: string; size?: number }) => id === 'premium'
   ? <svg width={size} height={size} viewBox="0 0 24 24" fill={color} aria-hidden><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5L3 8z" /></svg>
   : <svg width={size} height={size} viewBox="0 0 24 24" fill={color} aria-hidden><path d="M7 3h10v3h3v3a4 4 0 01-4 4 5 5 0 01-3 2.9V18h3v3H8v-3h3v-2.1A5 5 0 018 13a4 4 0 01-4-4V6h3z" /></svg>;
 
 // ───────────────────────── podium "The Big 3" ─────────────────────────
 const SPARK: [number, number, number][] = [[10, 22, 7], [88, 18, 9], [20, 55, 6], [78, 50, 7], [50, 12, 6], [93, 62, 6], [6, 70, 5]];
-const HEARTS: [number, number, number, number][] = [[18, 8, 8.5, 12], [36, 2, 10.5, 9], [58, 5, 7.5, 13], [76, 1, 9.5, 10], [88, 6, 8, 11], [47, 0, 11, 14]];
 
 function Valtxt({ b, v, size, unit, color }: { b: BoardId; v: number; size: string; unit: string; color: string }) {
   const num = b === 'reader' ? fmtC(v) : fmt(v);
   return (
     <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 4, fontWeight: 800, fontSize: size, letterSpacing: -0.4, color, whiteSpace: 'nowrap', lineHeight: 1.1 }}>
-      {b === 'charisma' && <span style={{ alignSelf: 'center', display: 'inline-flex' }}><HeartIcon size={14} color={PINK} /></span>}
-      {num}{b !== 'charisma' && <span style={{ fontSize: '0.62em', color: '#B9B7C4', fontWeight: 600 }}>{unit}</span>}
+      {num}<span style={{ fontSize: '0.62em', color: '#B9B7C4', fontWeight: 600 }}>{unit}</span>
     </span>
   );
 }
@@ -240,22 +228,17 @@ function PodiumCol({ r, pos, ex, theme, favs, onFav }: { r?: BRow; pos: 1 | 2 | 
 function Podium({ rows, ex, theme, tab, chip, favs, onFav }: { rows: BRow[]; ex: Record<string, Extra>; theme: Theme; tab: string; chip: string } & FavProps) {
   return (
     <div style={{ position: 'relative', margin: `${U(2.6)} ${U(2.8)} 0`, borderRadius: U(5), border: `1.5px solid ${theme.border}`, background: `linear-gradient(180deg, ${theme.bgTop} 0%, ${theme.bgBottom} 100%)`, overflow: 'hidden', padding: `${U(3.6)} ${U(2.2)} 0`, minHeight: U(80), boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
-      {/* sorotan cahaya + kilau + (khusus charisma) hati melayang */}
+      {/* sorotan cahaya + kilau */}
       <div aria-hidden style={{ position: 'absolute', left: '50%', top: 0, width: '62%', height: '88%', transform: 'translateX(-50%)', clipPath: 'polygon(36% 0, 64% 0, 100% 100%, 0 100%)', background: 'linear-gradient(180deg, rgba(255,255,255,.26) 0%, rgba(255,255,255,.06) 70%, rgba(255,255,255,0) 100%)', pointerEvents: 'none' }} />
       <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
         {SPARK.map(([x, y, z], i) => (
           <svg key={i} width={z * 2} height={z * 2} viewBox="0 0 24 24" style={{ position: 'absolute', left: x + '%', top: y + '%', opacity: 0.45, animationDelay: -(i * 0.7) + 's' }} className="rk-tw"><path d="M12 0l2.6 9.4L24 12l-9.4 2.6L12 24l-2.6-9.4L0 12l9.4-2.6z" fill="#fff" /></svg>
         ))}
       </div>
-      {theme.id === 'charisma' && (
-        <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-          {HEARTS.map(([x, d, z, dur], i) => <span key={i} className="rk-fh" style={{ position: 'absolute', left: x + '%', bottom: '8%', animationDuration: dur + 's', animationDelay: -(d + i * 1.7) + 's' }}><HeartIcon size={z * 1.6} color="#FF8DB5" /></span>)}
-        </div>
-      )}
 
       <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `0 ${U(0.8)}`, zIndex: 3 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: U(1.6), fontSize: F(3.1, 13), fontWeight: 800, color: theme.accent }}>
-          {theme.id === 'charisma' ? <HeartIcon size={16} color={theme.accent} /> : <Crown w={U(3.9)} />}The Big 3
+          <Crown w={U(3.9)} />The Big 3
         </div>
         <span style={{ fontSize: F(2.2, 10), fontWeight: 600, color: '#D5D3DE', background: 'rgba(0,0,0,.35)', border: '1px solid rgba(255,255,255,.1)', padding: `${U(0.9)} ${U(2.2)}`, borderRadius: 99, whiteSpace: 'nowrap' }}>{chip}</span>
       </div>
@@ -274,7 +257,6 @@ function RankingInner() {
   const router = useRouter();
   const sp = useSearchParams();
   const spBoard = sp?.get('board') || '';
-  const spTab = sp?.get('tab') || '';
   const season = currentSeason();
   const mine = useUserStats((s) => s.season);
   const [mounted, setMounted] = useState(false);
@@ -284,7 +266,6 @@ function RankingInner() {
   const [ex, setEx] = useState<Record<string, Extra>>({});
   const exRef = useRef<Record<string, Extra>>({});
   const [me, setMe] = useState<any>(null);
-  const [myCh, setMyCh] = useState<number | null>(null);
   const [sheet, setSheet] = useState(false);
   const [menu, setMenu] = useState(false);
   const [favs, setFavs] = useState<string[]>([]);
@@ -302,15 +283,15 @@ function RankingInner() {
     getUser().then((u) => { setMe(u || null); if (u) fetchExtras([u.uid], putEx, exRef.current); }).catch(() => {});
   }, []);
 
-  // papan & tab mengikuti alamat (?board=reader|premium|charisma &tab=all|d30|d7), jadi banner langsung buka papan yang sesuai
+  // papan & tab mengikuti alamat (?board=reader|premium), jadi banner langsung buka papan yang sesuai
   useEffect(() => {
-    const id: BoardId = spBoard === 'premium' ? spBoard : 'reader';
+    const id: BoardId = spBoard === 'premium' ? 'premium' : 'reader';
     setBoard(id);
-    setTab(id === 'charisma' ? (spTab === 'd30' || spTab === 'd7' ? spTab : 'all') : 'Semua');
-  }, [spBoard, spTab]);
+    setTab('Semua');
+  }, [spBoard]);
 
   const theme = THEMES[board || 'reader'];
-  const key = board === 'charisma' ? 'charisma:' + tab : board || '';
+  const key = board || '';
   const cur = data[key];
 
   useEffect(() => {
@@ -345,35 +326,22 @@ function RankingInner() {
   const meName = meEx?.displayName || me?.displayName || 'Pembaca';
   const myIndex = me ? rows.findIndex((r) => r.uid === me.uid) : -1;
 
-  useEffect(() => {
-    setMyCh(null);
-    if (board !== 'charisma' || !me || !cur || rows.some((r) => r.uid === me.uid)) return;
-    (async () => {
-      try {
-        const { db } = await getFirebase();
-        const k = (charismaBuckets() as Record<string, string>)[tab] || 'all';
-        setMyCh(Number((await db.ref(`charisma/${k}/${me.uid}`).get()).val()) || 0);
-      } catch {}
-    })();
-  }, [board, tab, me, cur]); // eslint-disable-line react-hooks/exhaustive-deps
-
   let myVal = 0;
   if (board === 'reader') myVal = pts;
   else if (board === 'premium') { const pu = Number(meEx?.premiumUntil) || 0; myVal = pu > Date.now() ? Math.ceil((pu - Date.now()) / 86400000) : 0; }
-  else if (myIndex >= 0) myVal = rows[myIndex].value;
-  else myVal = myCh || 0;
+  else myVal = myIndex >= 0 ? rows[myIndex].value : 0;
   const myRank = myIndex >= 0 ? String(myIndex + 1) : me && myVal > 0 ? '100+' : '–';
 
   const pickBoard = (id: BoardId) => {
     setMenu(false);
     if (id === board) return;
     setBoard(id);
-    setTab(id === 'charisma' ? 'all' : 'Semua');
+    setTab('Semua');
     try { window.history.replaceState(null, '', '/ranking?board=' + id); } catch {}
   };
   const goBack = () => { if (window.history.length > 1) router.back(); else router.push('/'); };
   const tabIdx = Math.max(0, theme.tabs.findIndex((t) => t.k === tab));
-  const valColor = theme.id === 'charisma' ? '#fff' : '#fff';
+  const valColor = '#fff';
 
   return (
     <div className={'rk-root ' + mont.className} style={{ ['--u' as string]: 'min(1vw, 4.48px)', background: '#1B1A20', color: '#fff', minHeight: '100vh', paddingBottom: 170, maxWidth: 448, margin: '0 auto' } as CSSProperties}>
@@ -448,7 +416,7 @@ a{text-decoration:none;color:inherit} button{font-family:inherit;cursor:pointer}
         </div>
       ) : list.length === 0 ? (
         <div style={{ padding: '70px 20px', textAlign: 'center', color: MUTED, fontWeight: 600, lineHeight: 1.5 }}>
-          {board === 'premium' ? <>Belum ada pengguna Premium aktif.<br />Jadi yang pertama lewat menu Premium.</> : board === 'charisma' ? <>Belum ada hati yang diterima di periode ini.<br />Komentar yang disukai akan muncul di sini.</> : <>Belum ada pembaca di peringkat ini.<br />Baca chapter untuk jadi yang pertama.</>}
+          {board === 'premium' ? <>Belum ada pengguna Premium aktif.<br />Jadi yang pertama lewat menu Premium.</> : <>Belum ada pembaca di peringkat ini.<br />Baca chapter untuk jadi yang pertama.</>}
         </div>
       ) : (
         <>
@@ -576,16 +544,6 @@ a{text-decoration:none;color:inherit} button{font-family:inherit;cursor:pointer}
                   • Hanya akun yang aktif membaca musim ini yang tampil
                 </div>
                 <Link href="/premium" style={{ display: 'block', textAlign: 'center', marginTop: 18, background: theme.accent, color: theme.accentText, fontWeight: 800, fontSize: 16, padding: '13px 0', borderRadius: 99 }}>Lihat paket Premium</Link>
-              </>
-            )}
-            {board === 'charisma' && (
-              <>
-                <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: -1 }}>Paling Dicintai</div>
-                <div style={{ color: '#D6D4DE', fontWeight: 700, fontSize: 14, lineHeight: 1.6, marginTop: 8 }}>
-                  • Charisma = jumlah hati yang diterima komentar kamu<br />
-                  • All Time menghitung sepanjang waktu, Bulan Ini dan Minggu Ini direset otomatis<br />
-                  • Minggu dimulai tiap hari Senin
-                </div>
               </>
             )}
           </div>
