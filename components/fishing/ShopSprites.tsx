@@ -1,12 +1,14 @@
 'use client';
 
+import type { ReactElement } from 'react';
+
 // Sprite piksel kecil untuk item Toko. '.' = transparan, huruf lain diambil dari palet.
 type Pal = Record<string, string>;
 
 export function Px({ g, pal, size }: { g: string[]; pal: Pal; size: number }) {
   const h = g.length;
   const w = Math.max(...g.map((r) => r.length));
-  const rects: JSX.Element[] = [];
+  const rects: ReactElement[] = [];
   g.forEach((row, y) => {
     for (let x = 0; x < row.length; x++) {
       const c = pal[row[x]];
