@@ -121,32 +121,46 @@ const LIST_BASE: Params = {
     hasAvailableChapters: 'true',
 };
 
-const readableCache = new Map<string, { ok: boolean; t: number }>();
+// Chapter terbaru yang BENAR-BENAR bisa dibaca dalam bahasa LANGS (sama dengan yang tampil di halaman detail).
+// latestUploadedChapter dari MangaDex tidak memfilter bahasa, jadi bisa menunjuk chapter Inggris (mis. 68.5)
+// padahal yang tersedia dalam bahasa Indonesia cuma 1 chapter.
+type Latest = { ok: boolean; chapter: string; publishAt: string; t: number };
+const readableCache = new Map<string, Latest>();
 
-async function hasReadable(id: string): Promise<boolean> {
+async function latestReadable(id: string): Promise<Latest> {
     const c = readableCache.get(id);
-    if (c && Date.now() - c.t < 3600_000) return c.ok;
-    let ok = true;
+    if (c && Date.now() - c.t < 3600_000) return c;
+    let v: Latest;
     try {
         const json = await md(`/manga/${id}/feed`, {
             'translatedLanguage[]': LANGS,
             'contentRating[]': ['safe', 'suggestive', 'erotica', 'pornographic'],
             includeExternalUrl: 0,
-            limit: 3,
+            'order[chapter]': 'desc',
+            limit: 10,
         });
-        ok = (json.data || []).some((c: any) => c.attributes?.pages > 0);
-    } catch { ok = true; }
-    readableCache.set(id, { ok, t: Date.now() });
-    return ok;
+        const first = (json.data || []).map((x: any) => x.attributes).find((a: any) => a?.pages > 0);
+        v = first
+            ? { ok: true, chapter: first.chapter ?? '', publishAt: first.publishAt || first.readableAt || '', t: Date.now() }
+            : { ok: false, chapter: '', publishAt: '', t: Date.now() };
+    } catch {
+        v = { ok: true, chapter: '', publishAt: '', t: Date.now() }; // gagal cek: jangan sembunyikan komik, tapi jangan tampilkan chapter tebakan
+    }
+    readableCache.set(id, v);
+    return v;
 }
 
-async function filterReadable(list: any[], chMap: Record<string, any>) {
-    const keep = await Promise.all(list.map(async (m) => {
+// Buang komik yang tidak punya chapter terbaca dalam LANGS, dan tentukan chapter terbarunya.
+async function resolveLatest(list: any[], chMap: Record<string, any>) {
+    const res = await Promise.all(list.map(async (m) => {
         const l = chMap[m.attributes?.latestUploadedChapter];
-        if (l && l.pages > 0 && !l.externalUrl && LANGS.includes(l.translatedLanguage)) return true;
-        return hasReadable(m.id);
+        if (l && l.pages > 0 && !l.externalUrl && LANGS.includes(l.translatedLanguage)) {
+            return { m, chapter: String(l.chapter ?? ''), publishAt: l.publishAt as string | undefined };
+        }
+        const info = await latestReadable(m.id);
+        return info.ok ? { m, chapter: info.chapter, publishAt: info.publishAt } : null;
     }));
-    return list.filter((_, i) => keep[i]);
+    return res.filter(Boolean) as { m: any; chapter: string; publishAt?: string }[];
 }
 
 // Tambahkan skor, jumlah follow, dan chapter terbaru ke tiap manga (2 request batch untuk seluruh daftar).
@@ -164,12 +178,11 @@ async function toCards(list: any[]) {
     const chMap: Record<string, any> = {};
     (chapters?.data || []).forEach((c: any) => { chMap[c.id] = c.attributes; });
 
-    const shown = await filterReadable(list, chMap);
-    return shown.map((m) => {
+    const shown = await resolveLatest(list, chMap);
+    return shown.map(({ m, chapter, publishAt }) => {
         const st = stats?.statistics?.[m.id];
         const rating = st?.rating?.bayesian;
         const score = rating ? rating.toFixed(1) : 'N/A';
-        const last = chMap[m.attributes?.latestUploadedChapter];
         return {
             title: titleOf(m),
             link: mangaLinkOf(m.id),
@@ -177,8 +190,8 @@ async function toCards(list: any[]) {
             desc: `Score: ${score}`,
             score,
             type: typeOf(m.attributes?.originalLanguage),
-            chapter: last?.chapter ? `Chapter ${last.chapter}` : '',
-            time: timeAgo(last?.publishAt),
+            chapter: chapter ? `Chapter ${chapter}` : '',
+            time: timeAgo(publishAt),
             views: st?.follows ? String(st.follows) : '',
         };
     }).filter((c) => c.title && c.thumb);
@@ -375,7 +388,7 @@ export async function getDetail(url: string) {
     }));
     if (!chapters.length) {
         const err: any = new Error('Komik ini cuma tersedia di situs resmi dan tidak bisa dibaca di sini.');
-        readableCache.set(id, { ok: false, t: Date.now() });
+        readableCache.set(id, { ok: false, chapter: '', publishAt: '', t: Date.now() });
         err.officialUrl = await findOfficialUrl(id, m);
         throw err;
     }
