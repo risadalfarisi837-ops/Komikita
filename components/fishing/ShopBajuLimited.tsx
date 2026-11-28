@@ -4,12 +4,15 @@ import { useEffect, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { Sprite } from './ShopSprites';
 import type { SpriteKey } from './ShopSprites';
+import type { LimitedDrop } from '@/lib/limitedGacha';
 
 interface Props {
   px: (n: number) => number;
   font: string;
   gems: number;
-  onOpen?: (n: 1 | 10) => void;
+  onOpen?: (n: 1 | 10) => Promise<LimitedDrop[] | 'kurang' | 'gagal'>;
+  /** Dev: gratis (tombol tetap aktif, Gems tidak terpotong). */
+  free?: boolean;
   /** Opsional: URL gambar banner asli (ilustrasi malam). Kalau kosong dipakai adegan SVG bawaan. */
   banner?: string;
   /** Jumlah peti yang sudah dibuka sejak Mythic terakhir. Dipakai untuk "Mythic dijamin dalam N peti". */
@@ -115,8 +118,23 @@ function NightScene() {
   );
 }
 
-export default function ShopBajuLimited({ px, font, gems, onOpen, banner, pity = 0, owned = [], endsAt }: Props) {
+export default function ShopBajuLimited({ px, font, gems, onOpen, free, banner, pity = 0, owned = [], endsAt }: Props) {
   const [odds, setOdds] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState('');
+  const [results, setResults] = useState<LimitedDrop[] | null>(null);
+  const open = async (n: 1 | 10) => {
+    if (busy) return;
+    if (!onOpen) { setNote('Gacha belum tersambung'); return; }
+    setBusy(true); setNote('');
+    try {
+      const r = await onOpen(n);
+      if (Array.isArray(r)) setResults(r);
+      else if (r === 'kurang') setNote('Gems kurang, top up dulu');
+      else setNote('Gagal membuka peti, coba lagi');
+    } catch { setNote('Gagal membuka peti, coba lagi'); }
+    setBusy(false);
+  };
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 60000); return () => clearInterval(t); }, []);
   const d0 = new Date(now);
@@ -183,15 +201,18 @@ export default function ShopBajuLimited({ px, font, gems, onOpen, banner, pity =
             <div style={{ fontWeight: 700, fontSize: px(17), marginBottom: px(6) }}>Mythic dijamin dalam <b style={{ color: '#ff8fc8', fontSize: px(20) }}>{sisaPeti.toLocaleString('id-ID')}</b> peti</div>
             <div style={{ height: px(9), borderRadius: 99, background: 'rgba(255,255,255,.2)', overflow: 'hidden' }}><div style={{ width: pityPct + '%', height: '100%', background: 'linear-gradient(90deg,#a259ff,#ff6fb1)' }} /></div>
           </div>
-          <button onClick={() => onOpen?.(1)} disabled={gems < 320} style={{ ...btn('linear-gradient(180deg,#2f86f0,#1458b8)', '#0d3f8a', '#fff'), opacity: gems < 320 ? 0.6 : 1 }}>
-            <span style={{ fontSize: px(16) }}>Buka 1×</span>{price(320)}
+          <button onClick={() => open(1)} disabled={busy || (!free && gems < 320)} style={{ ...btn('linear-gradient(180deg,#2f86f0,#1458b8)', '#0d3f8a', '#fff'), opacity: busy || (!free && gems < 320) ? 0.6 : 1 }}>
+            <span style={{ fontSize: px(16) }}>Buka 1×</span>{free ? <span style={{ fontSize: px(24) }}>Gratis</span> : price(320)}
           </button>
-          <button onClick={() => onOpen?.(10)} disabled={gems < 2880} style={{ ...btn('linear-gradient(180deg,#ffd45a,#f5a623)', '#b9740c', '#6a1a0a'), position: 'relative', opacity: gems < 2880 ? 0.6 : 1 }}>
+          <button onClick={() => open(10)} disabled={busy || (!free && gems < 2880)} style={{ ...btn('linear-gradient(180deg,#ffd45a,#f5a623)', '#b9740c', '#6a1a0a'), position: 'relative', opacity: busy || (!free && gems < 2880) ? 0.6 : 1 }}>
             <span style={{ position: 'absolute', top: px(-12), background: '#2f9a4a', color: '#fff', fontSize: px(13), borderRadius: 99, padding: `${px(1)}px ${px(12)}px`, boxShadow: '0 2px 0 #1d6a30' }}>Hemat 10%</span>
-            <span style={{ fontSize: px(16) }}>Buka 10×</span>{price(2880)}
+            <span style={{ fontSize: px(16) }}>Buka 10×</span>{free ? <span style={{ fontSize: px(24) }}>Gratis</span> : price(2880)}
           </button>
         </div>
       </div>
+
+      {note && <div style={{ marginTop: px(8), textAlign: 'center', fontWeight: 800, fontSize: px(15), color: '#b3402a' }}>{note}</div>}
+      {busy && <div style={{ marginTop: px(8), textAlign: 'center', fontWeight: 800, fontSize: px(15), color: '#8a6d4a' }}>Membuka peti…</div>}
 
       {label('Baju limited · 2,5%')}
       <div style={panel}>
@@ -201,6 +222,30 @@ export default function ShopBajuLimited({ px, font, gems, onOpen, banner, pity =
       <div style={panel}>
         {OTHERS.map((o, i) => row(i, o.sprite, o.name, o.rarity, o.color, o.pct, <span style={{ display: 'inline-flex', alignItems: 'center', gap: px(5) }}>{o.crystal && <Sprite k="crystal" size={px(22)} />}<b style={{ fontSize: px(19), color: BROWN }}>{o.qty}</b></span>))}
       </div>
+
+      {results && (
+        <div onClick={() => setResults(null)} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(40,20,0,.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: px(14) }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: px(440), maxWidth: '100%', maxHeight: '100%', overflowY: 'auto', borderRadius: px(22), border: `${px(4)}px solid #1a74e4`, background: '#fff5e1', padding: px(14), boxShadow: `0 ${px(6)}px 0 #0b3f8f`, color: BROWN, fontFamily: font }}>
+            <div style={{ textAlign: 'center', fontWeight: 800, fontSize: px(22), marginBottom: px(8) }}>Hasil buka {results.length}× peti</div>
+            <div style={{ background: '#fffdf7', borderRadius: px(10), border: '1px solid #ecdfc4' }}>
+              {results.map((d, i) => {
+                const col = d.rarity === 'Mythic' ? C.mythic : d.rarity === 'Legendary' ? C.legend : d.rarity === 'Epic' ? C.epic : d.rarity === 'Rare' ? C.rare : C.common;
+                return (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: px(10), padding: `${px(6)}px ${px(10)}px`, borderTop: i ? '1px solid #ecdfc4' : 'none' }}>
+                    <span style={{ width: px(44), display: 'flex', justifyContent: 'center', flex: 'none' }}><Sprite k={d.key as SpriteKey} size={px(36)} /></span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 800, fontSize: px(16) }}>{d.name}</div>
+                      <div style={{ fontWeight: 800, fontSize: px(12), color: col }}>{d.rarity}{d.outfit ? (d.duplicate ? ` · Dobel +${d.refund} Gems` : ' · Baju baru!') : ''}</div>
+                    </div>
+                    {!d.outfit && <b style={{ fontSize: px(17) }}>{d.crystal ? `${d.crystal} Crystal` : `×${d.qty}`}</b>}
+                  </div>
+                );
+              })}
+            </div>
+            <button onClick={() => setResults(null)} style={{ ...btn('linear-gradient(180deg,#3b8cf0,#1f64cc)', '#164b9c', '#fff'), width: '100%', marginTop: px(12), fontSize: px(18) }}>Tutup</button>
+          </div>
+        </div>
+      )}
 
       {odds && (
         <div onClick={() => setOdds(false)} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(40,20,0,.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: px(14) }}>

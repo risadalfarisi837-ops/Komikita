@@ -19,6 +19,7 @@ import { startFishingNet } from '@/lib/fishingNet';
 import { MAIN_ROOM, islandName } from '@/lib/fishingIslands';
 import { getFirebase } from '@/lib/firebase-client';
 import ShopScreen from './Shop';
+import type { LimitedDrop } from '@/lib/limitedGacha';
 import PixelRod from './RodArt';
 import GachaSpin from './GachaSpin';
 import RodScreen from './RodScreen';
@@ -48,6 +49,9 @@ interface Props {
   starterClaimed?: boolean;
   gems?: number;
   onTopUp?: (currency: 'gems' | 'crystal', packId: string) => string | void | Promise<string | void>;
+  onOpenLimited?: (n: 1 | 10, free?: boolean) => Promise<LimitedDrop[] | 'kurang' | 'gagal'>;
+  limitedPity?: number;
+  limitedOwned?: string[];
   onClaimStarter?: () => Promise<boolean>;
   onExit: () => void;
   room?: string; // kode pulau dari lobi (kosong = pulau utama)
@@ -1251,7 +1255,7 @@ export default function FishingGame(props: Props) {
       {/* Toko & Gacha */}
       {shopOpen && (
         <ShopScreen
-          px={(n: number) => px(n * 0.64)} font={HUD} crystal={crystal} gems={props.gems ?? 0} onTopUp={props.onTopUp} onPack={() => say('Pembelian pakai Rupiah belum tersedia')} rods={rods} equippedRod={equippedRod}
+          px={(n: number) => px(n * 0.64)} font={HUD} crystal={crystal} gems={props.gems ?? 0} onTopUp={props.onTopUp} onOpenLimited={props.onOpenLimited ? (n) => props.onOpenLimited!(n, !!props.dev && gachaFree) : undefined} limitedFree={!!props.dev && gachaFree} limitedPity={props.limitedPity} limitedOwned={props.limitedOwned} onPack={() => say('Pembelian pakai Rupiah belum tersedia')} rods={rods} equippedRod={equippedRod}
           tab={shopTab} onTab={setShopTab} buying={buying} pulling={pulling}
           onClose={() => setShopOpen(false)} onBuy={buyRod} onEquip={props.onEquipRod} onPull={pullGachaN}
           pity={props.pity ?? 0} starterClaimed={!!props.starterClaimed} onClaimStarter={claimStarter}

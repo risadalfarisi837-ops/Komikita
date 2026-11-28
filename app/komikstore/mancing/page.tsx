@@ -13,6 +13,8 @@ import {
 import type { BagItem, Rarity, Rod } from '@/lib/fishing';
 import { DEFAULT_OUTFIT, sanitizeOutfit } from '@/components/fishing/outfit';
 import type { Outfit } from '@/components/fishing/outfit';
+import { DUP_REFUND, LIMITED_PRICE, rollLimited, sanitizeLimited } from '@/lib/limitedGacha';
+import type { LimitedDrop } from '@/lib/limitedGacha';
 
 export default function MancingPage() {
   const router = useRouter();
@@ -26,6 +28,8 @@ export default function MancingPage() {
   const [outfit, setOutfit] = useState<Outfit>(DEFAULT_OUTFIT);
   const [bag, setBagState] = useState<BagItem[]>([]);
   const [err, setErr] = useState('');
+  const [limited, setLimited] = useState<{ owned: string[]; pity: number }>({ owned: [], pity: 0 });
+  const limitedRef = useRef<{ owned: string[]; pity: number; items: Record<string, number> }>({ owned: [], pity: 0, items: {} });
   const [isDev, setIsDev] = useState(false); // role Developer -> Dev Tools mancing
   const [rods, setRodsState] = useState<string[]>([DEFAULT_ROD]);
   const [equippedRod, setEquippedState] = useState<string>(DEFAULT_ROD);
@@ -94,6 +98,8 @@ export default function MancingPage() {
           setPity(pityRef.current);
           starterRef.current = !!v.fishing?.starter;
           setStarter(starterRef.current);
+          limitedRef.current = sanitizeLimited(v.fishing?.limited);
+          setLimited({ owned: limitedRef.current.owned, pity: limitedRef.current.pity });
         } catch { /* tetap bisa main tanpa data tersimpan */ }
         if (!stop) setReady(true);
       });
@@ -259,6 +265,58 @@ export default function MancingPage() {
     return { rod, duplicate };
   }, [spend, warn]);
 
+  // Gacha Baju Limited (bayar Gems). free hanya dihormati untuk role Developer.
+  const onOpenLimited = useCallback(async (n: 1 | 10, free?: boolean): Promise<LimitedDrop[] | 'kurang' | 'gagal'> => {
+    if (!uid.current || !fb.current) return 'gagal';
+    const u = fb.current.db.ref('users/' + uid.current);
+    const cost = n === 10 ? LIMITED_PRICE.ten : LIMITED_PRICE.one;
+    try {
+      if (!(free && isDevRef.current)) {
+        const res = await u.child('gems').transaction((c: any) => (typeof c !== 'number' ? c : c >= cost ? c - cost : undefined));
+        const val = res?.snapshot?.val();
+        if (!res?.committed || typeof val !== 'number') return 'kurang';
+        setGems(val);
+      }
+      const st = limitedRef.current;
+      const owned = [...st.owned];
+      const items = { ...st.items };
+      let pity = st.pity;
+      let refund = 0;
+      let crystalGain = 0;
+      const drops: LimitedDrop[] = [];
+      for (let i = 0; i < n; i++) {
+        const r = rollLimited(pity);
+        pity = r.pity;
+        const d: LimitedDrop = { ...r.item };
+        if (d.outfit) {
+          if (owned.includes(d.key)) { d.duplicate = true; d.refund = d.rarity === 'Mythic' ? DUP_REFUND.mythic : DUP_REFUND.legendary; refund += d.refund; }
+          else owned.push(d.key);
+        } else if (d.crystal) {
+          crystalGain += d.crystal;
+        } else {
+          items[d.key] = (items[d.key] || 0) + d.qty;
+        }
+        drops.push(d);
+      }
+      limitedRef.current = { owned, pity, items };
+      setLimited({ owned, pity });
+      await u.child('fishing').update({ limited: { owned, pity, items } });
+      if (refund > 0) {
+        const res = await u.child('gems').transaction((c: any) => (typeof c === 'number' ? c : 0) + refund);
+        const val = res?.snapshot?.val();
+        if (typeof val === 'number') setGems(val);
+      }
+      if (crystalGain > 0) {
+        const res = await u.child('koin').transaction((c: any) => (typeof c === 'number' ? c : 0) + crystalGain);
+        const val = res?.snapshot?.val();
+        if (typeof val === 'number') setCrystal(val);
+      }
+      return drops;
+    } catch {
+      return 'gagal';
+    }
+  }, []);
+
   // Paket Pemula: sekali per akun (flag disimpan dulu, baru hadiah diberikan)
   const onClaimStarter = useCallback(async (): Promise<boolean> => {
     if (!uid.current || !fb.current || starterRef.current) return false;
@@ -334,7 +392,7 @@ export default function MancingPage() {
   return (
     <>
       <FishingGame
-        name={name} photo={photo} crystal={crystal} gems={gems} onTopUp={onTopUp} xp={xp} bag={bag}
+        name={name} photo={photo} crystal={crystal} gems={gems} onTopUp={onTopUp} onOpenLimited={onOpenLimited} limitedPity={limited.pity} limitedOwned={limited.owned} xp={xp} bag={bag}
         rods={rods} equippedRod={equippedRod} rodLv={rodLv} onUpgradeRod={onUpgradeRod} dev={isDev}
         onCatch={onCatch} onSetXp={onSetXp} outfit={outfit} onSaveOutfit={onSaveOutfit} onSell={onSell} onBuyRod={onBuyRod} onEquipRod={onEquipRod} onGacha={onGacha}
         room={room} pity={pity} starterClaimed={starter} onClaimStarter={onClaimStarter}
