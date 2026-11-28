@@ -1364,7 +1364,7 @@ export default function ProfilePage() {
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', fontSize: 15, fontWeight: 800, letterSpacing: -0.4, lineHeight: 1.2 }}>
-              <PremiumName premium={isPremium && !isDev} dev={isDev} style={{ wordBreak: 'break-word' }}>{userData?.displayName || user.displayName || 'User'}</PremiumName>
+              <PremiumName premium={isPremium && !isDev} dev={isDev} admin={isAdmin} style={{ wordBreak: 'break-word' }}>{userData?.displayName || user.displayName || 'User'}</PremiumName>
               <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: -0.2, color: MUTED }}>{formatShortId(userData?.shortId, user.uid)}</span>
               {isPremium && !isDev && <VerifiedBadge size={17} />}
               {isDev && <DevBadge size={20} />}

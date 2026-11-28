@@ -279,7 +279,7 @@ function CommentItem({ c, currentUid, onDelete, canMod }: { c: CommentData; curr
             <div className="flex-1 min-w-0">
                 {/* Name + time */}
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <PremiumName premium={isPremiumRole(c.role)} dev={c.role === 'Developer'} className="text-[13px] font-bold text-white truncate max-w-[130px]">{c.nama}</PremiumName>
+                    <PremiumName premium={isPremiumRole(c.role)} dev={c.role === 'Developer'} admin={c.role === 'Admin'} className="text-[13px] font-bold text-white truncate max-w-[130px]">{c.nama}</PremiumName>
                     <RoleBadge role={c.role} />
                     <span className="text-[11px] text-gray-500">• {timeAgo(c.waktu)}</span>
                     {(isMine || canMod) && <span className="text-[10px] text-gray-400 font-bold ml-auto opacity-60">{isMine ? 'Tahan hapus' : 'Tahan hapus · admin'}</span>}

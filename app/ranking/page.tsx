@@ -152,7 +152,7 @@ function NameLine({ name, ex, size = '16px', weight = 700, prefix, center }: { n
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0, justifyContent: center ? 'center' : 'flex-start', maxWidth: '100%', fontSize: size }}>
       {prefix && <span style={{ fontWeight: weight, whiteSpace: 'nowrap' }}>{prefix}</span>}
-      <PremiumName premium={verified} dev={dev} style={{ fontWeight: weight, letterSpacing: -0.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{name}</PremiumName>
+      <PremiumName premium={verified} dev={dev} admin={admin} style={{ fontWeight: weight, letterSpacing: -0.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{name}</PremiumName>
       {verified && <VerifiedBadge size={14} />}
       {dev && <DevBadge size={15} />}
       {admin && <AdminBadge size={15} />}

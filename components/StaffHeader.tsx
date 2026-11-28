@@ -56,7 +56,7 @@ export default function StaffHeader({ nama, foto, role = 'Developer', idText, wa
 
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: c(8, 6), minHeight: pillH }}>
-          <PremiumName dev={dev} style={{ fontSize: c(20, 14.5), fontWeight: 800, letterSpacing: -0.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{nama}</PremiumName>
+          <PremiumName dev={dev} admin={!dev} style={{ fontSize: c(20, 14.5), fontWeight: 800, letterSpacing: -0.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{nama}</PremiumName>
           {idText && <span style={{ fontSize: c(17, 12.5), fontWeight: 700, color: MUTED, flex: '0 0 auto' }}>{idText}</span>}
           {dev ? <DevBadge size={c(24, 18)} /> : <AdminBadge size={c(24, 18)} />}
           {waktu && <span style={{ marginLeft: 'auto', fontSize: c(15, 12.5), fontWeight: 600, color: MUTED, flex: '0 0 auto', whiteSpace: 'nowrap' }}>{waktu}</span>}

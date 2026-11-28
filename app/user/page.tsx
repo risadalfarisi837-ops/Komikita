@@ -222,7 +222,7 @@ function UserContent() {
           {/* Nama + ID */}
           <div style={{ textAlign: 'center', padding: '14px 16px 0' }}>
             <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
-              <PremiumName premium={verified} dev={dev} style={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.5, wordBreak: 'break-word', textShadow: '0 2px 6px rgba(0,0,0,.45)' }}>{name}</PremiumName>
+              <PremiumName premium={verified} dev={dev} admin={admin} style={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.5, wordBreak: 'break-word', textShadow: '0 2px 6px rgba(0,0,0,.45)' }}>{name}</PremiumName>
               <span style={{ fontSize: 15.5, fontWeight: 600, color: '#CFC8BE', textShadow: '0 1px 4px rgba(0,0,0,.5)' }}>{shortUid}</span>
               {verified && <span style={{ alignSelf: 'center' }}><VerifiedBadge size={20} /></span>}
               {dev && <span style={{ alignSelf: 'center' }}><DevBadge size={24} /></span>}
@@ -236,7 +236,7 @@ function UserContent() {
               )}
               <LevelPill level={level} label="Lvl." fontSize="15px" iconSize={17} style={{ height: 29, padding: '0 14px 0 9px' }} />
               {prof.role && prof.role !== 'Member' && (
-                <span style={{ display: 'inline-flex', alignItems: 'center', height: 29, padding: '0 13px', borderRadius: 99, background: dev ? 'linear-gradient(90deg,#22d3ee,#818cf8,#e879f9)' : 'rgba(255,255,255,.14)', color: dev ? '#0b0b14' : '#fff', fontSize: 13, fontWeight: 800 }}>{dev ? 'DEVELOPER' : prof.role}</span>
+                <span className={admin ? 'tier-shine adm-pill adm-d3' : undefined} style={{ display: 'inline-flex', alignItems: 'center', height: 29, padding: '0 13px', borderRadius: 99, background: dev ? 'linear-gradient(90deg,#22d3ee,#818cf8,#e879f9)' : admin ? 'linear-gradient(90deg,#e5383b,#9b111e)' : 'rgba(255,255,255,.14)', border: admin ? '1.5px solid #ff8a8a' : undefined, boxSizing: 'border-box', color: dev ? '#0b0b14' : '#fff', fontSize: 13, fontWeight: 800 }}>{dev ? 'DEVELOPER' : admin ? 'ADMIN' : prof.role}</span>
               )}
             </div>
           </div>
@@ -283,7 +283,7 @@ function UserContent() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <Avatar src={prof.photoURL} size={41} />
               <div style={{ minWidth: 0 }}>
-                <PremiumName premium={verified} dev={dev} style={{ fontSize: 13.5, fontWeight: 800, letterSpacing: -0.3 }}>{name}</PremiumName>
+                <PremiumName premium={verified} dev={dev} admin={admin} style={{ fontSize: 13.5, fontWeight: 800, letterSpacing: -0.3 }}>{name}</PremiumName>
                 {lk && (
                   <div style={{ marginTop: 3 }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, height: 19, padding: '0 9px 0 3px', borderRadius: 99, background: lkBg, fontSize: 11, fontWeight: 800 }}><Shield color={lkBg} size={14} />{lk.name}</span>
