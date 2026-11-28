@@ -171,7 +171,7 @@ const CSS = `
 .kf-btn:active:not(:disabled) { transform: translateY(2px); }
 .kf-btn:disabled { cursor: default; }
 .kf-list::-webkit-scrollbar { width: 0; height: 0; }
-.kf-input::placeholder { color: ${MUTED}; font-weight: 600; font-size: 15px; letter-spacing: 0; opacity: 1; }
+.kf-input::placeholder { color: ${MUTED}; font-weight: 600; font-size: 12px; letter-spacing: 0; opacity: 1; }
 .kf-input:focus { outline: none; border-color: #f5c451 !important; }
 @media (prefers-reduced-motion: reduce) { .kf-anim { animation: none !important; } }
 `;
@@ -344,7 +344,7 @@ export default function FishLobby({ name, onPlay }: Props) {
                 <Sprite rows={GREEN_FISH} pal={GREEN_FISH_PAL} block={1.6} style={{ position: 'absolute', left: 21, top: 9 }} />
               </div>
               <div style={{ minWidth: 0, lineHeight: 1.1 }}>
-                <div style={{ fontFamily: TITLE, fontWeight: 700, fontSize: 15, color: '#b5391b' }}>Joran Bulanan!</div>
+                <div style={{ fontFamily: TITLE, fontWeight: 700, fontSize: 13, color: '#b5391b' }}>Joran Bulanan!</div>
                 <div style={{ fontWeight: 700, fontSize: 11.5, color: '#7a5236', whiteSpace: 'nowrap' }}>Joran bulan ini sampai {monthEnd}</div>
               </div>
             </div>
@@ -352,16 +352,16 @@ export default function FishLobby({ name, onPlay }: Props) {
             {/* judul */}
             <svg width={W} height={0} style={{ position: 'absolute' }} aria-hidden />
             <svg viewBox="0 0 340 70" width={340} height={70} style={{ position: 'absolute', left: 48, top: 45, overflow: 'visible' }} role="img" aria-label="Komik Fish">
-              <g fontFamily={TITLE} fontWeight={700} fontSize={50} textAnchor="middle" strokeLinejoin="round" style={{ paintOrder: 'stroke fill' }}>
-                <text x={170} y={56} fill="#06286b" stroke="#06286b" strokeWidth={9}>Komik Fish</text>
-                <text x={170} y={52} stroke="#0a3d9c" strokeWidth={9} fill="#ffffff">
+              <g fontFamily={TITLE} fontWeight={700} fontSize={40} textAnchor="middle" strokeLinejoin="round" style={{ paintOrder: 'stroke fill' }}>
+                <text x={170} y={53.5} fill="#06286b" stroke="#06286b" strokeWidth={8}>Komik Fish</text>
+                <text x={170} y={49.5} stroke="#0a3d9c" strokeWidth={8} fill="#ffffff">
                   Komik <tspan fill="#ffcf33">Fish</tspan>
                 </text>
               </g>
             </svg>
 
             {/* sapaan */}
-            <div style={{ position: 'absolute', left: 90, top: 107, width: 256, height: 27, boxSizing: 'border-box', borderRadius: 14, background: 'rgba(255,251,238,0.96)', border: '2px solid #ecd9a6', boxShadow: '0 2px 0 rgba(120,90,40,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px', fontWeight: 800, fontSize: 14.5, color: '#3b2a1c', whiteSpace: 'nowrap', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', left: 218, top: 107, transform: 'translateX(-50%)', width: 'fit-content', minWidth: 150, maxWidth: 300, height: 27, boxSizing: 'border-box', borderRadius: 14, background: 'rgba(255,251,238,0.96)', border: '2px solid #ecd9a6', boxShadow: '0 2px 0 rgba(120,90,40,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 11px', fontWeight: 800, fontSize: 12, color: '#3b2a1c', whiteSpace: 'nowrap', overflow: 'hidden' }}>
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 Halo, <span style={{ color: '#1d56b0' }}>{hello}</span>! Siap mancing?
               </span>
@@ -373,31 +373,31 @@ export default function FishLobby({ name, onPlay }: Props) {
               className="kf-btn"
               onClick={quickPlay}
               disabled={busy}
-              style={{ position: 'absolute', left: 113, top: 141, width: 210, height: 51, borderRadius: 17, border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, background: 'linear-gradient(180deg,#ffe06b,#fbbd2a)', boxShadow: '0 4px 0 #cf8d12, 0 7px 8px rgba(0,30,90,0.22)', color: '#63390f', fontFamily: TITLE, fontWeight: 700, fontSize: 32 }}
+              style={{ position: 'absolute', left: 113, top: 141, width: 210, height: 51, borderRadius: 17, border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, background: 'linear-gradient(180deg,#ffe06b,#fbbd2a)', boxShadow: '0 4px 0 #cf8d12, 0 7px 8px rgba(0,30,90,0.22)', color: '#63390f', fontFamily: TITLE, fontWeight: 700, fontSize: 22 }}
             >
-              <Sprite rows={MAIN_FISH} pal={MAIN_FISH_PAL} block={2.6} />
+              <Sprite rows={MAIN_FISH} pal={MAIN_FISH_PAL} block={1.65} />
               Main!
             </button>
             <Blue
               onClick={createIsland}
               disabled={busy}
-              style={{ position: 'absolute', left: 113, top: 204, width: 210, height: 37, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 18 }}
+              style={{ position: 'absolute', left: 113, top: 204, width: 210, height: 37, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 11.5 }}
             >
-              <IslandIcon size={22} theme="pulau" />
+              <IslandIcon size={17} theme="pulau" />
               Buat pulau baru
             </Blue>
 
-            {/* panel pilih pulau */}
+            {/* panel pilih pulau (semua posisi dikunci agar sama dengan desain acuan) */}
             <div style={{ position: 'absolute', left: 424, top: 14, width: 360, height: 330, boxSizing: 'border-box', borderRadius: 26, background: '#0c2f7c', padding: 3.5, boxShadow: '0 8px 18px rgba(0,20,80,0.35)' }}>
-              <div style={{ width: '100%', height: '100%', boxSizing: 'border-box', borderRadius: 23, border: '3px solid #ecd49c', background: 'linear-gradient(180deg,#fffaee,#fcf3de)', padding: '8px 12px 10px', display: 'flex', flexDirection: 'column', position: 'relative' }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-                  <div style={{ fontFamily: TITLE, fontWeight: 600, fontSize: 24, color: '#4a2c1a' }}>Pilih pulau</div>
-                  <div style={{ fontWeight: 700, fontSize: 12.5, color: INK }}>
+              <div style={{ position: 'relative', width: '100%', height: '100%', boxSizing: 'border-box', borderRadius: 23, border: '3px solid #ecd49c', background: 'linear-gradient(180deg,#fffaee,#fcf3de)' }}>
+                <div style={{ position: 'absolute', left: 9, right: 9, top: 6, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                  <div style={{ fontFamily: TITLE, fontWeight: 600, fontSize: 18, lineHeight: '22px', color: '#4a2c1a' }}>Pilih pulau</div>
+                  <div style={{ fontWeight: 700, fontSize: 11.5, lineHeight: '16px', color: INK }}>
                     <b style={{ fontWeight: 900 }}>{fmt(islands.length)}</b> pulau · <b style={{ fontWeight: 900 }}>{fmt(totalPlayers)}</b> lagi main
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                <div style={{ position: 'absolute', left: 10, right: 9, top: 34, height: 37, display: 'flex', gap: 6 }}>
                   <input
                     className="kf-input"
                     value={code}
@@ -408,32 +408,34 @@ export default function FishLobby({ name, onPlay }: Props) {
                     autoCapitalize="characters"
                     autoComplete="off"
                     spellCheck={false}
-                    style={{ flex: 1, minWidth: 0, height: 38, boxSizing: 'border-box', borderRadius: 14, border: `2.5px solid ${EDGE}`, background: '#fff', textAlign: 'center', fontFamily: BODY, fontWeight: 800, fontSize: 17, color: '#4a2c1a', letterSpacing: 1, padding: '0 8px', userSelect: 'text' }}
+                    style={{ flex: 1, minWidth: 0, height: 37, boxSizing: 'border-box', borderRadius: 14, border: `2.5px solid ${EDGE}`, background: '#fff', textAlign: 'center', fontFamily: BODY, fontWeight: 800, fontSize: 13, color: '#4a2c1a', letterSpacing: 1, padding: '0 8px', userSelect: 'text' }}
                   />
-                  <Blue onClick={joinByCode} disabled={busy} light={!canJoin} style={{ width: 68, height: 38, borderRadius: 13, fontSize: 17 }}>Masuk</Blue>
+                  <Blue onClick={joinByCode} disabled={busy} light={!canJoin} style={{ width: 68, height: 37, borderRadius: 13, fontSize: 12 }}>Masuk</Blue>
                 </div>
 
-                <div style={{ marginTop: 14, fontWeight: 800, fontSize: 14, color: INK }}>Teman online</div>
-                <div style={{ marginTop: 6, paddingLeft: 10, fontWeight: 600, fontSize: 14, color: MUTED }}>Belum ada teman online</div>
+                <div style={{ position: 'absolute', left: 9, top: 83, fontWeight: 800, fontSize: 11.5, lineHeight: '16px', color: INK }}>Teman online</div>
+                <div style={{ position: 'absolute', left: 19, top: 109, fontWeight: 600, fontSize: 12, lineHeight: '16px', color: MUTED }}>Belum ada teman online</div>
 
-                <div style={{ marginTop: 14, fontWeight: 800, fontSize: 14, color: INK }}>Pulau lain</div>
-                <div className="kf-list" style={{ marginTop: 6, flex: 1, minHeight: 0, overflowY: 'auto', borderRadius: 14, border: `2px solid ${EDGE}`, background: '#fffdf7' }}>
-                  {sorted.length === 0 && <div style={{ padding: '14px 12px', textAlign: 'center', fontWeight: 600, fontSize: 14, color: MUTED }}>Belum ada pulau. Tekan Main! atau buat pulau baru.</div>}
+                <div style={{ position: 'absolute', left: 9, top: 137, fontWeight: 800, fontSize: 11.5, lineHeight: '16px', color: INK }}>Pulau lain</div>
+                <div className="kf-list" style={{ position: 'absolute', left: 10, right: 9, top: 160, bottom: 6, overflowY: 'auto', borderRadius: 14, border: `2px solid ${EDGE}`, background: '#fffdf7' }}>
+                  {sorted.length === 0 && <div style={{ padding: '14px 12px', textAlign: 'center', fontWeight: 600, fontSize: 12, color: MUTED }}>Belum ada pulau. Tekan Main! atau buat pulau baru.</div>}
                   {sorted.map((it, i) => {
                     const full = it.count >= ISLAND_CAP;
                     return (
-                      <div key={it.room} style={{ display: 'flex', alignItems: 'center', gap: 8, height: 44, padding: '0 8px 0 8px', borderTop: i ? '1.5px solid #efe3c6' : 'none' }}>
-                        <IslandIcon size={18} theme={it.theme} />
-                        <div style={{ flex: 1, minWidth: 0, fontWeight: 700, fontSize: 17, color: '#4a2c1a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.name}</div>
-                        <div style={{ fontWeight: 800, fontSize: 15, color: full ? '#c0392f' : '#4a2c1a', width: 46, textAlign: 'center' }}>{it.count}/{ISLAND_CAP}</div>
-                        <Blue onClick={() => joinRoom(it.room)} disabled={busy || full} light={full} style={{ width: 66, height: 31, borderRadius: 11, fontSize: 16 }}>{full ? 'Penuh' : 'Masuk'}</Blue>
+                      <div key={it.room} style={{ display: 'flex', alignItems: 'center', height: 44, boxSizing: 'border-box', padding: '0 10px 0 9px', borderTop: i ? '1.5px solid #efe3c6' : 'none' }}>
+                        <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 5 }}>
+                          <IslandIcon size={15} theme={it.theme} />
+                          <div style={{ minWidth: 0, fontWeight: 700, fontSize: 14.5, lineHeight: '18px', color: '#4a2c1a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.name}</div>
+                        </div>
+                        <div style={{ width: 46, marginRight: 26, textAlign: 'center', fontWeight: 800, fontSize: 12.5, color: full ? '#c0392f' : '#4a2c1a' }}>{it.count}/{ISLAND_CAP}</div>
+                        <Blue onClick={() => joinRoom(it.room)} disabled={busy || full} light={full} style={{ width: 66, height: 28, borderRadius: 10, fontSize: 12 }}>{full ? 'Penuh' : 'Masuk'}</Blue>
                       </div>
                     );
                   })}
                 </div>
 
                 {msg && (
-                  <div style={{ position: 'absolute', left: '50%', bottom: 14, transform: 'translateX(-50%)', background: 'rgba(60,30,18,0.92)', color: '#fff', borderRadius: 99, padding: '5px 14px', fontWeight: 800, fontSize: 13, whiteSpace: 'nowrap', boxShadow: '0 2px 0 rgba(0,0,0,0.25)' }}>{msg}</div>
+                  <div style={{ position: 'absolute', left: '50%', bottom: 14, transform: 'translateX(-50%)', background: 'rgba(60,30,18,0.92)', color: '#fff', borderRadius: 99, padding: '5px 14px', fontWeight: 800, fontSize: 12, whiteSpace: 'nowrap', boxShadow: '0 2px 0 rgba(0,0,0,0.25)' }}>{msg}</div>
                 )}
               </div>
             </div>
