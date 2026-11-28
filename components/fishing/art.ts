@@ -1461,10 +1461,10 @@ export function drawPlayerRaw(ctx: CanvasRenderingContext2D, x: number, y: numbe
   const sh=pal.shirt, shL=lighten(sh,0.2), shD=pal.shirtD, shDD=darken(sh,0.42);
   const hairL=lighten(pal.hair,0.28), hairD=darken(pal.hair,0.22);
   const pantsL=lighten(pal.pants,0.16), pantsD=darken(pal.pants,0.2);
-  const bootL=lighten(pal.boot,0.25), bootD=darken(pal.boot,0.2), sole=fx==='night'?pal.band:darken(pal.boot,0.5);
+  const bootL=lighten(pal.boot,0.25), bootD=darken(pal.boot,0.2), sole=darken(pal.boot,0.5);
   const belt='#3b2716', buckle=fx==='night'?pal.band:'#e8c15a';
   const cuff=fx==='night'?pal.band:top;
-  const cape=top, capeD=darken(top,0.28), flameA='#ffd27a', flameB=pal.band||'#ff9b3a';
+  const cape=fx==='flame'?sh:top, capeD=fx==='flame'?shD:darken(top,0.28), flameA='#ffd27a', flameB=pal.band||'#ff9b3a';
   const eye='#1d1d2b', blush='rgba(240,110,120,0.55)', mouth='#b5543f';
   const al=moving?(fr===1?1:fr===3?-1:0):0;
   const flameHem=(x0:number,w:number,y:number)=>{ for(let i=0;i<w;i++){ R(ctx,x0+i,y,1,(i%2)?2:1,i%3===0?flameA:flameB); } };

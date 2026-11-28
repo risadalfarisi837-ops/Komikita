@@ -6,8 +6,8 @@ import { TITLES, titleFor } from '@/lib/fishing';
 // limited = baju dari Gacha Baju Limited yang sedang dipakai (0 = tidak ada, 1 = Setelan Pemburu Malam, 2 = Jubah Kilat Bara)
 export interface Outfit { skin: number; hair: number; shirt: number; top: number; pants: number; hat: number; hatCol: number; ttl: number; limited: number }
 export const LIMITED_OUTFITS = [
-  { key: 'night', name: 'Setelan Pemburu Malam', pal: { shirt: '#10141f', shirtD: '#060910', top: '#1c2a3f', pants: '#0a0d15', boot: '#0a0d15', band: '#35e6ff', hat: '#10141f', hatD: '#060910' } },
-  { key: 'flame', name: 'Jubah Kilat Bara', pal: { shirt: '#f6efe4', shirtD: '#cbbfae', top: '#ff7a1a', pants: '#3a2a22', boot: '#2a1c16', band: '#ff9b3a', hat: '#ff7a1a', hatD: '#c4570a' } },
+  { key: 'night', name: 'Setelan Pemburu Malam', pal: { hair: '#14161f', shirt: '#10141f', shirtD: '#060910', top: '#1c2a3f', pants: '#0a0d15', boot: '#0a0d15', band: '#35e6ff', hat: '#10141f', hatD: '#060910' } },
+  { key: 'flame', name: 'Jubah Kilat Bara', pal: { hair: '#2a1c14', shirt: '#f4f1ea', shirtD: '#d9d4c6', top: '#2d3550', pants: '#4f7a3a', boot: '#3a2a1c', band: '#ff8a2a', hat: '#ff7a1a', hatD: '#c4570a' } },
 ] as const;
 
 // lv = level minimal agar item terbuka (akun Developer membuka semuanya)
