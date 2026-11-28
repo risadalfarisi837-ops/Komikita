@@ -21,6 +21,10 @@ import { EFFECT_CATALOG } from '@/lib/effects';
 import { PROMO_PACKS, packLocked, rewardText } from '@/lib/promoPacks';
 import type { PromoPackId } from '@/lib/promoPacks';
 import { sanitizeRods } from '@/lib/fishing';
+import { LevelPill } from '@/components/LevelPill';
+import ExpBar from '@/components/ExpBar';
+import TierIcon from '@/components/TierIcon';
+import { nextTier, tierFor, nf as nfLv } from '@/lib/levelTiers';
 
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyDOVdnkjnjTfNMMIBT68WPOMGPH6MGbakI",
@@ -146,6 +150,13 @@ const BORDER_CATALOG: Record<string, { nama: string; harga: number; url: string 
   'infinite-swirl':  { nama: 'Infinite Swirl',  harga: 800,  url: 'https://cdn.discordapp.com/media/v1/collectibles-shop/1427463138634109027/animated' },
   'dark-hood-crimson':{ nama: 'Dark Hood Crimson', harga: 500, url: 'https://cdn.discordapp.com/media/v1/collectibles-shop/1287835633645125653/animated' },
 };
+
+// Hadiah Border gratis tiap level tertentu (diambil berurutan lewat kartu level di Profil)
+const LEVEL_REWARDS: { lv: number; key: string }[] = [
+  { lv: 3, key: 'blue_premium' }, { lv: 5, key: 'dark-hood' }, { lv: 8, key: 'infinite-swirl' }, { lv: 12, key: 'phoenix' },
+  { lv: 18, key: 'venom' }, { lv: 25, key: 'spider-man' }, { lv: 35, key: 'purple-animation' }, { lv: 50, key: 'black-mana' },
+  { lv: 75, key: 'fishbones' }, { lv: 100, key: 'the-haxcore' }, { lv: 150, key: 'glitch_merah' }, { lv: 200, key: 'hologram-dragon' },
+];
 
 // ─── Avatar with Border Overlay ───────────────────────────────────────────────
 function AvatarWithBorder({
@@ -1109,6 +1120,17 @@ export default function ProfilePage() {
     }));
   }, [user]);
 
+  const handleClaimReward = useCallback(async (key: string, need: number) => {
+    if (!user || !dbRef.current) return;
+    const snap = await dbRef.current.ref(`users/${user.uid}`).get();
+    const d = snap.val() || {};
+    if ((Number(d.level) || 1) < need) { alert('Level belum cukup!'); return; }
+    const owned = d.ownedBorders ? Object.keys(d.ownedBorders) : [];
+    if (owned.includes(key)) return;
+    await dbRef.current.ref(`users/${user.uid}`).update({ [`ownedBorders/${key}`]: true });
+    setUserData((prev: any) => ({ ...prev, ownedBorders: { ...(prev.ownedBorders || {}), [key]: true } }));
+  }, [user]);
+
   const handleRename = useCallback(async (newName: string) => {
     if (!user || !dbRef.current) return;
     const snap = await dbRef.current.ref(`users/${user.uid}`).get();
@@ -1141,6 +1163,11 @@ export default function ProfilePage() {
   const target       = next ? next.min : Math.max(pts, 1);
   const barPct       = Math.min(100, (pts / target) * 100);
   const soon = () => alert('Fitur Premium segera hadir.');
+  const lvTier = tierFor(level);
+  const lvExpRaw = userData?.exp;
+  const lvExp = Math.max(0, Math.min(199, Math.floor((lvExpRaw === undefined || lvExpRaw === null || !Number.isFinite(Number(lvExpRaw)) ? (level - 1) * 200 : Number(lvExpRaw)) - (level - 1) * 200)));
+  const nextReward = LEVEL_REWARDS.find((r) => !ownedBorders.includes(r.key)) || null;
+  const rewardReady = !!nextReward && level >= nextReward.lv;
 
   if (loadingAuth) return (
     <div className="min-h-screen bg-[#1B1A20] flex items-center justify-center">
@@ -1206,9 +1233,7 @@ export default function ProfilePage() {
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: rank.bg, padding: '3px 14px 3px 5px', borderRadius: 99, fontSize: 15, fontWeight: 800, letterSpacing: -0.5 }}>
-            <Emblem t={rank.track} fill={rank.bg} size={18} />{rank.name}
-          </span>
+          <LevelPill level={level} label="Lvl." fontSize="15px" iconSize={18} style={{ padding: '3px 14px 3px 8px' }} />
           {isDev && (
             <span style={{ background: 'linear-gradient(90deg,#22d3ee,#818cf8,#e879f9)', color: '#0b0b14', padding: '3px 12px', borderRadius: 99, fontSize: 13, fontWeight: 800 }}>DEVELOPER</span>
           )}
@@ -1237,23 +1262,28 @@ export default function ProfilePage() {
 
       {/* Kartu musim */}
       <div style={{ margin: '32px 16px 0', background: CARD, borderRadius: 22, padding: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          {next ? <LockedEmblem size={46} /> : <Emblem t={rank.track} fill={rank.bg} size={46} />}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ flex: '0 0 62px', display: 'flex', justifyContent: 'center', opacity: nextReward && !rewardReady ? 0.6 : 1 }}>
+            {nextReward
+              ? <AvatarWithBorder src={photoURL} size={46} borderKey={nextReward.key} />
+              : <TierIcon k={lvTier.key} size={46} />}
+          </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 14, fontWeight: 800, color: MUTED, letterSpacing: -0.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textTransform: 'uppercase' }}>
-              Musim {season.id} · {next ? 'Lencana berikutnya' : 'Lencana tertinggi'}
+              Level {nfLv(level)} · {lvTier.name}
             </div>
-            <div style={{ fontSize: 21, fontWeight: 800, letterSpacing: -0.8, lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {next ? next.name : rank.name}
+            <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: -0.7, lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {nextReward ? `Hadiah: ${BORDER_CATALOG[nextReward.key]?.nama || 'Border'}` : 'Semua hadiah Border diambil'}
             </div>
+            {nextReward && !rewardReady && (
+              <div style={{ fontSize: 13, fontWeight: 700, color: MUTED, marginTop: 1 }}>{nfLv(nextReward.lv - level)} level lagi (Lv. {nfLv(nextReward.lv)})</div>
+            )}
           </div>
-          <div style={{ fontSize: 23, fontWeight: 800, letterSpacing: -1, whiteSpace: 'nowrap' }}>
-            {fmtC(pts)}{next && <span style={{ fontSize: 14, color: MUTED, letterSpacing: -0.3 }}> / {fmt(next.min)}</span>}
-          </div>
+          {rewardReady && nextReward && (
+            <button onClick={() => handleClaimReward(nextReward.key, nextReward.lv)} style={{ background: GOLD, color: '#2E2615', border: 0, borderRadius: 99, padding: '0 18px', height: 38, fontSize: 16, fontWeight: 800, letterSpacing: -0.4, flexShrink: 0, cursor: 'pointer', fontFamily: 'inherit' }}>Ambil</button>
+          )}
         </div>
-        <div style={{ height: 8, borderRadius: 4, background: MAROON, marginTop: 14 }}>
-          <div style={{ width: `${barPct}%`, height: '100%', borderRadius: 4, background: GREEN }} />
-        </div>
+        <div style={{ marginTop: 14 }}><ExpBar level={level} exp={lvExp} max={200} /></div>
         <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
           <MiniStat icon={<BookOpen size={16} color={ICON} />} label="Chapter" value={chapters} target={TARGETS.chapter} />
           <MiniStat icon={<Flame size={16} color={ICON} />} label="Streak" value={streak} target={TARGETS.streak} unit="hari" />
