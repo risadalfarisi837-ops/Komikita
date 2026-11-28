@@ -168,12 +168,12 @@ const BANNERS = [
 type BoardRow = { name: string; photo?: string; value: number; sub?: string };
 type BoardTheme = {
   id: 'giveaway' | 'charisma' | 'reader'; title: string; href: string; tabs: boolean; tabLabels?: [string, string, string];
-  border: string; bg: string; accent: string; accentText: string; glow: string; unit: string; fmt: (n: number) => string;
+  border: string; bg: string; titleColor: string; accent: string; accentText: string; glow: string; unit: string; fmt: (n: number) => string;
 };
 const nf = (n: number) => Math.round(n).toLocaleString('id-ID');
 const BOARDS: BoardTheme[] = [
-  { id: 'giveaway', title: 'TOP PREMIUM', href: '/ranking?board=premium', tabs: false, border: '#1F6F86', bg: 'linear-gradient(160deg, #0E3446 0%, #115063 55%, #0B2C3C 100%)', accent: '#2DD4E8', accentText: '#06303A', glow: 'rgba(45,212,232,.25)', unit: 'hari premium', fmt: nf },
-  { id: 'reader', title: 'TOP PEMBACA', href: '/ranking?board=reader', tabs: false, border: '#55545C', bg: 'linear-gradient(160deg, #2E2E34 0%, #4A4A52 55%, #28282D 100%)', accent: '#F5C451', accentText: '#2A2208', glow: 'rgba(255,255,255,.14)', unit: 'XP musim ini', fmt: nf },
+  { id: 'giveaway', title: 'TOP PREMIUM', href: '/ranking?board=premium', tabs: false, border: '#23899F', bg: 'radial-gradient(85% 120% at 6% 0%, #17758F 0%, rgba(23,117,143,0) 62%), radial-gradient(75% 100% at 100% 100%, #082B3B 0%, rgba(8,43,59,0) 70%), linear-gradient(155deg, #0F4A5E 0%, #12657A 48%, #0A3849 100%)', titleColor: '#D5DEE3', accent: '#2DD4E8', accentText: '#06303A', glow: 'rgba(45,212,232,.25)', unit: 'hari premium', fmt: nf },
+  { id: 'reader', title: 'TOP PEMBACA', href: '/ranking?board=reader', tabs: false, border: '#6E6D76', bg: 'radial-gradient(85% 120% at 6% 0%, #5E5E67 0%, rgba(94,94,103,0) 62%), radial-gradient(75% 100% at 100% 100%, #1D1D21 0%, rgba(29,29,33,0) 70%), linear-gradient(155deg, #3B3B41 0%, #55555D 48%, #28282D 100%)', titleColor: '#C4C4C9', accent: '#F5C451', accentText: '#2A2208', glow: 'rgba(255,255,255,.14)', unit: 'XP musim ini', fmt: nf },
 ];
 
 // Cahaya latar di balik banner: berubah halus mengikuti slide yang aktif
@@ -245,11 +245,14 @@ function useBoards() {
 }
 
 function Sparkles({ color }: { color: string }) {
-  const dots: [number, number, number][] = [[12, 8, 10], [38, 4, 6], [66, 10, 8], [92, 22, 5], [84, 86, 6], [8, 70, 5], [52, 92, 7], [26, 46, 5], [74, 58, 6], [96, 62, 5]];
+  // [kiri%, atas%, ukuran, bintang(true)/titik(false)]
+  const dots: [number, number, number, boolean][] = [[7, 12, 15, true], [60, 18, 11, true], [93, 30, 8, true], [38, 6, 4, false], [88, 88, 5, false], [5, 74, 4, false], [47, 94, 9, true], [70, 52, 4, false], [97, 66, 4, false], [26, 40, 3, false]];
   return (
     <>
-      {dots.slice(0, 6).map(([l, t, z], i) => (
-        <svg key={i} aria-hidden className="bs-twk" width={z} height={z} viewBox="0 0 24 24" style={{ position: 'absolute', left: l + '%', top: t + '%', opacity: 0.55, pointerEvents: 'none', animation: `bsTwk ${2.4 + (i % 4) * 0.45}s ease-in-out ${(i * 0.37) % 2.2}s infinite` }}><path d="M12 0l2.6 9.4L24 12l-9.4 2.6L12 24l-2.6-9.4L0 12l9.4-2.6z" fill={color} /></svg>
+      {dots.map(([l, t, z, star], i) => (
+        <svg key={i} aria-hidden className="bs-twk" width={z} height={z} viewBox="0 0 24 24" style={{ position: 'absolute', left: l + '%', top: t + '%', opacity: star ? 0.7 : 0.5, pointerEvents: 'none', filter: star ? `drop-shadow(0 0 5px ${color})` : 'none', animation: `bsTwk ${2.4 + (i % 4) * 0.45}s ease-in-out ${(i * 0.37) % 2.2}s infinite` }}>
+          {star ? <path d="M12 0l2.6 9.4L24 12l-9.4 2.6L12 24l-2.6-9.4L0 12l9.4-2.6z" fill="#fff" /> : <circle cx={12} cy={12} r={10} fill="#fff" />}
+        </svg>
       ))}
     </>
   );
@@ -259,13 +262,13 @@ function BoardAvatar({ row, size, ring, rank, crown }: { row: BoardRow; size: nu
   return (
     <div style={{ position: 'relative', width: size, height: size, flex: `0 0 ${size}px` }}>
       {crown && <svg aria-hidden width={size * 0.42} height={size * 0.3} viewBox="0 0 24 18" style={{ position: 'absolute', left: '50%', top: -size * 0.2, transform: 'translateX(-50%)', zIndex: 2 }}><path d="M1 5l5 4 6-8 6 8 5-4-2 12H3z" fill="#FFC53D" /></svg>}
-      <div style={{ width: '100%', height: '100%', borderRadius: '50%', border: `${Math.max(2, size * 0.05)}px solid ${ring}`, overflow: 'hidden', background: '#2A2931', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: size * 0.36 }}>
+      <div style={{ width: '100%', height: '100%', borderRadius: '50%', border: `${Math.max(2, size * 0.07)}px solid ${ring}`, boxShadow: rank === 1 ? `0 0 14px ${ring}66` : 'none', overflow: 'hidden', background: '#2A2931', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: size * 0.36 }}>
         {row.photo
           // eslint-disable-next-line @next/next/no-img-element
           ? <img decoding="async" src={row.photo} alt="" referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           : row.name.slice(0, 2).toUpperCase()}
       </div>
-      <span style={{ position: 'absolute', right: -2, bottom: -2, width: size * 0.34, height: size * 0.34, minWidth: 18, minHeight: 18, borderRadius: '50%', background: '#FBBF24', color: '#2A2208', border: '2px solid #14131A', fontSize: Math.max(10, size * 0.2), fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{rank}</span>
+      <span style={{ position: 'absolute', right: -2, bottom: -2, width: size * 0.34, height: size * 0.34, minWidth: 18, minHeight: 18, borderRadius: '50%', background: rank === 1 ? '#FBBF24' : '#17161C', color: rank === 1 ? '#2A2208' : '#fff', border: `2px solid ${rank === 1 ? '#14131A' : rank === 2 ? '#C9D1DA' : '#C99A3A'}`, boxSizing: 'border-box', fontSize: Math.max(10, size * 0.2), fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{rank}</span>
     </div>
   );
 }
@@ -296,23 +299,25 @@ function BoardSlide({ theme, rowsByTab, onOpen }: { theme: BoardTheme; rowsByTab
   const labels = theme.tabLabels || ['ALL', '30D', '7D'];
   const rows = (theme.tabs ? rowsByTab[shown] : rowsByTab.all) || [];
   const [r1, r2, r3, r4, r5] = rows;
-  const val = (r: BoardRow) => (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: theme.accent, fontWeight: 800 }}>
+  const val = (r: BoardRow, color = '#fff') => (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color, fontWeight: 800, letterSpacing: -0.3 }}>
       {theme.id === 'charisma' && <Heart />}{theme.fmt(r.value)}
     </span>
   );
   const tabBtn = (k: 'all' | 'd30' | 'd7', label: string) => (
-    <button key={k} ref={(el) => { btnRefs.current[k] = el; }} onClick={(e) => { e.stopPropagation(); pick(k); }} style={{ position: 'relative', zIndex: 1, border: 0, borderRadius: 99, padding: '5px 11px', fontSize: 11, fontWeight: 800, background: 'transparent', color: tab === k ? theme.accentText : '#9AA6B2', transition: 'color .25s' }}>{label}</button>
+    <button key={k} ref={(el) => { btnRefs.current[k] = el; }} onClick={(e) => { e.stopPropagation(); pick(k); }} style={{ position: 'relative', zIndex: 1, border: 0, borderRadius: 99, padding: '6px 14px', fontSize: 12.5, fontWeight: 800, background: 'transparent', color: tab === k ? theme.accentText : '#9AA6B2', transition: 'color .25s' }}>{label}</button>
   );
+  const GOLD_ICON = '#F4C542';
   const TitleIcon = theme.id === 'charisma' ? <Heart size={15} color={theme.accent} /> : theme.id === 'reader'
-    ? <svg width={15} height={15} viewBox="0 0 24 24" fill={theme.accent} aria-hidden><path d="M7 3h10v3h3v3a4 4 0 01-4 4 5 5 0 01-3 2.9V18h3v3H8v-3h3v-2.1A5 5 0 018 13a4 4 0 01-4-4V6h3z" /></svg>
-    : <svg width={16} height={16} viewBox="0 0 24 24" fill={theme.accent} aria-hidden><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5L3 8z" /></svg>;
+    ? <svg width={16} height={16} viewBox="0 0 24 24" fill={GOLD_ICON} aria-hidden><path d="M7 3h10v3h3v3a4 4 0 01-4 4 5 5 0 01-3 2.9V18h3v3H8v-3h3v-2.1A5 5 0 018 13a4 4 0 01-4-4V6h3z" /></svg>
+    : <svg width={17} height={17} viewBox="0 0 24 24" fill={GOLD_ICON} aria-hidden><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5L3 8z" /></svg>;
 
   return (
-    <div role="button" onClick={() => onOpen(tab)} style={{ position: 'relative', flex: '0 0 100%', aspectRatio: '984 / 446', borderRadius: 20, overflow: 'hidden', scrollSnapAlign: 'start', cursor: 'pointer', background: theme.bg, border: `2px solid ${theme.border}`, boxSizing: 'border-box', padding: '3.2% 3.4%', display: 'flex', flexDirection: 'column', gap: '3%' }}>
+    <div role="button" onClick={() => onOpen(tab)} style={{ position: 'relative', flex: '0 0 100%', aspectRatio: '984 / 446', borderRadius: 20, overflow: 'hidden', scrollSnapAlign: 'start', cursor: 'pointer', background: theme.bg, border: `2.5px solid ${theme.border}`, boxShadow: 'inset 0 1px 0 rgba(255,255,255,.22), inset 0 0 28px rgba(255,255,255,.05), 0 6px 22px rgba(0,0,0,.35)', boxSizing: 'border-box', padding: '3.2% 3.4%', display: 'flex', flexDirection: 'column', gap: '3%' }}>
+      <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(115deg, rgba(255,255,255,.13) 0%, rgba(255,255,255,0) 34%, rgba(255,255,255,0) 70%, rgba(255,255,255,.05) 100%)' }} />
       <Sparkles color={theme.accent} />
       <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7, color: theme.accent, fontSize: 13, fontWeight: 800, letterSpacing: 1.2 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, color: theme.titleColor, fontSize: 14, fontWeight: 800, letterSpacing: 1.5, textShadow: '0 1px 3px rgba(0,0,0,.4)' }}>
           {TitleIcon}{theme.title}
           <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#9AA6B2" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"><path d="M9 5l7 7-7 7" /></svg>
         </div>
@@ -326,27 +331,27 @@ function BoardSlide({ theme, rowsByTab, onOpen }: { theme: BoardTheme; rowsByTab
 
       <div key={shown} style={{ position: 'relative', flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '38% 1fr', gap: '2.5%', opacity: fading ? 0 : 1, transition: 'opacity .17s ease' }}>
         {r1 ? (
-          <div className="bs-in" style={{ animationDelay: '0s', borderRadius: 16, border: '2px solid #B98B2B', background: 'rgba(0,0,0,.28)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, padding: '6px 4px', minWidth: 0 }}>
-            <BoardAvatar row={r1} size={58} ring={theme.accent} rank={1} crown />
-            <div style={{ fontSize: 14, fontWeight: 800, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 4 }}>{r1.name}</div>
-            <div style={{ fontSize: 20, lineHeight: 1 }}>{val(r1)}</div>
-            <div style={{ fontSize: 11, color: '#9AA6B2', fontWeight: 600 }}>{theme.unit}</div>
+          <div className="bs-in" style={{ animationDelay: '0s', borderRadius: 17, border: '2.5px solid transparent', background: 'linear-gradient(160deg, rgba(112,88,36,.62), rgba(28,26,22,.78)) padding-box, linear-gradient(160deg, #F6D879 0%, #B98B2B 55%, #E3B94F 100%) border-box', boxShadow: 'inset 0 1px 0 rgba(255,255,255,.12), 0 4px 14px rgba(0,0,0,.28)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, padding: '6px 4px', minWidth: 0 }}>
+            <BoardAvatar row={r1} size={58} ring="#F2C14E" rank={1} crown />
+            <div style={{ fontSize: 14.5, fontWeight: 800, letterSpacing: -0.2, textShadow: '0 1px 3px rgba(0,0,0,.45)', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 4 }}>{r1.name}</div>
+            <div style={{ fontSize: 19, lineHeight: 1.05, textShadow: '0 0 12px rgba(242,193,78,.45)' }}>{val(r1, '#F7CB5B')}</div>
+            <div style={{ fontSize: 11.5, color: '#B4BEC8', fontWeight: 600 }}>{theme.unit}</div>
           </div>
         ) : <div />}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4%', minWidth: 0 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
             {[r2, r3].map((r, i) => r ? (
-              <div key={i} className="bs-in" style={{ animationDelay: `${0.12 + i * 0.1}s`, borderRadius: 14, border: `2px solid ${i === 0 ? '#C9D1DA' : '#B98B2B'}`, background: 'rgba(0,0,0,.24)', padding: '6px 8px', minWidth: 0 }}>
+              <div key={i} className="bs-in" style={{ animationDelay: `${0.12 + i * 0.1}s`, borderRadius: 15, border: '2.5px solid transparent', background: (i === 0 ? 'linear-gradient(160deg, rgba(255,255,255,.17), rgba(255,255,255,.05))' : 'linear-gradient(160deg, rgba(196,146,52,.30), rgba(58,38,14,.38))') + ' padding-box, ' + (i === 0 ? 'linear-gradient(160deg, #F1F4F7, #9FA8B3 55%, #D9DEE4)' : 'linear-gradient(160deg, #F0C56A, #A8762A 55%, #D9A64B)') + ' border-box', boxShadow: 'inset 0 1px 0 rgba(255,255,255,.1)', padding: '6px 8px', minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
-                  <BoardAvatar row={r} size={30} ring={i === 0 ? '#C9D1DA' : '#B98B2B'} rank={i + 2} />
-                  <span style={{ fontSize: 14 }}>{val(r)}</span>
+                  <BoardAvatar row={r} size={30} ring={i === 0 ? '#C9D1DA' : '#C99A3A'} rank={i + 2} />
+                  <span style={{ fontSize: 14.5 }}>{val(r)}</span>
                 </div>
-                <div style={{ fontSize: 12, fontWeight: 800, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</div>
+                <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: -0.2, textShadow: '0 1px 3px rgba(0,0,0,.4)', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</div>
               </div>
             ) : <div key={i} />)}
           </div>
           {[r4, r5].map((r, i) => r ? (
-            <div key={i} className="bs-in" style={{ animationDelay: `${0.34 + i * 0.1}s`, display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, borderTop: i === 1 ? '1px solid rgba(255,255,255,.12)' : 0, paddingTop: i === 1 ? 4 : 0 }}>
+            <div key={i} className="bs-in" style={{ animationDelay: `${0.34 + i * 0.1}s`, display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, borderTop: i === 1 ? '1px solid rgba(255,255,255,.16)' : 0, paddingTop: i === 1 ? 4 : 0, textShadow: '0 1px 2px rgba(0,0,0,.35)' }}>
               <span style={{ width: 14, color: '#9AA6B2', fontWeight: 800 }}>{i + 4}</span>
               <div style={{ width: 22, height: 22, flex: '0 0 22px', borderRadius: '50%', overflow: 'hidden', background: '#2A2931', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800 }}>
                 {r.photo
@@ -444,8 +449,8 @@ function Hero({ onGlow }: { onGlow?: (id: string) => void }) {
       </div>
     </div>
     {total > 1 && (
-      <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 8 }}>
-        {Array.from({ length: total }).map((_, i) => <span key={i} style={{ width: i === active ? 20 : 7, height: 7, borderRadius: 99, background: i === active ? '#3B9BFF' : '#4A4953', transition: 'width .25s' }} />)}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: 10 }}>
+        {Array.from({ length: total }).map((_, i) => <span key={i} style={{ width: 9, height: 9, borderRadius: 99, background: i === active ? '#2F8CFF' : '#55545C', transition: 'background .25s' }} />)}
       </div>
     )}
     </>
