@@ -7,6 +7,7 @@ import { addCharisma } from '@/lib/charisma';
 import { useMissions } from '@/lib/missions';
 import { findLencana } from '@/lib/lencana';
 import DevBadge from '@/components/DevBadge';
+import AdminBadge from '@/components/AdminBadge';
 import PremiumName from '@/components/PremiumName';
 import { isPremiumRole, isStaffRole } from '@/lib/premium';
 import VerifiedBadge from '@/components/VerifiedBadge';
@@ -165,6 +166,7 @@ function KomentarContent() {
             <a href={`/user?uid=${c.uid}`} style={{ color: 'inherit', textDecoration: 'none' }}><PremiumName premium={isPremiumRole(c.role)} dev={c.role === 'Developer'} style={{ fontSize: small ? 16 : 18, fontWeight: 800, letterSpacing: -0.5, wordBreak: 'break-word' }}>{c.nama}</PremiumName></a>
             {(c.role === 'Komikita Premium' || c.role === 'Wibu Premium') && <VerifiedBadge size={small ? 17 : 20} />}
             {c.role === 'Developer' && <DevBadge size={small ? 18 : 22} />}
+            {c.role === 'Admin' && <AdminBadge size={small ? 18 : 22} />}
             {lk && <LencanaIcon l={lk} size={small ? 22 : 28} />}
             <span style={{ fontSize: 15, fontWeight: 800, color: MUTED, letterSpacing: -0.3 }}>· {fmtDate(c.waktu)}</span>
           </div>

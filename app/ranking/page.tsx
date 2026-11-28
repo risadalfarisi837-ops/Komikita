@@ -12,6 +12,7 @@ import WallpaperBg from '@/components/WallpaperBg';
 import PremiumName from '@/components/PremiumName';
 import VerifiedBadge from '@/components/VerifiedBadge';
 import DevBadge from '@/components/DevBadge';
+import AdminBadge from '@/components/AdminBadge';
 import { BORDER_CATALOG } from '@/components/BorderSheet';
 import { WALLPAPER_CATALOG } from '@/lib/wallpapers';
 import { isPremiumRole } from '@/lib/premium';
@@ -147,12 +148,14 @@ function NameLine({ name, ex, size = '16px', weight = 700, prefix, center }: { n
   const pu = Number(ex?.premiumUntil) || 0;
   const verified = isPremiumRole(ex?.role) && (!pu || pu > Date.now());
   const dev = ex?.role === 'Developer';
+  const admin = ex?.role === 'Admin';
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0, justifyContent: center ? 'center' : 'flex-start', maxWidth: '100%', fontSize: size }}>
       {prefix && <span style={{ fontWeight: weight, whiteSpace: 'nowrap' }}>{prefix}</span>}
       <PremiumName premium={verified} dev={dev} style={{ fontWeight: weight, letterSpacing: -0.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{name}</PremiumName>
       {verified && <VerifiedBadge size={14} />}
       {dev && <DevBadge size={15} />}
+      {admin && <AdminBadge size={15} />}
     </div>
   );
 }

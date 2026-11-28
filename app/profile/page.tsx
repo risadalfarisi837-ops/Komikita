@@ -8,6 +8,7 @@ import { numericId, formatShortId } from '@/lib/utils';
 import { ensureShortId } from '@/lib/shortid';
 import VerifiedBadge from '@/components/VerifiedBadge';
 import DevBadge from '@/components/DevBadge';
+import AdminBadge from '@/components/AdminBadge';
 import StaffHeader from '@/components/StaffHeader';
 import PremiumName from '@/components/PremiumName';
 import { currentSeason, RANKS, rankFor, fmt, fmtC, TARGETS, Track } from '@/lib/season';
@@ -1367,12 +1368,7 @@ export default function ProfilePage() {
               <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: -0.2, color: MUTED }}>{formatShortId(userData?.shortId, user.uid)}</span>
               {isPremium && !isDev && <VerifiedBadge size={17} />}
               {isDev && <DevBadge size={20} />}
-              {isAdmin && (
-                <svg className="adm-check" width={17} height={17} viewBox="0 0 24 24" aria-label="Admin" role="img" style={{ flex: '0 0 auto' }}>
-                  <circle cx={12} cy={12} r={10.5} fill="#E5383B" />
-                  <path d="M7.6 12.3l3 3 5.8-6.2" fill="none" stroke="#fff" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              )}
+              {isAdmin && <AdminBadge size={20} />}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
               <span title={rank.name} aria-label={rank.name} role="img" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, borderRadius: '50%', background: rank.bg, flex: '0 0 auto' }}>

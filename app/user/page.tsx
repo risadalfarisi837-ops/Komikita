@@ -14,6 +14,7 @@ import { WALLPAPER_CATALOG, RARITY_STYLE, wpBg } from '@/lib/wallpapers';
 import { BORDER_CATALOG } from '@/components/BorderSheet';
 import VerifiedBadge from '@/components/VerifiedBadge';
 import DevBadge from '@/components/DevBadge';
+import AdminBadge from '@/components/AdminBadge';
 import PremiumName from '@/components/PremiumName';
 import { isPremiumRole } from '@/lib/premium';
 
@@ -156,6 +157,7 @@ function UserContent() {
   const pu = Number(prof.premiumUntil) || 0;
   const verified = isPremiumRole(prof.role) && (!pu || pu > Date.now());
   const dev = prof.role === 'Developer';
+  const admin = prof.role === 'Admin';
   const joined = Number(prof.joinedAt) || 0;
   const months = joined ? Math.max(0, Math.floor((Date.now() - joined) / (30.44 * 86400000))) : null;
   const minutes = Number(prof.menitMenonton) || 0;
@@ -224,6 +226,7 @@ function UserContent() {
               <span style={{ fontSize: 15.5, fontWeight: 600, color: '#CFC8BE', textShadow: '0 1px 4px rgba(0,0,0,.5)' }}>{shortUid}</span>
               {verified && <span style={{ alignSelf: 'center' }}><VerifiedBadge size={20} /></span>}
               {dev && <span style={{ alignSelf: 'center' }}><DevBadge size={24} /></span>}
+              {admin && <span style={{ alignSelf: 'center' }}><AdminBadge size={24} /></span>}
             </div>
             <div style={{ marginTop: 14, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               {lk && (

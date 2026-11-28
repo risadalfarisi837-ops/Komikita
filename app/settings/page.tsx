@@ -13,6 +13,7 @@ import { getFirebase, loginWithGoogle } from '@/lib/firebase-client';
 import { LevelPill } from '@/components/LevelPill';
 import VerifiedBadge from '@/components/VerifiedBadge';
 import DevBadge from '@/components/DevBadge';
+import AdminBadge from '@/components/AdminBadge';
 import pkg from '@/package.json';
 import { BG, CARD, LINE, MUTED, HEAD, RED, FONT, UnitCtx, Row, Section, Pill } from './ui';
 
@@ -103,6 +104,7 @@ export default function SettingsPage() {
 
   const isPremium = role === 'Komikita Premium';
   const isDev = role === 'Developer';
+  const isAdmin = role === 'Admin';
 
   const goBack = () => {
     if (typeof window !== 'undefined' && window.history.length > 1) router.back();
@@ -265,6 +267,7 @@ export default function SettingsPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: p(13), height: p(38), marginTop: p(6) }}>
                     {isPremium && !isDev && <VerifiedBadge size={p(34)} />}
                     {isDev && <DevBadge size={p(38)} />}
+                    {isAdmin && <AdminBadge size={p(38)} />}
                     <LevelPill level={user.level} label="Lvl." fontSize={headFont} iconSize={p(26)} style={{ height: p(38), padding: `0 ${p(14)}px 0 ${p(18)}px`, gap: p(8), lineHeight: 1 }} />
                   </div>
                 )}

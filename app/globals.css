@@ -148,3 +148,10 @@ html, body {
 .adm-ring { animation: admRing 2.2s ease-in-out infinite; }
 .adm-d1 { --d: .5s; } .adm-d2 { --d: 1s; } .adm-d3 { --d: 1.5s; }
 @media (prefers-reduced-motion: reduce) { .adm-check, .adm-crown, .adm-ring { animation: none; } }
+
+/* ── Lencana Admin (merah): denyut cahaya + kilau yang menyapu ── */
+@keyframes admBadgeGlow { 0%, 100% { filter: drop-shadow(0 0 2px rgba(229,56,59,.55)); transform: scale(1); } 50% { filter: drop-shadow(0 0 8px rgba(255,90,90,1)); transform: scale(1.07); } }
+@keyframes admBadgeShine { 0%, 40% { transform: translateX(0); } 100% { transform: translateX(46px); } }
+.adm-badge { animation: admBadgeGlow 2s ease-in-out infinite; }
+.adm-badge-shine { animation: admBadgeShine 2.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .adm-badge, .adm-badge-shine { animation: none; } }

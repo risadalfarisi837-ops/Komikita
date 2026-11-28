@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState, useCallback, useRef } from 'react';
 import WallpaperBg from '@/components/WallpaperBg';
 import { numericId } from '@/lib/utils';
 import DevBadge from '@/components/DevBadge';
+import AdminBadge from '@/components/AdminBadge';
 import PremiumName from '@/components/PremiumName';
 import VerifiedBadge from '@/components/VerifiedBadge';
 import { isPremiumRole, isStaffRole } from '@/lib/premium';
@@ -257,6 +258,7 @@ function LevelBadge({ level }: { level: number }) {
 // ─── Role Badge ───────────────────────────────────────────────────────────────
 function RoleBadge({ role }: { role: string; level?: number }) {
   if (role === 'Developer') return <DevBadge size={16} />;
+  if (role === 'Admin') return <AdminBadge size={16} />;
   return isPremiumRole(role) ? <VerifiedBadge size={15} /> : null;
 }
 

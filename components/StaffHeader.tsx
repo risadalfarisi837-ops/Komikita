@@ -1,6 +1,7 @@
 'use client';
 
 import DevBadge from '@/components/DevBadge';
+import AdminBadge from '@/components/AdminBadge';
 import PremiumName from '@/components/PremiumName';
 import { TierPill } from '@/components/LevelPill';
 import { ADMIN_TIER } from '@/lib/levelTiers';
@@ -14,16 +15,6 @@ function Crown({ size = 22, compact = false }: { size?: number; compact?: boolea
   return (
     <svg className="adm-crown" width={size} height={size} viewBox="0 0 24 24" style={{ position: 'absolute', top: compact ? -7 : -9, right: compact ? -5 : -7, filter: 'drop-shadow(0 1px 2px rgba(0,0,0,.6))' }}>
       <path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z" fill="#F5C84B" stroke="#B8860B" strokeWidth={1.2} strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-// Centang merah khusus Admin
-function AdminCheck({ size = 22 }: { size?: number }) {
-  return (
-    <svg className="adm-check" width={size} height={size} viewBox="0 0 24 24" aria-label="Admin" role="img" style={{ flex: '0 0 auto', display: 'inline-block', verticalAlign: 'middle' }}>
-      <circle cx={12} cy={12} r={10.5} fill="#E5383B" />
-      <path d="M7.6 12.3l3 3 5.8-6.2" fill="none" stroke="#fff" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -67,7 +58,7 @@ export default function StaffHeader({ nama, foto, role = 'Developer', idText, wa
         <div style={{ display: 'flex', alignItems: 'center', gap: c(8, 6), minHeight: pillH }}>
           <PremiumName dev={dev} style={{ fontSize: c(20, 14.5), fontWeight: 800, letterSpacing: -0.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{nama}</PremiumName>
           {idText && <span style={{ fontSize: c(17, 12.5), fontWeight: 700, color: MUTED, flex: '0 0 auto' }}>{idText}</span>}
-          {dev ? <DevBadge size={c(24, 18)} /> : <AdminCheck size={c(22, 17)} />}
+          {dev ? <DevBadge size={c(24, 18)} /> : <AdminBadge size={c(24, 18)} />}
           {waktu && <span style={{ marginLeft: 'auto', fontSize: c(15, 12.5), fontWeight: 600, color: MUTED, flex: '0 0 auto', whiteSpace: 'nowrap' }}>{waktu}</span>}
           {menu}
         </div>
