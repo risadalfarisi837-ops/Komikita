@@ -8,13 +8,13 @@ import FishingLobby from '@/components/fishing/FishingLobby';
 import FishLoading from '@/components/fishing/FishLoading';
 import { MAIN_ROOM, islandName } from '@/lib/fishingIslands';
 import {
-  DEFAULT_ROD, GACHA_DUPLICATE_REFUND, GACHA_PRICE, ROD_MAX_LV, RODS_BY_ID, SPECIES_BY_ID, clampRodLv, fishPrice, rodAt, rodUpgradeCost, rollGacha, nextPity, sanitizeBag, sanitizeRodLv, sanitizeRods,
+  DEFAULT_ROD, GACHA_DUPLICATE_REFUND, GACHA_PITY, GACHA_PRICE, ROD_MAX_LV, RODS_BY_ID, SPECIES_BY_ID, clampRodLv, fishPrice, rodAt, rodUpgradeCost, rollGacha, nextPity, sanitizeBag, sanitizeRodLv, sanitizeRods,
 } from '@/lib/fishing';
 import type { BagItem, Rarity, Rod } from '@/lib/fishing';
 import { DEFAULT_OUTFIT, sanitizeOutfit } from '@/components/fishing/outfit';
 import type { Outfit } from '@/components/fishing/outfit';
-import { DUP_REFUND, LIMITED_PRICE, rollLimited, sanitizeLimited } from '@/lib/limitedGacha';
-import type { LimitedDrop } from '@/lib/limitedGacha';
+import { DUP_REFUND, LIMITED_PRICE, MYTHIC_PITY, rollLimited, sanitizeLimited } from '@/lib/limitedGacha';
+import type { LimitedDrop, LimitedRarity } from '@/lib/limitedGacha';
 import type { QrOrder, TopUpPoll } from '@/lib/topupPacks';
 import { FREE_BAIT, dayKey, sanitizePromoBought } from '@/lib/promoPacks';
 
@@ -87,7 +87,8 @@ export default function MancingPage() {
           if (typeof v.photoURL === 'string' && v.photoURL) setPhoto(v.photoURL);
           setCrystal(typeof v.koin === 'number' ? v.koin : 0);
           setGems(typeof v.gems === 'number' ? v.gems : 0);
-          setIsDev(false); isDevRef.current = false;
+          const dv = v.role === 'Developer';
+          setIsDev(dv); isDevRef.current = dv;
           const fx = typeof v.fishing?.xp === 'number' ? v.fishing.xp : 0;
           xpRef.current = fx;
           setXp(fx);
@@ -243,14 +244,14 @@ export default function MancingPage() {
     fb.current.db.ref('users/' + uid.current + '/fishing').update({ equippedRod: id }).catch(() => warn('Joran belum tersimpan'));
   }, [warn]);
 
-  const onGacha = useCallback(async (opt?: { min?: Rarity | ''; free?: boolean }): Promise<{ rod: Rod; duplicate: boolean } | 'kurang' | 'gagal'> => {
+  const onGacha = useCallback(async (opt?: { min?: Rarity | ''; free?: boolean; rod?: string }): Promise<{ rod: Rod; duplicate: boolean } | 'kurang' | 'gagal'> => {
     const d = isDevRef.current ? opt : undefined; // opsi gacha wangi hanya dihormati untuk role Developer
     if (!uid.current || !fb.current) return 'gagal';
     if (!d?.free) {
       const st = await spend(GACHA_PRICE);
       if (st !== 'ok') return st;
     }
-    const rod = rollGacha(Math.random, pityRef.current, d?.min || '');
+    const rod = rollGacha(Math.random, pityRef.current, d?.min || '', d?.rod || '');
     const duplicate = rodsRef.current.includes(rod.id);
     const np = nextPity(rod, pityRef.current);
     pityRef.current = np;
@@ -274,7 +275,7 @@ export default function MancingPage() {
   }, [spend, warn]);
 
   // Gacha Baju Limited (bayar Gems). free hanya dihormati untuk role Developer.
-  const onOpenLimited = useCallback(async (n: 1 | 10, free?: boolean): Promise<LimitedDrop[] | 'kurang' | 'gagal'> => {
+  const onOpenLimited = useCallback(async (n: 1 | 10, free?: boolean, min?: LimitedRarity | ''): Promise<LimitedDrop[] | 'kurang' | 'gagal'> => {
     if (!uid.current || !fb.current) return 'gagal';
     const u = fb.current.db.ref('users/' + uid.current);
     const cost = n === 10 ? LIMITED_PRICE.ten : LIMITED_PRICE.one;
@@ -293,7 +294,7 @@ export default function MancingPage() {
       let crystalGain = 0;
       const drops: LimitedDrop[] = [];
       for (let i = 0; i < n; i++) {
-        const r = rollLimited(pity);
+        const r = rollLimited(pity, Math.random, isDevRef.current && min ? min : '');
         pity = r.pity;
         const d: LimitedDrop = { ...r.item };
         if (d.outfit) {
@@ -324,6 +325,46 @@ export default function MancingPage() {
       return 'gagal';
     }
   }, []);
+
+  // Dev Tools: gift ke akun sendiri (Crystal, Gems, joran). Hanya jalan kalau role di database = Developer.
+  const onDevGive = useCallback(async (kind: 'crystal' | 'gems' | 'rod', v: number | string): Promise<boolean> => {
+    if (!isDevRef.current || !uid.current || !fb.current) return false;
+    const u = fb.current.db.ref('users/' + uid.current);
+    try {
+      if (kind === 'crystal' || kind === 'gems') {
+        const n = Math.min(1e9, Math.floor(Number(v)));
+        if (!Number.isFinite(n) || n <= 0) return false;
+        const res = await u.child(kind === 'crystal' ? 'koin' : 'gems').transaction((c: any) => (typeof c === 'number' ? c : 0) + n);
+        const val = res?.snapshot?.val();
+        if (typeof val === 'number') { if (kind === 'crystal') setCrystal(val); else setGems(val); }
+        return true;
+      }
+      const id = String(v);
+      if (!RODS_BY_ID[id] || rodsRef.current.includes(id)) return false;
+      const nr = [...rodsRef.current, id];
+      setRods(nr);
+      await u.child('fishing').update({ rods: nr });
+      return true;
+    } catch { warn('Gift Dev gagal'); return false; }
+  }, [warn]);
+
+  // Dev Tools: atur pity gacha (joran: 0..21, baju limited: 0..999)
+  const onDevPity = useCallback(async (kind: 'rod' | 'limited', n: number): Promise<void> => {
+    if (!isDevRef.current || !uid.current || !fb.current) return;
+    const f = fb.current.db.ref('users/' + uid.current + '/fishing');
+    try {
+      if (kind === 'rod') {
+        const np = Math.max(0, Math.min(GACHA_PITY - 1, Math.floor(n)));
+        pityRef.current = np; setPity(np);
+        await f.update({ pity: np });
+      } else {
+        const np = Math.max(0, Math.min(MYTHIC_PITY - 1, Math.floor(n)));
+        limitedRef.current = { ...limitedRef.current, pity: np };
+        setLimited({ owned: limitedRef.current.owned, pity: np });
+        await f.child('limited/pity').set(np);
+      }
+    } catch { warn('Pity belum tersimpan'); }
+  }, [warn]);
 
   // Paket Pemula: sekali per akun (flag disimpan dulu, baru hadiah diberikan)
   const onClaimStarter = useCallback(async (): Promise<boolean> => {
@@ -434,7 +475,7 @@ export default function MancingPage() {
     <>
       <FishingGame
         name={name} photo={photo} crystal={crystal} gems={gems} onTopUp={onTopUp} onTopUpPoll={onTopUpPoll} onTopUpPaid={refreshWallet} onPromoPaid={refreshWallet} freeBaitClaimed={freeBaitDay !== dayKey()} onClaimBait={onClaimBait} promoBought={promoBought} onOpenLimited={onOpenLimited} limitedPity={limited.pity} limitedOwned={limited.owned} xp={xp} bag={bag}
-        rods={rods} equippedRod={equippedRod} rodLv={rodLv} onUpgradeRod={onUpgradeRod} dev={isDev}
+        rods={rods} equippedRod={equippedRod} rodLv={rodLv} onUpgradeRod={onUpgradeRod} dev={isDev} onDevGive={onDevGive} onDevPity={onDevPity}
         onCatch={onCatch} onSetXp={onSetXp} outfit={outfit} onSaveOutfit={onSaveOutfit} onSell={onSell} onBuyRod={onBuyRod} onEquipRod={onEquipRod} onGacha={onGacha}
         room={room} pity={pity} starterClaimed={starter} onClaimStarter={onClaimStarter}
         onExit={() => router.push('/komikstore')}

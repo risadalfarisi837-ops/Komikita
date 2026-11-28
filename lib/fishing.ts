@@ -333,7 +333,9 @@ export const GACHA_ODDS: Record<string, number> = (() => {
 
 // minRarity hanya dipakai Dev Tools (gacha wangi): hanya joran dengan rarity itu atau lebih tinggi yang bisa keluar.
 const RARITY_RANK: Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic', 'divine', 'secret'];
-export function rollGacha(rnd: () => number = Math.random, pity = 0, minRarity: Rarity | '' = ''): Rod {
+// targetId (Dev Tools): paksa joran tertentu yang keluar.
+export function rollGacha(rnd: () => number = Math.random, pity = 0, minRarity: Rarity | '' = '', targetId = ''): Rod {
+  if (targetId && RODS_BY_ID[targetId] && RODS_BY_ID[targetId].id !== DEFAULT_ROD) return RODS_BY_ID[targetId];
   let pool = pity >= GACHA_PITY - 1 ? GACHA_RODS.filter((r) => TOP_RARITY.includes(r.rarity)) : GACHA_RODS;
   if (minRarity) {
     const min = RARITY_RANK.indexOf(minRarity);

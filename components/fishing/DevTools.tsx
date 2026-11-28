@@ -5,8 +5,10 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, PointerEvent as RPointerEvent, ReactNode } from 'react';
 import type { FishingEngine } from './engine';
-import { MAX_LEVEL, RARITY, formatNum, levelFromXp, xpForLevel } from '@/lib/fishing';
+import { DEFAULT_ROD, GACHA_PITY, MAX_LEVEL, RARITY, RODS, formatNum, levelFromXp, xpForLevel } from '@/lib/fishing';
 import type { Rarity, SizeTier } from '@/lib/fishing';
+import { MYTHIC_PITY } from '@/lib/limitedGacha';
+import type { LimitedRarity } from '@/lib/limitedGacha';
 
 export type SellMode = 'off' | 'keep' | 'all';
 
@@ -125,6 +127,17 @@ interface Props {
   setGachaMin: (r: Rarity | '') => void;
   gachaFree: boolean;
   setGachaFree: (b: boolean) => void;
+  gachaRod: string;
+  setGachaRod: (id: string) => void;
+  limitedMin: LimitedRarity | '';
+  setLimitedMin: (r: LimitedRarity | '') => void;
+  rodPity: number;
+  limitedPity: number;
+  rods: string[];
+  crystal: number;
+  gems: number;
+  onGive: (kind: 'crystal' | 'gems' | 'rod', v: number | string) => Promise<boolean>;
+  onPity: (kind: 'rod' | 'limited', n: number) => Promise<void>;
   stats: DevStats;
   resetStats: () => void;
   xp: number;
@@ -132,7 +145,7 @@ interface Props {
   onClose: () => void;
 }
 
-type Tab = 'auto' | 'uji' | 'gacha' | 'level' | 'stat';
+type Tab = 'auto' | 'uji' | 'gacha' | 'hadiah' | 'level' | 'stat';
 
 export default function DevTools(p: Props) {
   const { px } = p;
@@ -140,6 +153,8 @@ export default function DevTools(p: Props) {
   const [min, setMin] = useState(false);
   const [xpIn, setXpIn] = useState('');
   const [lvIn, setLvIn] = useState('');
+  const [giveIn, setGiveIn] = useState('');
+  const [note, setNote] = useState('');
   const [info, setInfo] = useState<ReturnType<FishingEngine['devInfo']> | null>(null);
   const { pos, bind } = useDrag('komikita-dev-panel', { x: 0.27, y: 0.05 }, { x: [0, 0.72], y: [0, 0.8] }, p.rot, p.getWrap);
 
@@ -149,6 +164,11 @@ export default function DevTools(p: Props) {
     return () => clearInterval(t);
   }, [p.engine]);
 
+  const give = async (kind: 'crystal' | 'gems' | 'rod', v: number | string, label: string) => {
+    const ok = await p.onGive(kind, v);
+    setNote(ok ? '✓ ' + label : '✕ Gagal / sudah dimiliki');
+    setTimeout(() => setNote(''), 2200);
+  };
   const mins = p.stats.since && p.stats.last > p.stats.since ? (p.stats.last - p.stats.since) / 60000 : 0;
   const perMin = mins > 0.05 ? (p.stats.catches / mins).toFixed(1) : '-';
 
@@ -206,7 +226,7 @@ export default function DevTools(p: Props) {
 
       {!min && (
         <div style={{ overflowY: 'auto', padding: `${px(8)}px ${px(10)}px ${px(12)}px`, WebkitOverflowScrolling: 'touch' }}>
-          {seg<Tab>([{ v: 'auto', label: '🎣 Auto' }, { v: 'uji', label: '🧪 Uji' }, { v: 'gacha', label: '🎰 Gacha' }, { v: 'level', label: '⭐ Level' }, { v: 'stat', label: '📊 Statistik' }], tab, setTab)}
+          {seg<Tab>([{ v: 'auto', label: 'Auto' }, { v: 'uji', label: 'Uji' }, { v: 'gacha', label: 'Gacha' }, { v: 'hadiah', label: 'Hadiah' }, { v: 'level', label: 'Level' }, { v: 'stat', label: 'Stat' }], tab, setTab)}
 
           {tab === 'auto' && (
             <>
@@ -263,7 +283,7 @@ export default function DevTools(p: Props) {
 
           {tab === 'gacha' && (
             <>
-              {H('Gacha Rod wangi (minimal rarity)')}
+              {H('Joran · minimal rarity')}
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: px(5) }}>
                 <button style={small(p.gachaMin === '')} onClick={() => p.setGachaMin('')}>🍀 Normal</button>
                 {(['epic', 'legendary', 'mythic'] as Rarity[]).map((r) => (
@@ -272,10 +292,79 @@ export default function DevTools(p: Props) {
                   </button>
                 ))}
               </div>
-              <div style={{ marginTop: px(10) }}>{toggle(p.gachaFree, p.setGachaFree, '💎 Gacha gratis', 'Buka peti tanpa memotong Crystal')}</div>
-              <div style={{ fontSize: px(10.5), color: '#8a96b8', marginTop: px(6), lineHeight: 1.35 }}>Berlaku untuk Gacha Rod di Toko (1× dan 5×). Hanya joran dengan rarity terpilih atau lebih tinggi yang keluar. Joran ganda tetap dihitung duplikat.</div>
+              {H('Joran · target pasti')}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: px(5) }}>
+                <button style={small(p.gachaRod === '')} onClick={() => p.setGachaRod('')}>Acak</button>
+                {RODS.filter((r) => r.id !== DEFAULT_ROD).map((r) => (
+                  <button key={r.id} onClick={() => p.setGachaRod(r.id)} style={{ ...small(false), background: p.gachaRod === r.id ? RARITY[r.rarity].color : 'rgba(255,255,255,0.09)', color: p.gachaRod === r.id ? '#111' : RARITY[r.rarity].color }}>
+                    {r.name.replace('Joran ', '')}
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: px(6), marginTop: px(8), alignItems: 'center' }}>
+                {card('🎯', 'Pity joran', p.rodPity + ' / ' + (GACHA_PITY - 1))}
+                <button style={{ ...small(false), flex: 1 }} onClick={() => p.onPity('rod', GACHA_PITY - 1)}>Pity penuh</button>
+                <button style={{ ...small(false), flex: 1 }} onClick={() => p.onPity('rod', 0)}>Reset</button>
+              </div>
+
+              {H('Baju Limited · minimal rarity')}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: px(5) }}>
+                <button style={small(p.limitedMin === '')} onClick={() => p.setLimitedMin('')}>🍀 Normal</button>
+                {([['Epic', 'Epic+'], ['Legendary', 'Legendary+'], ['Mythic', 'Mythic']] as const).map(([v, l]) => (
+                  <button key={v} onClick={() => p.setLimitedMin(v)} style={small(p.limitedMin === v)}>{l}</button>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: px(6), marginTop: px(8), alignItems: 'center' }}>
+                {card('🎯', 'Pity baju', p.limitedPity + ' / ' + (MYTHIC_PITY - 1))}
+                <button style={{ ...small(false), flex: 1 }} onClick={() => p.onPity('limited', MYTHIC_PITY - 1)}>Pity penuh</button>
+                <button style={{ ...small(false), flex: 1 }} onClick={() => p.onPity('limited', 0)}>Reset</button>
+              </div>
+
+              <div style={{ marginTop: px(10) }}>{toggle(p.gachaFree, p.setGachaFree, '💎 Gacha gratis', 'Joran (Crystal) dan Baju Limited (Gems) tanpa potong saldo')}</div>
+              <div style={{ fontSize: px(10.5), color: '#8a96b8', marginTop: px(6), lineHeight: 1.35 }}>Target pasti mengalahkan minimal rarity. Joran yang sudah dimiliki tetap dihitung duplikat. Berlaku untuk 1× dan 5×/10×.</div>
             </>
           )}
+
+          {tab === 'hadiah' && (() => {
+            const field: CSSProperties = { flex: 1, minWidth: 0, boxSizing: 'border-box', background: 'rgba(255,255,255,0.08)', border: `${px(1)}px solid rgba(255,255,255,0.18)`, borderRadius: px(10), padding: `${px(7)}px ${px(9)}px`, color: '#fff', fontFamily: HUD, fontWeight: 700, fontSize: px(13) };
+            const chips = (kind: 'crystal' | 'gems', list: number[]) => (
+              <div style={{ display: 'flex', gap: px(5) }}>
+                {list.map((n) => <button key={n} style={{ ...small(false), flex: 1 }} onClick={() => give(kind, n, '+' + formatNum(n) + (kind === 'crystal' ? ' Crystal' : ' Gems'))}>+{formatNum(n)}</button>)}
+              </div>
+            );
+            const amt = Number(giveIn);
+            return (
+              <>
+                <div style={{ display: 'flex', gap: px(6), marginTop: px(10) }}>
+                  {card('💎', 'Crystal', formatNum(p.crystal))}
+                  {card('💠', 'Gems', formatNum(p.gems))}
+                </div>
+                {H('Crystal')}
+                {chips('crystal', [1000, 10000, 100000])}
+                {H('Gems')}
+                {chips('gems', [300, 3000, 30000])}
+                {H('Jumlah bebas')}
+                <div style={{ display: 'flex', gap: px(6) }}>
+                  <input style={field} inputMode="numeric" placeholder="mis. 2500" value={giveIn} onChange={(e) => setGiveIn(e.target.value.replace(/\D/g, ''))} />
+                  <button style={small(true)} onClick={() => { if (amt > 0) { give('crystal', amt, '+' + formatNum(amt) + ' Crystal'); setGiveIn(''); } }}>Crystal</button>
+                  <button style={small(true)} onClick={() => { if (amt > 0) { give('gems', amt, '+' + formatNum(amt) + ' Gems'); setGiveIn(''); } }}>Gems</button>
+                </div>
+                {H('Joran (ketuk untuk ambil)')}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: px(5) }}>
+                  {RODS.filter((r) => r.id !== DEFAULT_ROD).map((r) => {
+                    const own = p.rods.includes(r.id);
+                    return (
+                      <button key={r.id} disabled={own} onClick={() => give('rod', r.id, r.name)} style={{ ...small(false), color: own ? '#6b7592' : RARITY[r.rarity].color, opacity: own ? 0.6 : 1, cursor: own ? 'default' : 'pointer' }}>
+                        {own ? '✓ ' : ''}{r.name.replace('Joran ', '')}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div style={{ minHeight: px(16), fontSize: px(11.5), fontWeight: 700, color: note.startsWith('✓') ? '#4ade80' : '#fb7185', marginTop: px(8) }}>{note}</div>
+                <div style={{ fontSize: px(10.5), color: '#8a96b8', marginTop: px(2), lineHeight: 1.35 }}>Masuk langsung ke akun sendiri. Untuk kirim ke pemain lain, pakai Panel Developer di Profil.</div>
+              </>
+            );
+          })()}
 
           {tab === 'level' && (() => {
             const lv = levelFromXp(p.xp);

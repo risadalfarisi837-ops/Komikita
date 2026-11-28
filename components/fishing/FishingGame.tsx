@@ -11,7 +11,7 @@ import {
 } from '@/lib/fishing';
 import { SPECIES as KSPECIES, sizeRatio as kSizeRatio } from '@/lib/fishing';
 import type { BagItem, Rarity, Rod, SizeTier } from '@/lib/fishing';
-import { EMPTY_STATS } from './DevTools';
+import DevTools, { DevFab, EMPTY_STATS } from './DevTools';
 import ProfileModal from './ProfileModal';
 import { DEFAULT_OUTFIT, encodeOutfit, titleOf } from './outfit';
 import type { Outfit } from './outfit';
@@ -21,7 +21,7 @@ import { getFirebase } from '@/lib/firebase-client';
 import ShopScreen from './Shop';
 import SellFish from './SellFish';
 import LimitedSpin from './LimitedSpin';
-import type { LimitedDrop } from '@/lib/limitedGacha';
+import type { LimitedDrop, LimitedRarity } from '@/lib/limitedGacha';
 import type { QrOrder, TopUpPoll } from '@/lib/topupPacks';
 import PixelRod from './RodArt';
 import GachaSpin from './GachaSpin';
@@ -47,14 +47,16 @@ interface Props {
   onSell: (ids: string[]) => Promise<number>;
   onBuyRod: (id: string) => Promise<'ok' | 'kurang' | 'gagal'>;
   onEquipRod: (id: string) => void;
-  onGacha: (dev?: { min?: Rarity | ''; free?: boolean }) => Promise<{ rod: Rod; duplicate: boolean } | 'kurang' | 'gagal'>;
+  onGacha: (dev?: { min?: Rarity | ''; free?: boolean; rod?: string }) => Promise<{ rod: Rod; duplicate: boolean } | 'kurang' | 'gagal'>;
   pity?: number;
   starterClaimed?: boolean;
   gems?: number;
   onTopUp?: (currency: 'gems' | 'crystal', packId: string) => string | QrOrder | void | Promise<string | QrOrder | void>;
   onTopUpPoll?: (orderId: string) => Promise<TopUpPoll>;
   onTopUpPaid?: () => void;
-  onOpenLimited?: (n: 1 | 10, free?: boolean) => Promise<LimitedDrop[] | 'kurang' | 'gagal'>;
+  onOpenLimited?: (n: 1 | 10, free?: boolean, min?: LimitedRarity | '') => Promise<LimitedDrop[] | 'kurang' | 'gagal'>;
+  onDevGive?: (kind: 'crystal' | 'gems' | 'rod', v: number | string) => Promise<boolean>;
+  onDevPity?: (kind: 'rod' | 'limited', n: number) => Promise<void>;
   limitedPity?: number;
   limitedOwned?: string[];
   onClaimStarter?: () => Promise<boolean>;
@@ -424,6 +426,9 @@ export default function FishingGame(props: Props) {
   const [forceSize, setForceSize] = useState<SizeTier | ''>('');
   const [gachaMin, setGachaMin] = useState<Rarity | ''>(''); // Dev: gacha wangi
   const [gachaFree, setGachaFree] = useState(false);          // Dev: gacha gratis
+  const [gachaRod, setGachaRod] = useState('');               // Dev: joran target gacha
+  const [limitedMin, setLimitedMin] = useState<LimitedRarity | ''>(''); // Dev: rarity minimal Baju Limited
+  const [devOpen, setDevOpen] = useState(false);
   const [dstats, setDstats] = useState<DevStats>(EMPTY_STATS);
   const sellBusy = useRef(false);
   // HP masih portrait (kunci landscape tidak diizinkan browser) → game diputar 90° sendiri,
@@ -720,7 +725,7 @@ export default function FishingGame(props: Props) {
     setPulling(true);
     const got: { rod: Rod; duplicate: boolean }[] = [];
     for (let i = 0; i < n; i++) {
-      const res = await props.onGacha(props.dev ? { min: gachaMin, free: gachaFree } : undefined);
+      const res = await props.onGacha(props.dev ? { min: gachaMin, free: gachaFree, rod: gachaRod } : undefined);
       if (res === 'kurang') { say(got.length ? `Crystal habis, baru ${got.length}× terbuka` : 'Crystal kurang buat Gacha'); break; }
       if (res === 'gagal') { say('Gacha gagal, coba lagi'); break; }
       got.push(res);
@@ -1281,11 +1286,31 @@ export default function FishingGame(props: Props) {
       {/* Toko & Gacha */}
       {shopOpen && (
         <ShopScreen
-          px={(n: number) => px(n * 0.64)} font={HUD} crystal={crystal} gems={props.gems ?? 0} onTopUp={props.onTopUp} onTopUpPoll={props.onTopUpPoll} onTopUpPaid={props.onTopUpPaid} onOpenLimited={props.onOpenLimited ? async (n) => { const r = await props.onOpenLimited!(n, !!props.dev && gachaFree); if (Array.isArray(r)) setLimitedDrops(r); return r; } : undefined} limitedFree={!!props.dev && gachaFree} limitedPity={props.limitedPity} limitedOwned={props.limitedOwned} freeBaitClaimed={props.freeBaitClaimed} onClaimBait={claimBait} promoBought={props.promoBought} onPromoPaid={props.onPromoPaid} rods={rods} equippedRod={equippedRod}
+          px={(n: number) => px(n * 0.64)} font={HUD} crystal={crystal} gems={props.gems ?? 0} onTopUp={props.onTopUp} onTopUpPoll={props.onTopUpPoll} onTopUpPaid={props.onTopUpPaid} onOpenLimited={props.onOpenLimited ? async (n) => { const r = await props.onOpenLimited!(n, !!props.dev && gachaFree, props.dev ? limitedMin : ''); if (Array.isArray(r)) setLimitedDrops(r); return r; } : undefined} limitedFree={!!props.dev && gachaFree} limitedPity={props.limitedPity} limitedOwned={props.limitedOwned} freeBaitClaimed={props.freeBaitClaimed} onClaimBait={claimBait} promoBought={props.promoBought} onPromoPaid={props.onPromoPaid} rods={rods} equippedRod={equippedRod}
           tab={shopTab} onTab={setShopTab} buying={buying} pulling={pulling}
           onClose={() => setShopOpen(false)} onBuy={buyRod} onEquip={props.onEquipRod} onPull={pullGachaN}
           pity={props.pity ?? 0} starterClaimed={!!props.starterClaimed} onClaimStarter={claimStarter}
         />
+      )}
+
+      {/* Dev Tools (hanya role Developer) */}
+      {dev && (
+        <>
+          <DevFab px={px} rot={rot} getWrap={() => wrapRef.current} auto={auto} count={dstats.catches} open={devOpen} onTap={() => setDevOpen((o) => !o)} />
+          {devOpen && (
+            <DevTools
+              px={px} rot={rot} getWrap={() => wrapRef.current} engine={engineRef.current}
+              auto={auto} onAuto={(on) => engineRef.current?.setAuto(on)}
+              sellMode={sellMode} setSellMode={setSellMode} speed={speed} setSpeed={setSpeed} instant={instant} setInstant={setInstant}
+              force={force} setForce={setForce} forceSize={forceSize} setForceSize={setForceSize}
+              gachaMin={gachaMin} setGachaMin={setGachaMin} gachaFree={gachaFree} setGachaFree={setGachaFree}
+              gachaRod={gachaRod} setGachaRod={setGachaRod} limitedMin={limitedMin} setLimitedMin={setLimitedMin}
+              rodPity={props.pity ?? 0} limitedPity={props.limitedPity ?? 0} rods={rods} crystal={crystal} gems={props.gems ?? 0}
+              onGive={(k, v) => props.onDevGive?.(k, v) ?? Promise.resolve(false)} onPity={(k, n) => props.onDevPity?.(k, n) ?? Promise.resolve()}
+              stats={dstats} resetStats={() => setDstats(EMPTY_STATS)} xp={xp} onSetXp={(v) => props.onSetXp?.(v)} onClose={() => setDevOpen(false)}
+            />
+          )}
+        </>
       )}
 
       {/* animasi buka gacha + hasil */}

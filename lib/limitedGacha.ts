@@ -20,15 +20,19 @@ export const LIMITED_POOL: LimitedItem[] = [
   { key: 'shrimp', name: 'Udang', rarity: 'Common', weight: 16.84, qty: 10 },
 ];
 
-/** Satu tarikan. pity = jumlah peti sejak Mythic terakhir. Mengembalikan item dan pity baru. */
-export function rollLimited(pity: number, rnd: () => number = Math.random): { item: LimitedItem; pity: number } {
+const LIMITED_RANK: LimitedRarity[] = ['Common', 'Rare', 'Epic', 'Legendary', 'Mythic'];
+
+/** Satu tarikan. pity = jumlah peti sejak Mythic terakhir. Mengembalikan item dan pity baru.
+ *  min hanya dipakai Dev Tools (gacha hoki): hanya item dengan rarity itu atau lebih tinggi yang keluar. */
+export function rollLimited(pity: number, rnd: () => number = Math.random, min: LimitedRarity | '' = ''): { item: LimitedItem; pity: number } {
   const force = pity + 1 >= MYTHIC_PITY;
   let item = LIMITED_POOL[0];
   if (!force) {
-    const total = LIMITED_POOL.reduce((a, i) => a + i.weight, 0);
+    const pool = min ? LIMITED_POOL.filter((i) => LIMITED_RANK.indexOf(i.rarity) >= LIMITED_RANK.indexOf(min)) : LIMITED_POOL;
+    const total = pool.reduce((a, i) => a + i.weight, 0);
     let r = rnd() * total;
-    item = LIMITED_POOL[LIMITED_POOL.length - 1];
-    for (const i of LIMITED_POOL) { if (r < i.weight) { item = i; break; } r -= i.weight; }
+    item = pool[pool.length - 1];
+    for (const i of pool) { if (r < i.weight) { item = i; break; } r -= i.weight; }
   }
   return { item, pity: item.rarity === 'Mythic' ? 0 : pity + 1 };
 }
