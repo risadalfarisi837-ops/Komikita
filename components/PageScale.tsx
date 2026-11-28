@@ -8,7 +8,7 @@ import type { ReactNode } from 'react';
 const UI_SCALE = 0.85;
 
 // Halaman yang dikecilkan (Peringkat sudah pas, jadi tidak ikut)
-const SCALED_PAGES = ['/', '/schedule', '/history', '/riwayat', '/profile', '/manga', '/komentar', '/user', '/notifikasi', '/premium', '/settings'];
+const SCALED_PAGES = ['/', '/schedule', '/history', '/riwayat', '/profile', '/komentar', '/user', '/notifikasi', '/premium', '/settings'];
 
 export default function PageScale({ children }: { children: ReactNode }) {
   const path = usePathname();
