@@ -12,8 +12,6 @@ import PremiumName from '@/components/PremiumName';
 import { currentSeason, RANKS, rankFor, fmt, fmtC, TARGETS, Track } from '@/lib/season';
 import { pushSeasonScore, ACTIVE_DAYS, getFirebase } from '@/lib/leaderboard';
 import { sendGifts, giftTitle, GiftType } from '@/lib/gifts';
-import ProfileEffect from '@/components/ProfileEffect';
-import ProfileBg from '@/components/ProfileBg';
 import GiftEffect from '@/components/GiftEffect';
 import GiftVisual from '@/components/GiftVisual';
 import { WALLPAPER_CATALOG } from '@/lib/wallpapers';
@@ -1196,26 +1194,14 @@ export default function ProfilePage() {
   return (
     <div style={{ background: '#1B1A20', color: '#fff', minHeight: '100vh', paddingBottom: 130 }}>
 
-      {/* Header */}
-      <div style={{ position: 'relative', isolation: 'isolate', padding: userData?.activeBackground ? '24px 16px 22px' : '24px 16px 0', textAlign: 'left', overflow: 'hidden' }}>
-        <ProfileBg k={userData?.activeBackground} fade />
-        {activeEffect && <ProfileEffect effectKey={activeEffect} />}
-        <div style={{ position: 'absolute', top: 14, right: 10, display: 'flex', gap: 2 }}>
-          <Link href="/notifikasi" aria-label="Notifikasi" style={{ position: 'relative', padding: 8, color: '#fff', display: 'flex' }}>
-            <Bell size={26} strokeWidth={1.8} />
-            {newChapters > 0 && <span style={{ position: 'absolute', top: 7, right: 9, width: 11, height: 11, borderRadius: '50%', background: '#FF5C5C' }} />}
-          </Link>
-          <Link href="/settings" aria-label="Pengaturan" style={{ padding: 8, display: 'flex' }}>
-            <HexIcon size={26} color="#fff" />
-          </Link>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, paddingRight: 84, textAlign: 'left' }}>
+      {/* Header: gaya timeline (avatar + nama/ID + pil, Exp, dua kartu) */}
+      <div style={{ padding: '24px 16px 0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{ flex: '0 0 auto' }}>
             <AvatarWithBorder src={photoURL} size={66} borderKey={activeBorder || undefined} onClick={() => void 0} />
           </div>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 21, fontWeight: 800, letterSpacing: -0.9, lineHeight: 1.2 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 19, fontWeight: 800, letterSpacing: -0.7, lineHeight: 1.2 }}>
               <PremiumName premium={isPremium && !isDev} dev={isDev} style={{ wordBreak: 'break-word' }}>{userData?.displayName || user.displayName || 'User'}</PremiumName>
               <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: -0.2, color: MUTED }}>{formatShortId(userData?.shortId, user.uid)}</span>
               {isPremium && !isDev && <VerifiedBadge size={20} />}
@@ -1246,70 +1232,41 @@ export default function ProfilePage() {
               )}
             </div>
           </div>
+          <Link href="/settings" aria-label="Pengaturan" style={{ flex: '0 0 auto', padding: 8, display: 'flex' }}>
+            <HexIcon size={28} color="#fff" />
+          </Link>
         </div>
-        <div style={{ marginTop: 16, paddingBottom: 2, textAlign: 'left' }}><ExpBar level={level} exp={lvExp} max={200} /></div>
-      </div>
 
-      {/* Crystal & streak */}
-      <div style={{ display: 'flex', gap: 10, margin: '14px 16px 0' }}>
-        {[
-          { icon: <svg width={26} height={26} viewBox="0 0 24 24"><path d="M6 3h12l4 6-10 12L2 9l4-6z" fill="#4cc3f0" /><path d="M2 9h20M9 3l3 18M15 3l-3 18" stroke="rgba(255,255,255,.55)" fill="none" strokeWidth={1} /></svg>, v: fmt(koin), l: 'Crystal' },
-          { icon: <Flame size={26} color="#F59E0B" fill="#F59E0B" />, v: String(streak), l: 'Streak (hari)' },
-        ].map((x) => (
-          <div key={x.l} style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 12, background: CARD, border: '1px solid rgba(255,255,255,.1)', borderRadius: 18, padding: '12px 16px' }}>
-            {x.icon}
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.8, lineHeight: 1.1 }}>{x.v}</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: MUTED, letterSpacing: -0.3 }}>{x.l}</div>
+        <div style={{ marginTop: 16 }}><ExpBar level={level} exp={lvExp} max={200} /></div>
+
+        <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+          {[
+            { icon: <svg width={28} height={28} viewBox="0 0 24 24"><path d="M6 3h12l4 6-10 12L2 9l4-6z" fill="#4cc3f0" /><path d="M2 9h20M9 3l3 18M15 3l-3 18" stroke="rgba(255,255,255,.55)" fill="none" strokeWidth={1} /></svg>, v: fmt(koin), l: 'Crystal' },
+            { icon: <Flame size={28} color="#F59E0B" fill="#F59E0B" />, v: String(streak), l: 'Streak (hari)' },
+          ].map((x) => (
+            <div key={x.l} style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 12, background: CARD, border: '1px solid rgba(255,255,255,.1)', borderRadius: 18, padding: '12px 16px' }}>
+              {x.icon}
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.8, lineHeight: 1.1 }}>{x.v}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: MUTED, letterSpacing: -0.3 }}>{x.l}</div>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
       <div style={{ height: 1, background: 'rgba(255,255,255,.1)', margin: '16px 0 0' }} />
 
-      {/* Ringkasan: peringkat / tingkat / poin */}
-      <div style={{ margin: '16px 26px 0', background: CARD, borderRadius: 18, display: 'flex', padding: '14px 0' }}>
-        {[
-          { v: seasonRank != null ? `#${fmt(seasonRank)}` : '–', l: 'Peringkat musim' },
-          { v: String(level), l: 'Tingkat' },
-          { v: fmtC(pts), l: 'XP' },
-        ].map((x, i) => (
-          <div key={x.l} style={{ flex: 1, textAlign: 'center', borderLeft: i ? '1px solid rgba(255,255,255,.08)' : 'none', margin: '2px 0', minWidth: 0 }}>
-            <div style={{ fontSize: 25, fontWeight: 800, letterSpacing: -1.2, lineHeight: 1.2 }}>{x.v}</div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: MUTED, letterSpacing: -0.4, whiteSpace: 'nowrap', padding: '0 4px' }}>{x.l}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Kartu musim */}
-      <div style={{ margin: '32px 16px 0', background: CARD, borderRadius: 22, padding: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ flex: '0 0 62px', display: 'flex', justifyContent: 'center', opacity: nextReward && !rewardReady ? 0.6 : 1 }}>
-            {nextReward
-              ? <AvatarWithBorder src={photoURL} size={46} borderKey={nextReward.key} />
-              : <TierIcon k={lvTier.key} size={46} />}
-          </div>
+      {/* Hadiah Border level: hanya muncul kalau sudah bisa diambil */}
+      {rewardReady && nextReward && (
+        <div style={{ margin: '14px 16px 0', background: CARD, borderRadius: 18, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <AvatarWithBorder src={photoURL} size={40} borderKey={nextReward.key} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 14, fontWeight: 800, color: MUTED, letterSpacing: -0.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textTransform: 'uppercase' }}>
-              Level {nfLv(level)} · {lvTier.name}
-            </div>
-            <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: -0.7, lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {nextReward ? `Hadiah: ${BORDER_CATALOG[nextReward.key]?.nama || 'Border'}` : 'Semua hadiah Border diambil'}
-            </div>
-            {nextReward && !rewardReady && (
-              <div style={{ fontSize: 13, fontWeight: 700, color: MUTED, marginTop: 1 }}>{nfLv(nextReward.lv - level)} level lagi (Lv. {nfLv(nextReward.lv)})</div>
-            )}
+            <div style={{ fontSize: 13, fontWeight: 800, color: MUTED, textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Level {nfLv(nextReward.lv)} · Hadiah siap</div>
+            <div style={{ fontSize: 17, fontWeight: 800, letterSpacing: -0.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{BORDER_CATALOG[nextReward.key]?.nama || 'Border'}</div>
           </div>
-          {rewardReady && nextReward && (
-            <button onClick={() => handleClaimReward(nextReward.key, nextReward.lv)} style={{ background: GOLD, color: '#2E2615', border: 0, borderRadius: 99, padding: '0 18px', height: 38, fontSize: 16, fontWeight: 800, letterSpacing: -0.4, flexShrink: 0, cursor: 'pointer', fontFamily: 'inherit' }}>Ambil</button>
-          )}
+          <button onClick={() => handleClaimReward(nextReward.key, nextReward.lv)} style={{ background: GOLD, color: '#2E2615', border: 0, borderRadius: 99, padding: '0 18px', height: 38, fontSize: 16, fontWeight: 800, letterSpacing: -0.4, flexShrink: 0, cursor: 'pointer', fontFamily: 'inherit' }}>Ambil</button>
         </div>
-        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-          <MiniStat icon={<BookOpen size={16} color={ICON} />} label="Chapter" value={chapters} target={TARGETS.chapter} />
-          <MiniStat icon={<Flame size={16} color={ICON} />} label="Streak" value={streak} target={TARGETS.streak} unit="hari" />
-          <MiniStat icon={<Moon size={16} color={ICON} />} label="Malam" value={night} target={TARGETS.night} />
-        </div>
-      </div>
+      )}
 
       {/* Premium */}
       {!isPremium && (
