@@ -10,7 +10,8 @@ function Ingot({ top, front, hi, spark }: { top: string; front: string; hi: stri
   );
 }
 
-export default function TierIcon({ k, size = 14 }: { k: string; size?: number }) {
+export default function TierIcon({ k, size = 14, fancy }: { k: string; size?: number; fancy?: boolean }) {
+  const rich = fancy ?? size >= 20; // ikon besar (lingkaran): ada bayangan lantai + kerlip
   let g: React.ReactNode = null;
   switch (k) {
     case 'stone': g = (<><path d="M6.5 17.5L4.8 11l4-5.2 6.2.9 3.6 5-2.4 5z" fill="#2a2c32" stroke="#6a6f7c" strokeWidth="1.1" strokeLinejoin="round" /><path d="M8.8 5.8l2.6 5.2 6.2 1.1M11.4 11l-1.2 6.2" stroke="#4a4e59" strokeWidth=".9" fill="none" /></>); break;
@@ -31,5 +32,12 @@ export default function TierIcon({ k, size = 14 }: { k: string; size?: number })
     case 'admin': g = <path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z" fill="#f6d869" stroke="#b8902a" strokeWidth="1" strokeLinejoin="round" />; break;
     default: g = <circle cx="12" cy="12" r="6" fill="#888" />;
   }
-  return <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden style={{ flex: `0 0 ${size}px`, display: 'block' }}>{g}</svg>;
+  const noSpark = ['gold', 'mythic', 'divine', 'admin', 'infinity', 'cosmic'].includes(k);
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden style={{ flex: `0 0 ${size}px`, display: 'block', overflow: 'visible' }}>
+      {rich && <ellipse cx="12" cy="21.6" rx="6.4" ry="1.5" fill="#000" opacity=".38" />}
+      {g}
+      {rich && !noSpark && <path d="M19.6 2.6l.55 1.6 1.6.55-1.6.55-.55 1.6-.55-1.6-1.6-.55 1.6-.55z" fill="#fff" opacity=".92" />}
+    </svg>
+  );
 }

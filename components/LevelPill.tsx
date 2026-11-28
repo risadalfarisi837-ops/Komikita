@@ -20,7 +20,7 @@ export function TierPill({ tier, text, fontSize = '12px', iconSize = 13, style, 
   const twinkle = !!shine && idx >= 10;
   const vars = { '--d': `${delay}s` } as CSSProperties;
   return (
-    <span className={sweep ? 'tier-shine' : undefined} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 9px 2px 6px', borderRadius: 99, background: tier.pill, border: tier.border, color: tier.text, fontSize, fontWeight: 700, whiteSpace: 'nowrap', lineHeight: 1.25, boxShadow: 'inset 0 1px 0 rgba(255,255,255,.16)', ...vars, ...style }}>
+    <span className={sweep ? 'tier-shine' : undefined} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 10px 3px 6px', borderRadius: 99, background: tier.pill, border: tier.border, color: tier.text, fontSize, fontWeight: 800, whiteSpace: 'nowrap', lineHeight: 1.25, fontFamily: 'var(--font-montserrat), var(--font-jakarta), sans-serif', ...vars, ...style }}>
       <TierIcon k={tier.key} size={iconSize} />{text}
       {twinkle && (<>
         <i className="tier-spark" style={{ left: '14%', top: '8%', ...({ '--d': `${delay}s` } as CSSProperties) }} />
@@ -55,17 +55,17 @@ function Sheet({ level, onClose }: { level: number; onClose: () => void }) {
     <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
       <style>{`@keyframes lvUp{from{transform:translate3d(0,100%,0)}to{transform:none}}@keyframes lvFade{from{opacity:0}to{opacity:1}}`}</style>
       <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.6)', animation: 'lvFade .2s ease both' }} />
-      <div role="dialog" aria-label="Semua tier level" style={{ position: 'relative', width: 'min(100%, 448px)', margin: '0 auto', height: '92vh', background: '#17181B', borderRadius: '26px 26px 0 0', overflowY: 'auto', overscrollBehavior: 'contain', padding: '0 18px calc(24px + env(safe-area-inset-bottom, 0px))', animation: 'lvUp .32s cubic-bezier(.2,.9,.25,1) both', color: '#fff' }}>
+      <div role="dialog" aria-label="Semua tier level" style={{ position: 'relative', width: 'min(100%, 448px)', margin: '0 auto', height: '92vh', background: '#17181B', borderRadius: '26px 26px 0 0', overflowY: 'auto', overscrollBehavior: 'contain', padding: '0 18px calc(24px + env(safe-area-inset-bottom, 0px))', animation: 'lvUp .32s cubic-bezier(.2,.9,.25,1) both', color: '#fff', fontFamily: 'var(--font-montserrat), var(--font-jakarta), sans-serif' }}>
         <div onClick={onClose} style={{ position: 'sticky', top: 0, height: 22, display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#17181B', zIndex: 2, cursor: 'pointer' }}>
           <span style={{ width: 40, height: 4, borderRadius: 2, background: 'rgba(255,255,255,.28)' }} />
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 6 }}>
-          <span className="lv-pop" style={{ width: 66, height: 66, borderRadius: '50%', background: t.circle, border: `2px solid ${t.ring}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 66px' }}>
-            <TierIcon k={t.key} size={38} />
+          <span className="lv-pop" style={{ width: 56, height: 56, borderRadius: '50%', background: `radial-gradient(circle at 50% 35%, ${t.ring}66, ${t.circle} 70%)`, border: `1.5px solid ${t.ring}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 56px' }}>
+            <TierIcon k={t.key} size={34} />
           </span>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: -0.8, lineHeight: 1.1 }}>Level {nf(level)}</div>
+            <div style={{ fontSize: 27, fontWeight: 800, letterSpacing: -0.6, lineHeight: 1.1 }}>Level {nf(level)}</div>
             <div style={{ fontSize: 13.5, fontWeight: 800, letterSpacing: 0.8, color: t.nameColor, marginTop: 4 }}>{t.name.toUpperCase()}</div>
           </div>
         </div>
@@ -81,22 +81,22 @@ function Sheet({ level, onClose }: { level: number; onClose: () => void }) {
         <div style={{ fontSize: 21, fontWeight: 800, letterSpacing: -0.5, marginTop: 26 }}>Semua Tier Level</div>
         <div style={{ fontSize: 13.5, fontWeight: 500, color: '#9A9AA5', marginTop: 3 }}>Naik level dengan menonton anime</div>
 
-        <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
           {rows.map((r) => {
             const i = TIERS.indexOf(r);
             const isAdmin = r.key === 'admin';
             const cur = !isAdmin && i === idx;
             const done = !isAdmin && i < idx;
             return (
-              <div key={r.key} className={cur ? 'lv-row lv-cur' : 'lv-row'} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 10px', borderRadius: 16, background: cur ? 'rgba(246,216,105,.14)' : 'transparent', animationDelay: `${140 + (isAdmin ? TIERS.length : i) * 40}ms` }}>
-                <span style={{ width: 48, height: 48, borderRadius: '50%', background: r.circle, border: `1.5px solid ${r.ring}88`, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 48px' }}>
-                  <TierIcon k={r.key} size={26} />
+              <div key={r.key} className={cur ? 'lv-row lv-cur' : 'lv-row'} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '7px 10px', borderRadius: 14, background: cur ? 'rgba(246,216,105,.14)' : 'transparent', animationDelay: `${140 + (isAdmin ? TIERS.length : i) * 40}ms` }}>
+                <span style={{ width: 42, height: 42, borderRadius: '50%', background: r.circle, border: `1.5px solid ${r.ring}99`, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 42px' }}>
+                  <TierIcon k={r.key} size={24} />
                 </span>
-                <div style={{ flex: '1 0 auto', display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'flex-start' }}>
-                  <span style={{ fontSize: 16, fontWeight: 700, color: r.nameColor, letterSpacing: -0.2 }}>{r.name}</span>
+                <div style={{ flex: '1 0 auto', display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
+                  <span style={{ fontSize: 15.5, fontWeight: 700, color: r.nameColor, letterSpacing: -0.1 }}>{r.name}</span>
                   <TierPill tier={r} text={rangeText(r)} fontSize="12px" iconSize={13} shine delay={((isAdmin ? TIERS.length : i) % 6) * 0.45} />
                 </div>
-                <span style={{ flex: '0 1 auto', minWidth: 0, textAlign: 'right', fontSize: 12.5, lineHeight: 1.25, fontWeight: 700, color: cur ? '#F6D869' : '#8E8E99' }}>
+                <span style={{ flex: '0 1 auto', minWidth: 0, textAlign: 'right', fontSize: 12.5, lineHeight: 1.25, fontWeight: 700, color: cur ? '#F6D869' : '#8E8E99', fontFamily: 'inherit' }}>
                   {isAdmin ? 'Khusus Admin' : cur ? 'Sekarang' : done ? '✓ Tercapai' : (<><span style={{ whiteSpace: 'nowrap' }}>{nf(r.min - level)}</span>{' '}<span style={{ whiteSpace: 'nowrap' }}>level lagi</span></>)}
                 </span>
               </div>
