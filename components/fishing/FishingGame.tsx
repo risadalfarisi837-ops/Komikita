@@ -300,7 +300,7 @@ async function makeShareCard(item: BagItem, player: string, level: number): Prom
 }
 
 // >>> kartu-tangkapan (helper)
-const RARITY_EN: Record<keyof typeof RARITY, string> = { mythic: 'Mythic', common: 'COMMON', uncommon: 'UNCOMMON', rare: 'RARE', epic: 'EPIC', legendary: 'LEGENDARY' };
+const RARITY_EN: Record<keyof typeof RARITY, string> = { mythic: 'Mythic', common: 'COMMON', uncommon: 'UNCOMMON', rare: 'RARE', epic: 'EPIC', legendary: 'LEGENDARY', divine: 'DIVINE', secret: 'SECRET' };
 const LEN_FACTOR: Record<string, number> = { long: 5, oval: 4, round: 2.8, flat: 6, big: 4.2, shark: 6 };
 // panjang perkiraan (cm) dari berat & bentuk ikan
 function fishLengthCm(shape: string, kg: number): number {
@@ -495,7 +495,7 @@ export default function FishingGame(props: Props) {
         if (autoRef.current) {
           // auto fishing: tanpa popup (engine menutup hasil sendiri), cukup catat statistik & kabari yang penting
           const sp = c.species;
-          const ridx = ['common', 'uncommon', 'rare', 'epic', 'legendary'].indexOf(sp.rarity);
+          const ridx = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'divine', 'secret'].indexOf(sp.rarity);
           const rank = ridx * 100000 + Math.min(99999, c.weight);
           setDstats((d) => ({
             ...d, catches: d.catches + 1, xp: d.xp + gain, rare: d.rare + (ridx >= 2 ? 1 : 0), last: Date.now(),
@@ -503,7 +503,7 @@ export default function FishingGame(props: Props) {
             ...(rank > d.bestRank ? { best: sp.name + ' ' + formatWeight(c.weight), bestRank: rank } : {}),
           }));
           if (after > before) say('Level naik ke ' + after + '!');
-          else if (ridx >= 3) say((ridx === 4 ? '🌟 ' : '✨ ') + sp.name + ' ' + formatWeight(c.weight));
+          else if (ridx >= 3) say((ridx === 6 ? '🔮 SECRET! ' : ridx === 5 ? '🌠 DIVINE! ' : ridx === 4 ? '🌟 ' : '✨ ') + sp.name + ' ' + formatWeight(c.weight));
         } else {
           setPopup({ item, gain, up: after > before ? after : 0, record });
         }
@@ -626,6 +626,7 @@ export default function FishingGame(props: Props) {
     engineRef.current?.setLevel(lv.level);
     engineRef.current?.setLuck(rod.luck);
     engineRef.current?.setEase(rodEase(rod.power));
+    engineRef.current?.setRodPower(rod.power);
     engineRef.current?.setBagFull(bag.length >= BAG_MAX);
     engineRef.current?.setProfile({ name: name || 'Tamu', title: titleOf(lv.level, outfit.ttl), level: lv.level, rodName: rod.name, rodId: rod.id, outfit });
   }, [lv.level, bag.length, rod.luck, rod.power, rod.name, rod.id, name, outfit]);
@@ -1132,8 +1133,8 @@ export default function FishingGame(props: Props) {
         const stroke = `-1px 0 ${INK}, 1px 0 ${INK}, 0 -1px ${INK}, 0 1px ${INK}, 1px 1px 0 ${INK}, -1px -1px 0 ${INK}, 1px -1px 0 ${INK}, -1px 1px 0 ${INK}`;
         const SLOT_BG = '#68758f';
         const SLOT_EDGE = '#c3c7d1';
-        const bc = (r: keyof typeof RARITY) => (r === 'common' ? SLOT_EDGE : r === 'uncommon' ? '#4fc261' : r === 'rare' ? '#4aa3ff' : r === 'epic' ? '#b48cff' : '#f5c451');
-        const nc = (r: keyof typeof RARITY) => (r === 'common' ? '#fff' : r === 'uncommon' ? '#a4f0a4' : r === 'rare' ? '#9ad0ff' : r === 'epic' ? '#d6bfff' : '#ffd96a');
+        const bc = (r: keyof typeof RARITY) => (r === 'common' ? SLOT_EDGE : r === 'uncommon' ? '#4fc261' : r === 'rare' ? '#4aa3ff' : r === 'epic' ? '#b48cff' : r === 'divine' ? '#7df9ff' : r === 'secret' ? '#e879f9' : '#f5c451');
+        const nc = (r: keyof typeof RARITY) => (r === 'common' ? '#fff' : r === 'uncommon' ? '#a4f0a4' : r === 'rare' ? '#9ad0ff' : r === 'epic' ? '#d6bfff' : r === 'divine' ? '#b8fbff' : r === 'secret' ? '#f5c6ff' : '#ffd96a');
         const cb = (extra: CSSProperties = {}): CSSProperties => ({ border: `${px(2)}px solid ${CREAM_EDGE}`, borderRadius: px(13), background: CREAM_BG, color: '#6b4a2a', fontFamily: HUD, fontWeight: 700, fontSize: px(13), height: px(34), padding: `0 ${px(14)}px`, cursor: 'pointer', boxShadow: '0 3px 0 #d9c08a', display: 'inline-flex', alignItems: 'center', gap: px(4), boxSizing: 'border-box', whiteSpace: 'nowrap', ...extra });
         const cell = (b: BagItem, onClick: () => void) => {
           const sp = SPECIES_BY_ID[b.s];
@@ -1143,7 +1144,7 @@ export default function FishingGame(props: Props) {
             : sp.name;
           return (
             <div key={b.id} style={{ position: 'relative', width: '100%', paddingTop: '100%' }}>
-            <button onClick={onClick} style={{ position: 'absolute', inset: 0, borderRadius: px(14), background: SLOT_BG, border: `${px(3)}px solid ${bc(sp.rarity)}`, boxSizing: 'border-box', padding: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', overflow: 'hidden', boxShadow: sp.rarity === 'legendary' ? '0 0 0 2px rgba(245,196,81,0.35)' : 'none' }}>
+            <button onClick={onClick} style={{ position: 'absolute', inset: 0, borderRadius: px(14), background: SLOT_BG, border: `${px(3)}px solid ${bc(sp.rarity)}`, boxSizing: 'border-box', padding: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', overflow: 'hidden', boxShadow: sp.rarity === 'legendary' ? '0 0 0 2px rgba(245,196,81,0.35)' : sp.rarity === 'divine' ? '0 0 0 2px rgba(125,249,255,0.55)' : sp.rarity === 'secret' ? '0 0 0 2px rgba(232,121,249,0.6)' : 'none' }}>
               <span style={{ fontSize: px(9.5), fontWeight: 700, color: nc(sp.rarity), marginTop: px(2), textShadow: stroke, lineHeight: 1.02, maxWidth: '96%', textAlign: 'center', fontFamily: HUD, zIndex: 1 }}>{nameEl}</span>
               <span style={{ position: 'absolute', left: 0, right: 0, top: '50%', transform: 'translateY(-38%)', display: 'flex', justifyContent: 'center' }}><FishIcon id={sp.id} scale={0.95 * u} /></span>
               <span style={{ fontSize: px(13), fontWeight: 700, color: '#fff', marginBottom: px(1), textShadow: stroke, fontFamily: HUD, lineHeight: 1.1, zIndex: 1 }}>{wl(b.w)}</span>

@@ -25,8 +25,8 @@ interface Props {
   renderFish: (id: string, scale: number) => ReactNode;
 }
 
-const RAR_BORDER: Record<Rar, string> = { common: '#9aa3ad', uncommon: '#4fc261', rare: '#4aa3ff', epic: '#b48cff', legendary: '#f5c451', mythic: '#ff5d7a' };
-const RAR_NAME: Record<Rar, string> = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', epic: 'Epic', legendary: 'Legendary', mythic: 'Mythic' };
+const RAR_BORDER: Record<Rar, string> = { common: '#9aa3ad', uncommon: '#4fc261', rare: '#4aa3ff', epic: '#b48cff', legendary: '#f5c451', mythic: '#ff5d7a', divine: '#7df9ff', secret: '#e879f9' };
+const RAR_NAME: Record<Rar, string> = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', epic: 'Epic', legendary: 'Legendary', mythic: 'Mythic', divine: 'Divine', secret: 'Secret' };
 
 export default function SellFish({ px, font, bag, money, crystal, onSell, onClose, onOpenShop, renderFish }: Props) {
   const [tab, setTab] = useState<Tab>('semua');

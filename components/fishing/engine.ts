@@ -122,6 +122,8 @@ export class FishingEngine {
   // 0..1 dari kekuatan joran: makin bagus joran, makin lebar zona hijau & makin lambat ikan melawan
   private ease = 0;
   setEase(n: number) { this.ease = Math.min(1, Math.max(0, n)); }
+  private rodPower = 0; // kekuatan joran: Divine & Secret hanya keluar kalau >= DIVINE_MIN_POWER
+  setRodPower(n: number) { this.rodPower = n; }
   setBagFull(b: boolean) { this.bagFull = b; }
   private pal: Pal = PAL_PLAYER; // gaya karakter sendiri (dari Lemari)
   setProfile(p: Profile) { this.profile = p; this.pal = p.outfit ? palFromOutfit(p.outfit) : PAL_PLAYER; }
@@ -628,7 +630,7 @@ export class FishingEngine {
       this.waitT -= dt;
       if (Math.random() < dt * 0.7) this.ripples.push({ x: this.target.wx + (Math.random() - 0.5) * 6, y: this.target.wy + (Math.random() - 0.5) * 3, t: 0.55 });
       if (this.waitT <= 0) {
-        let rolled = this.castInShoal && this.castKind === 'raksasa' && Math.random() < Math.min(0.7, 0.25 + (this.luck + this.tierLuck()) * 0.4 + this.level / 250) ? rollGiant() : this.castInShoal && this.castKind === 'hiu' && Math.random() < Math.min(0.8, 0.15 + (this.luck + this.tierLuck()) * 0.5 + this.level / 200) ? rollShark() : rollFish(this.level, (this.luck + this.tierLuck()) + (this.castInShoal ? 2 : 0));
+        let rolled = this.castInShoal && this.castKind === 'raksasa' && Math.random() < Math.min(0.7, 0.25 + (this.luck + this.tierLuck()) * 0.4 + this.level / 250) ? rollGiant() : this.castInShoal && this.castKind === 'hiu' && Math.random() < Math.min(0.8, 0.15 + (this.luck + this.tierLuck()) * 0.5 + this.level / 200) ? rollShark() : rollFish(this.level, (this.luck + this.tierLuck()) + (this.castInShoal ? 2 : 0), Math.random, this.rodPower);
         if (this.forceRarity) rolled = this.rollForced(this.forceRarity);
         if (this.forceSize) rolled = withSize(rolled, this.forceSize);
         this.fish = rolled;
@@ -1211,6 +1213,8 @@ export class FishingEngine {
         epic: 'Jorannmu bisa patah!',
         legendary: 'Aku bukan ikan biasa!',
         mythic: 'Semua yang mencoba pulang kosong.',
+        divine: 'Cahayaku bukan untuk sembarang pemancing.',
+        secret: 'Tak ada yang pernah menarikku sampai ke darat.',
       };
       const text = lines[sp.rarity] || lines.common;
       const fs = 11;

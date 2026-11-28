@@ -53,7 +53,7 @@ const FX_LABEL: Record<string, string> = {
   sisik: 'Sisik naga & api',
   tentakel: 'Tentakel bercahaya',
 };
-const RARITY_GLOW: Record<Rarity, number> = { common: 0, uncommon: 0, rare: 1, epic: 2, legendary: 3, mythic: 4 };
+const RARITY_GLOW: Record<Rarity, number> = { common: 0, uncommon: 0, rare: 1, epic: 2, legendary: 3, mythic: 4, divine: 4, secret: 4 };
 
 const rays = (a: string, b: string) => `repeating-conic-gradient(from 0deg at 50% 50%, ${a} 0 8deg, ${b} 8deg 16deg)`;
 

@@ -1,6 +1,6 @@
 // Data & aturan game Mancing (murni logika, tanpa tampilan).
 
-export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'mythic';
+export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'mythic' | 'divine' | 'secret';
 export type Shape = 'oval' | 'round' | 'long' | 'flat' | 'big' | 'shark';
 export type Pattern = 'none' | 'stripes' | 'spots' | 'band';
 
@@ -11,7 +11,14 @@ export const RARITY: Record<Rarity, { label: string; color: string; weight: numb
   epic: { label: 'Epik', color: '#c4b5fd', weight: 6, xp: 80, diff: 1.75 },
   legendary: { label: 'Legendary', color: '#fcd34d', weight: 2, xp: 220, diff: 2.05 },
   mythic: { label: 'Mythic', color: '#ff5d7a', weight: 0, xp: 400, diff: 2.4 },
+  // Divine & Secret: hanya bisa didapat dengan joran power >= DIVINE_MIN_POWER (lihat rollFish). weight = peluang dasar (tampilan "1 dari N").
+  divine: { label: 'Divine', color: '#7df9ff', weight: 0.35, xp: 900, diff: 2.7 },
+  secret: { label: 'Secret', color: '#e879f9', weight: 0.02, xp: 2200, diff: 3.3 },
 };
+
+// Syarat joran (kekuatan tarik / power) untuk bisa mendapat ikan Divine dan Secret. 7 = Joran Bulan Purnama ke atas.
+export const DIVINE_MIN_POWER = 7;
+export const isTopFish = (r: Rarity): boolean => r === 'divine' || r === 'secret';
 
 export interface Species {
   id: string;
@@ -74,6 +81,13 @@ export const SPECIES: Species[] = [
   { id: 'pausbiru', name: 'Paus Biru Samudra', rarity: 'legendary', min: 40000, max: 100000, price: 16000, shape: 'big', body: '#3f6fa6', belly: '#cfe3f5', fin: '#2c4f7c', pattern: 'none', accent: '#9fd0ff', glow: true, eventOnly: true, giant: true, gs: 5.2 },
   { id: 'hiuputih', name: 'Hiu Putih Raksasa', rarity: 'legendary', min: 80000, max: 160000, price: 26000, shape: 'shark', body: '#9fb0c2', belly: '#ffffff', fin: '#6f8196', pattern: 'none', accent: '#6f8196', glow: true, eventOnly: true, giant: true, gs: 7 },
   { id: 'leviathan', name: 'Leviathan Pulau', rarity: 'legendary', min: 150000, max: 400000, price: 40000, shape: 'big', body: '#1f6f8b', belly: '#bfeaf5', fin: '#134a63', pattern: 'spots', accent: '#7df9ff', glow: true, eventOnly: true, giant: true },
+  // ---- Divine (butuh joran power 7+) ----
+  { id: 'malaikat', name: 'Ikan Malaikat Cahaya', rarity: 'divine', min: 8, max: 40, price: 6500, shape: 'round', body: '#fff3b8', belly: '#ffffff', fin: '#ffe27a', pattern: 'band', accent: '#fffbe0', glow: true },
+  { id: 'arwanadewa', name: 'Arwana Dewa Fajar', rarity: 'divine', min: 25, max: 110, price: 8800, shape: 'long', body: '#ffd96a', belly: '#fffbe6', fin: '#ff9a3d', pattern: 'spots', accent: '#ffffff', glow: true },
+  { id: 'pariilahi', name: 'Pari Manta Ilahi', rarity: 'divine', min: 80, max: 260, price: 11500, shape: 'flat', body: '#9fe3ff', belly: '#f4fdff', fin: '#5fb8ec', pattern: 'spots', accent: '#ffffff', glow: true },
+  // ---- Secret (butuh joran power 7+, sangat langka & susah ditarik) ----
+  { id: 'bayangan', name: 'Ikan Bayangan Hampa', rarity: 'secret', min: 6, max: 34, price: 32000, shape: 'long', body: '#150f24', belly: '#3b2a5c', fin: '#7c3aed', pattern: 'band', accent: '#f0abfc', glow: true },
+  { id: 'nagasegel', name: 'Naga Segel Terlarang', rarity: 'secret', min: 220, max: 900, price: 62000, shape: 'big', body: '#1b0f2b', belly: '#4a2a73', fin: '#d946ef', pattern: 'spots', accent: '#f5d0fe', glow: true },
 ];
 
 export const SPECIES_BY_ID: Record<string, Species> = Object.fromEntries(SPECIES.map((s) => [s.id, s]));
@@ -143,7 +157,7 @@ export function rollGiant(rnd: () => number = Math.random): { species: Species; 
   const raw = species.min + (species.max - species.min) * Math.pow(rnd(), 1.2);
   return { species, weight: Math.round(raw * 100) / 100 };
 }
-export function rollFish(level: number, luck: number = 0, rnd: () => number = Math.random): { species: Species; weight: number } {
+export function rollFish(level: number, luck: number = 0, rnd: () => number = Math.random, rodPower: number = 0): { species: Species; weight: number } {
   const b = Math.min(Math.max(level, 1), MAX_LEVEL) / MAX_LEVEL; // 0..1
   const lk = Math.max(0, Math.min(3, luck)); // bonus joran (+ event Gerombolan Ikan sampai +2)
   const w: Record<Rarity, number> = {
@@ -153,8 +167,11 @@ export function rollFish(level: number, luck: number = 0, rnd: () => number = Ma
     epic: RARITY.epic.weight + 8 * b + 6 * lk,
     legendary: RARITY.legendary.weight + 4 * b + 3 * lk,
     mythic: 0,
+    // Divine & Secret: hanya kalau joran power >= DIVINE_MIN_POWER. Secret jauh lebih langka daripada Divine.
+    divine: rodPower >= DIVINE_MIN_POWER ? RARITY.divine.weight + 0.4 * lk : 0,
+    secret: rodPower >= DIVINE_MIN_POWER ? RARITY.secret.weight + 0.015 * lk : 0,
   };
-  const order: Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
+  const order: Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'divine', 'secret'];
   const total = order.reduce((a, r) => a + w[r], 0);
   let roll = rnd() * total;
   let rarity: Rarity = 'common';
@@ -212,7 +229,7 @@ export function isXL(s: Species, weight: number): boolean {
 }
 // Layak dipamerkan: XL, atau ikan Epik/Legendary
 export function isShowoff(s: Species, weight: number): boolean {
-  return isXL(s, weight) || s.rarity === 'epic' || s.rarity === 'legendary';
+  return isXL(s, weight) || s.rarity === 'epic' || s.rarity === 'legendary' || isTopFish(s.rarity);
 }
 
 export function formatWeight(kg: number): string {
@@ -304,7 +321,7 @@ export const GACHA_DUPLICATE_REFUND = Math.round(GACHA_PRICE * 0.5);
 export const GACHA_PITY = 22; // joran Epic atau lebih tinggi dijamin dalam 22 peti
 const TOP_RARITY: Rarity[] = ['epic', 'legendary', 'mythic'];
 // Peluang per rarity (persen, jumlah = 100), dibagi rata ke joran di rarity itu
-const GACHA_RARITY_PCT: Record<Rarity, number> = { common: 36, uncommon: 28, rare: 20, epic: 11, legendary: 4.9, mythic: 0.1 };
+const GACHA_RARITY_PCT: Record<Rarity, number> = { common: 36, uncommon: 28, rare: 20, epic: 11, legendary: 4.9, mythic: 0.1, divine: 0, secret: 0 };
 export const GACHA_RODS: Rod[] = RODS.filter((r) => r.id !== DEFAULT_ROD);
 
 // Peluang tiap joran gacha dalam persen (jumlah = 100)
@@ -315,7 +332,7 @@ export const GACHA_ODDS: Record<string, number> = (() => {
 })();
 
 // minRarity hanya dipakai Dev Tools (gacha wangi): hanya joran dengan rarity itu atau lebih tinggi yang bisa keluar.
-const RARITY_RANK: Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'];
+const RARITY_RANK: Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic', 'divine', 'secret'];
 export function rollGacha(rnd: () => number = Math.random, pity = 0, minRarity: Rarity | '' = ''): Rod {
   let pool = pity >= GACHA_PITY - 1 ? GACHA_RODS.filter((r) => TOP_RARITY.includes(r.rarity)) : GACHA_RODS;
   if (minRarity) {
