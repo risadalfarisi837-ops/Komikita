@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
-import { useGameFrame } from '@/components/GameMode';
+import { GAME_BACK_EVENT, markLeavingGame, useGameFrame } from '@/components/GameMode';
 import { getFirebase } from '@/lib/firebase-client';
 import { ISLAND_CAP, cleanCode, newIslandCode, pickQuickRoom, readIslands, sortIslands, watchIslands } from '@/lib/fishingIslands';
 import type { IslandInfo, IslandTheme } from '@/lib/fishingIslands';
@@ -199,6 +199,12 @@ function Blue({ children, onClick, disabled, style, light }: { children: ReactNo
 
 export default function FishLobby({ name, onPlay }: Props) {
   const { ready, style: frameStyle } = useGameFrame();
+  // back saat layar penuh: browser hanya menutup layar penuh, jadi event ini yang langsung membawa keluar dari lobi
+  useEffect(() => {
+    const onBack = () => { markLeavingGame(); window.history.back(); };
+    window.addEventListener(GAME_BACK_EVENT, onBack);
+    return () => window.removeEventListener(GAME_BACK_EVENT, onBack);
+  }, []);
   const frameRef = useRef<HTMLDivElement>(null);
   const [u, setU] = useState(1);
   const [islands, setIslands] = useState<IslandInfo[]>([]);

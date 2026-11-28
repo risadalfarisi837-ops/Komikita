@@ -59,10 +59,16 @@ export function cancelLeavingGame() { leaving = false; }
 // game mendengarkan event ini dan langsung menampilkan "Yakin keluar?".
 export const GAME_BACK_EVENT = 'game-back-request';
 
-async function lockLandscape(): Promise<boolean> {
+// satu kunci orientasi pada satu waktu: panggilan ganda (kartu menu + GameMode) saling membatalkan → layar berkedip/masuk dua kali
+let lockBusy: Promise<boolean> | null = null;
+function lockLandscape(): Promise<boolean> {
+  if (lockBusy) return lockBusy;
   const o = getOrient();
-  if (!o?.lock) return false;
-  try { await o.lock('landscape'); return true; } catch { return false; }
+  if (!o?.lock) return Promise.resolve(false);
+  lockBusy = (async () => {
+    try { await o.lock!('landscape'); return true; } catch { return false; }
+  })().finally(() => { lockBusy = null; });
+  return lockBusy;
 }
 
 async function enterGameMode(): Promise<boolean> {
@@ -80,12 +86,17 @@ function isImmersiveApp() {
 // Layar penuh sungguhan: bar status (jam, sinyal, baterai) dan bar navigasi bawah disembunyikan, lalu kunci landscape.
 // Android hanya menerima ini dari sentuhan pemain. Chrome menampilkan pesan sistem sebentar saat masuk layar penuh.
 // Hanya di layar sentuh: di komputer tidak perlu.
-async function enterFullscreenLandscape() {
-  if (!isTouchDevice()) return;
-  if (!document.fullscreenElement && !isImmersiveApp()) {
-    try { await document.documentElement.requestFullscreen({ navigationUI: 'hide' }); } catch { /* butuh sentuhan pemain */ }
-  }
-  await lockLandscape();
+let fsBusy: Promise<void> | null = null;
+function enterFullscreenLandscape(): Promise<void> {
+  if (!isTouchDevice()) return Promise.resolve();
+  if (fsBusy) return fsBusy; // permintaan layar penuh yang sedang berjalan dipakai bersama (tidak dobel)
+  fsBusy = (async () => {
+    if (!document.fullscreenElement && !isImmersiveApp()) {
+      try { await document.documentElement.requestFullscreen({ navigationUI: 'hide' }); } catch { /* butuh sentuhan pemain */ }
+    }
+    await lockLandscape();
+  })().finally(() => { fsBusy = null; });
+  return fsBusy;
 }
 
 // dipanggil dari sentuhan pemain di menu (mis. kartu "Mancing"): layar penuh + landscape sudah aktif saat game terbuka

@@ -413,10 +413,12 @@ export default function FishingGame(props: Props) {
   const exitOkRef = useRef(false);
   // tombol back HP / browser: tampilkan "Yakin keluar?" dulu (history ditahan satu langkah)
   useEffect(() => {
-    history.pushState({ fishGuard: true }, '');
+    // guard hanya satu langkah: jangan ditumpuk kalau game ter-mount ulang (kalau menumpuk, keluar harus berkali-kali)
+    const hasGuard = () => !!(history.state && (history.state as { fishGuard?: boolean }).fishGuard);
+    if (!hasGuard()) history.pushState({ fishGuard: true }, '');
     const onPop = () => {
       if (exitOkRef.current) return;
-      history.pushState({ fishGuard: true }, '');
+      if (!hasGuard()) history.pushState({ fishGuard: true }, '');
       setMenuOpen(false);
       setConfirmExit(true);
     };
@@ -442,7 +444,7 @@ export default function FishingGame(props: Props) {
     setTimeout(() => {
       try { history.go(-2); } catch { /* abaikan */ }
       // kalau tidak ada halaman sebelumnya, pakai jalur keluar biasa
-      setTimeout(() => { if (location.pathname.includes('mancing')) props.onExit(); }, 600);
+      setTimeout(() => { if (location.pathname.includes('mancing')) props.onExit(); }, 1800); // beri waktu history.go selesai dulu, supaya tidak keluar dua kali
     }, 60);
   };
   const [shopTab, setShopTab] = useState<ShopTab>('toko');
@@ -896,16 +898,20 @@ export default function FishingGame(props: Props) {
   };
   const unreadChat = !chatOpen && chat.length > seenChat;
   const redDot: CSSProperties = { position: 'absolute', top: hx(-5), right: hx(-4), width: hx(14), height: hx(14), borderRadius: '50%', background: '#ff3b3b', border: `${hx(2)}px solid #fff`, boxSizing: 'border-box', pointerEvents: 'none' };
+  // safe-area (poni/kamera) ikut arah game: kalau tampilan diputar 90° (HP masih tegak), sisi-sisinya bertukar
+  const safeVars = (rot
+    ? { '--sal': 'env(safe-area-inset-top, 0px)', '--sat': 'env(safe-area-inset-right, 0px)', '--sar': 'env(safe-area-inset-bottom, 0px)', '--sab': 'env(safe-area-inset-left, 0px)' }
+    : { '--sal': 'env(safe-area-inset-left, 0px)', '--sat': 'env(safe-area-inset-top, 0px)', '--sar': 'env(safe-area-inset-right, 0px)', '--sab': 'env(safe-area-inset-bottom, 0px)' }) as CSSProperties;
   const guide = status.shoal;
   const rotate = guide ? (guide.ang * 180) / Math.PI + 90 : 0;
 
   return (
-    <div ref={wrapRef} style={{ position: 'fixed', ...(rot ? { top: 0, left: vp.w, width: vp.h, height: vp.w, transform: 'rotate(90deg)', transformOrigin: 'top left' } : { inset: 0 }), zIndex: 70, userSelect: 'none', overflow: 'hidden', background: '#2872b4', color: '#fff', touchAction: 'none', fontFamily: HUD, opacity: vp.w > 0 ? 1 : 0, transition: 'opacity .25s ease' }}>
+    <div ref={wrapRef} style={{ position: 'fixed', ...(rot ? { top: 0, left: vp.w, width: vp.h, height: vp.w, transform: 'rotate(90deg)', transformOrigin: 'top left' } : { inset: 0 }), zIndex: 70, ...safeVars, userSelect: 'none', overflow: 'hidden', background: '#2872b4', color: '#fff', touchAction: 'none', fontFamily: HUD, opacity: vp.w > 0 ? 1 : 0, transition: 'opacity .25s ease' }}>
       <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0 }} />
       {exiting && <div style={{ position: 'absolute', inset: 0, background: '#0b1a2b', zIndex: 200 }} />}
 
       {/* kiri atas: kartu pemain + pulau, lalu deretan tombol (chat, mic, headset, emoji) */}
-      <div style={{ position: 'absolute', left: `calc(env(safe-area-inset-left, 0px) + ${hx(14)}px)`, top: `calc(env(safe-area-inset-top, 0px) + ${hx(11.5)}px)`, display: fishing ? 'none' : 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: hx(7) }}>
+      <div style={{ position: 'absolute', left: `calc(var(--sal, 0px) + ${hx(14)}px)`, top: `calc(var(--sat, 0px) + ${hx(11.5)}px)`, display: fishing ? 'none' : 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: hx(7) }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: hx(7) }}>
           <div role="button" aria-label="Buka profil" onClick={() => setProfileOpen(true)} style={{ ...pillBox, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: hx(8), width: hx(186), height: hx(53), boxSizing: 'border-box', padding: `${hx(4)}px ${hx(8)}px ${hx(4)}px ${hx(5)}px`, borderRadius: hx(27) }}>
             <div style={{ width: hx(34), height: hx(34), borderRadius: '50%', overflow: 'hidden', border: `${hx(2)}px solid ${CREAM_EDGE}`, boxSizing: 'border-box', background: '#35405c', flex: '0 0 auto' }}>
@@ -960,7 +966,7 @@ export default function FishingGame(props: Props) {
         return (
           <>
             <div onClick={() => setMenu2(false)} style={{ position: 'absolute', inset: 0, zIndex: 25 }} />
-            <div style={{ position: 'absolute', zIndex: 26, right: `calc(env(safe-area-inset-right, 0px) + ${hx(68)}px)`, top: `calc(env(safe-area-inset-top, 0px) + ${hx(56)}px)`, width: `min(${hx(376)}px, calc(100% - ${hx(140)}px))`, boxSizing: 'border-box', padding: hx(8), display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: hx(6), background: CREAM_BG, border: `${hx(3)}px solid ${CREAM_EDGE}`, borderRadius: hx(20), boxShadow: `0 ${hx(4)}px 0 #d9c08a, 0 8px 22px rgba(0,0,0,0.35)` }}>
+            <div style={{ position: 'absolute', zIndex: 26, right: `calc(var(--sar, 0px) + ${hx(68)}px)`, top: `calc(var(--sat, 0px) + ${hx(56)}px)`, width: `min(${hx(376)}px, calc(100% - ${hx(140)}px))`, boxSizing: 'border-box', padding: hx(8), display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: hx(6), background: CREAM_BG, border: `${hx(3)}px solid ${CREAM_EDGE}`, borderRadius: hx(20), boxShadow: `0 ${hx(4)}px 0 #d9c08a, 0 8px 22px rgba(0,0,0,0.35)` }}>
               {items.map((it) => (
                 <button key={it.k} onClick={() => { setMenu2(false); it.act(); }} style={{ height: hx(78), boxSizing: 'border-box', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', gap: hx(4), padding: `${hx(9)}px ${hx(2)}px 0`, borderRadius: hx(14), border: `${hx(2)}px solid ${CREAM_EDGE}`, background: '#fff8e8', boxShadow: '0 2px 0 #d9c08a', color: CREAM_INK, fontFamily: HUD, fontWeight: 800, fontSize: hx(14.5), lineHeight: 1.1, cursor: 'pointer' }}>
                   <span style={{ height: hx(34), display: 'flex', alignItems: 'center', justifyContent: 'center' }}><PixIcon k={it.icon} size={hx(34)} /></span>
@@ -974,7 +980,7 @@ export default function FishingGame(props: Props) {
 
       {/* chat: 4 pesan terakhir + tab Pulau/Global (kolom ketik muncul saat tombol chat dibuka) */}
       {!fishing && (() => {
-        const box: CSSProperties = { position: 'absolute', left: `calc(env(safe-area-inset-left, 0px) + ${hx(14)}px)`, top: `calc(env(safe-area-inset-top, 0px) + ${hx(122)}px)`, maxWidth: hx(256), boxSizing: 'border-box', background: 'transparent', padding: 0, fontSize: hx(12.8), fontWeight: 700, textShadow: '0 1px 2px rgba(0,0,0,0.7)', pointerEvents: 'auto' };
+        const box: CSSProperties = { position: 'absolute', left: `calc(var(--sal, 0px) + ${hx(14)}px)`, top: `calc(var(--sat, 0px) + ${hx(122)}px)`, maxWidth: hx(256), boxSizing: 'border-box', background: 'transparent', padding: 0, fontSize: hx(12.8), fontWeight: 700, textShadow: '0 1px 2px rgba(0,0,0,0.7)', pointerEvents: 'auto' };
         const line = (m: { who: string; msg: string; rl?: string }, i: number) => (
           <div key={i} style={{ display: 'block', width: 'fit-content', maxWidth: '100%', boxSizing: 'border-box', background: 'rgba(20,32,40,0.62)', borderRadius: hx(11), padding: `${hx(3.5)}px ${hx(10)}px`, marginBottom: hx(3), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#fff' }}><span style={{ color: '#fff', fontWeight: 800 }}><RoleName role={m.rl}>{m.who}</RoleName></span>: {m.msg}</div>
         );
@@ -996,7 +1002,7 @@ export default function FishingGame(props: Props) {
       })()}
 
       {/* kanan atas: mata uang + pengaturan; di bawahnya kartu misi/lokasi dan kolom tombol (menu, toko) */}
-      <div style={{ position: 'absolute', right: `calc(env(safe-area-inset-right, 0px) + ${hx(13.5)}px)`, top: `calc(env(safe-area-inset-top, 0px) + ${hx(12)}px)`, display: fishing ? 'none' : 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: hx(6) }}>
+      <div style={{ position: 'absolute', right: `calc(var(--sar, 0px) + ${hx(13.5)}px)`, top: `calc(var(--sat, 0px) + ${hx(12)}px)`, display: fishing ? 'none' : 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: hx(6) }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: hx(7) }}>
           <div role="button" aria-label="Top up Crystal" onClick={() => { setShopTopup('crystal'); setShopOpen(true); }} style={{ ...dockPill('#6bb6ff'), cursor: 'pointer', padding: `0 ${hx(14)}px 0 ${hx(9)}px`, gap: hx(7), marginBottom: 0, height: hx(36), borderRadius: hx(18) }}>
             <CrystalIcon size={hx(21)} />
@@ -1039,7 +1045,7 @@ export default function FishingGame(props: Props) {
 
       {/* petunjuk */}
       {(HINT[phase] || (intro && phase === 'idle')) && !fishing && !popup && !bagOpen && (
-        <div style={{ position: 'absolute', left: '50%', top: `calc(env(safe-area-inset-top, 0px) + ${hx(70)}px)`, transform: 'translateX(-50%)', maxWidth: '60%', pointerEvents: 'none', background: 'rgba(32,22,10,0.85)', border: '1px solid rgba(255,214,140,0.35)', borderRadius: hx(14), padding: `${hx(6)}px ${hx(14)}px`, fontSize: hx(14), fontWeight: 600, color: '#ffe9bf', textAlign: 'center' }}>
+        <div style={{ position: 'absolute', left: '50%', top: `calc(var(--sat, 0px) + ${hx(70)}px)`, transform: 'translateX(-50%)', maxWidth: '60%', pointerEvents: 'none', background: 'rgba(32,22,10,0.85)', border: '1px solid rgba(255,214,140,0.35)', borderRadius: hx(14), padding: `${hx(6)}px ${hx(14)}px`, fontSize: hx(14), fontWeight: 600, color: '#ffe9bf', textAlign: 'center' }}>
           {HINT[phase] || 'Hadapkan ke air, tahan Lempar. Lepas saat bar tinggi = lemparan jauh (penuh = mulai lagi)'}
         </div>
       )}
@@ -1052,7 +1058,7 @@ export default function FishingGame(props: Props) {
         onPointerMove={(e) => joyActive.current && joyMove(e)}
         onPointerUp={joyUp}
         onPointerCancel={joyUp}
-        style={{ position: 'absolute', left: `calc(env(safe-area-inset-left, 0px) + ${hx(95)}px)`, bottom: `calc(env(safe-area-inset-bottom, 0px) + ${hx(46)}px)`, width: hx(98), height: hx(98), borderRadius: '50%', background: 'rgba(255,255,255,0.2)', border: `${hx(2.5)}px solid rgba(255,255,255,0.6)`, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'none' }}
+        style={{ position: 'absolute', left: `calc(var(--sal, 0px) + ${hx(95)}px)`, bottom: `calc(var(--sab, 0px) + ${hx(46)}px)`, width: hx(98), height: hx(98), borderRadius: '50%', background: 'rgba(255,255,255,0.2)', border: `${hx(2.5)}px solid rgba(255,255,255,0.6)`, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'none' }}
       >
         <div style={{ width: hx(51), height: hx(51), borderRadius: '50%', background: 'rgba(255,255,255,0.92)', border: `${hx(2)}px solid #fff`, boxShadow: '0 2px 6px rgba(0,0,0,0.25)', boxSizing: 'border-box', transform: `translate(${knob.x}px, ${knob.y}px)` }} />
       </div>}
@@ -1068,7 +1074,7 @@ export default function FishingGame(props: Props) {
           { k: 'bite', icon: <BobberIcon size={hx(15)} />, t: '+' + Math.round(rod.power * 10) + '%', hi: false },
         ];
         return (
-          <div style={{ position: 'absolute', left: '50%', bottom: `calc(env(safe-area-inset-bottom, 0px) + ${hx(19)}px)`, transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: hx(4) }}>
+          <div style={{ position: 'absolute', left: '50%', bottom: `calc(var(--sab, 0px) + ${hx(19)}px)`, transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: hx(4) }}>
             <div style={{ display: 'flex', gap: hx(5), alignItems: 'center' }}>
               <span style={{ ...chipSt(true), minWidth: hx(34), justifyContent: 'center' }}><CloverIcon size={hx(15)} color="#1f7a35" />{rod.power}</span>
               {buffOpen && (
@@ -1114,7 +1120,7 @@ export default function FishingGame(props: Props) {
 
       {/* penghitung ikan lepas (x0): dipindah ke tengah atas supaya tidak menabrak slot umpan/joran */}
       {!fishing && (
-        <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: `calc(env(safe-area-inset-top, 0px) + ${hx(11.5)}px)`, display: 'flex', alignItems: 'center', gap: hx(5), height: hx(26), boxSizing: 'border-box', padding: `0 ${hx(12)}px 0 ${hx(8)}px`, borderRadius: 99, background: '#fbf1dc', border: `${hx(2)}px solid #d9c196`, boxShadow: '0 2px 0 rgba(120,90,40,0.45)', color: '#c2392b', fontWeight: 700, fontSize: hx(16) }}>
+        <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: `calc(var(--sat, 0px) + ${hx(11.5)}px)`, display: 'flex', alignItems: 'center', gap: hx(5), height: hx(26), boxSizing: 'border-box', padding: `0 ${hx(12)}px 0 ${hx(8)}px`, borderRadius: 99, background: '#fbf1dc', border: `${hx(2)}px solid #d9c196`, boxShadow: '0 2px 0 rgba(120,90,40,0.45)', color: '#c2392b', fontWeight: 700, fontSize: hx(16) }}>
           <CrossRodIcon size={hx(20)} />×{fails}
         </div>
       )}
@@ -1124,14 +1130,14 @@ export default function FishingGame(props: Props) {
         <button
           onClick={() => setSellOpen(true)}
           aria-label="Belanja"
-          style={{ position: 'absolute', zIndex: 20, right: `calc(env(safe-area-inset-right, 0px) + ${hx(13.5)}px)`, top: `calc(env(safe-area-inset-top, 0px) + ${hx(150)}px)`, display: 'flex', alignItems: 'center', gap: hx(6), padding: `${hx(8)}px ${hx(18)}px`, borderRadius: 99, border: `${hx(3.5)}px solid #fff`, background: 'linear-gradient(180deg,#ffb23c,#f08a24)', color: '#fff', fontFamily: HUD, fontWeight: 800, fontSize: hx(17), textShadow: '0 2px 3px rgba(120,60,0,0.55)', boxShadow: '0 4px 0 rgba(150,80,10,0.65), 0 6px 16px rgba(0,0,0,0.35)', cursor: 'pointer' }}
+          style={{ position: 'absolute', zIndex: 20, right: `calc(var(--sar, 0px) + ${hx(13.5)}px)`, top: `calc(var(--sat, 0px) + ${hx(150)}px)`, display: 'flex', alignItems: 'center', gap: hx(6), padding: `${hx(8)}px ${hx(18)}px`, borderRadius: 99, border: `${hx(3.5)}px solid #fff`, background: 'linear-gradient(180deg,#ffb23c,#f08a24)', color: '#fff', fontFamily: HUD, fontWeight: 800, fontSize: hx(17), textShadow: '0 2px 3px rgba(120,60,0,0.55)', boxShadow: '0 4px 0 rgba(150,80,10,0.65), 0 6px 16px rgba(0,0,0,0.35)', cursor: 'pointer' }}
         >
           <StoreInk size={hx(22)} />Belanja
         </button>
       )}
 
       {/* tombol aksi: Mancing + joran terpasang (⚡) + umpan (×jumlah) */}
-      <div style={{ position: 'absolute', right: `calc(env(safe-area-inset-right, 0px) + ${hx(40)}px)`, bottom: `calc(env(safe-area-inset-bottom, 0px) + ${hx(21)}px)`, width: hx(btnSz), height: hx(btnSz) }}>
+      <div style={{ position: 'absolute', right: `calc(var(--sar, 0px) + ${hx(40)}px)`, bottom: `calc(var(--sab, 0px) + ${hx(21)}px)`, width: hx(btnSz), height: hx(btnSz) }}>
         <button
           onPointerDown={(e) => { e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId); engineRef.current?.action(true); }}
           onPointerUp={() => engineRef.current?.action(false)}
