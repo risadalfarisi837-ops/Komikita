@@ -1463,7 +1463,7 @@ export function drawPlayerRaw(ctx: CanvasRenderingContext2D, x: number, y: numbe
   const pantsL=lighten(pal.pants,0.16), pantsD=darken(pal.pants,0.2);
   const bootL=lighten(pal.boot,0.25), bootD=darken(pal.boot,0.2), sole=darken(pal.boot,0.5);
   const belt='#3b2716', buckle=fx==='night'?pal.band:'#e8c15a';
-  const cuff=fx==='night'?pal.band:top;
+  const cuff=fx==='night'?pal.band:fx==='flame'?'#ff8a2a':top;
   const cape=fx==='flame'?sh:top, capeD=fx==='flame'?shD:darken(top,0.28), flameA='#ffd27a', flameB=pal.band||'#ff9b3a';
   const eye='#1d1d2b', blush='rgba(240,110,120,0.55)', mouth='#b5543f';
   const al=moving?(fr===1?1:fr===3?-1:0):0;
@@ -1487,7 +1487,7 @@ export function drawPlayerRaw(ctx: CanvasRenderingContext2D, x: number, y: numbe
       R(ctx,ox+7,oy+8,2,6,top);                    // kaus dalam di tengah (jaket terbuka)
       R(ctx,ox+7,oy+8,2,1,pal.skinD);              // leher
       R(ctx,ox+6,oy+8,1,2,shD); R(ctx,ox+9,oy+8,1,2,shD); // kerah
-      R(ctx,ox+6,oy+10,1,4,fx==='night'?pal.band:shD); R(ctx,ox+9,oy+10,1,4,fx==='night'?pal.band:shD); // tepi jaket
+      R(ctx,ox+6,oy+10,1,4,fx==='night'?'#1b5a70':shD); R(ctx,ox+9,oy+10,1,4,fx==='night'?'#1b5a70':shD); // tepi jaket
       R(ctx,ox+7,oy+11,1,1,topD); R(ctx,ox+8,oy+12,1,1,topD);
       R(ctx,ox+5,oy+11,1,2,shDD); R(ctx,ox+5,oy+11,1,1,shD);  // saku kiri
       R(ctx,ox+10,oy+11,1,2,shDD);
@@ -1497,7 +1497,7 @@ export function drawPlayerRaw(ctx: CanvasRenderingContext2D, x: number, y: numbe
       R(ctx,ox+5,oy+8,6,1,top);                    // kerah belakang
       R(ctx,ox+7,oy+9,2,5,shD);                    // jahitan punggung
       R(ctx,ox+7,oy+9,1,5,sh);
-      if(fx==='night'){ R(ctx,ox+6,oy+10,1,3,pal.band); R(ctx,ox+9,oy+10,1,3,pal.band); }
+      if(fx==='night'){ R(ctx,ox+7,oy+9,2,1,'#1fa6c4'); R(ctx,ox+7,oy+10,1,4,'#35e6ff'); R(ctx,ox+8,oy+10,1,4,'#1fa6c4'); }
     }
     // ikat pinggang
     R(ctx,ox+4,oy+14,8,1,belt);
@@ -1516,6 +1516,26 @@ export function drawPlayerRaw(ctx: CanvasRenderingContext2D, x: number, y: numbe
       R(ctx,ox+2,oy+13+al,2,1,cuff); R(ctx,ox+12,oy+13-al,2,1,cuff);
       R(ctx,ox+2,oy+14+al,2,2,pal.skin); R(ctx,ox+12,oy+14-al,2,2,pal.skin);
       R(ctx,ox+3,oy+15+al,1,1,pal.skinD); R(ctx,ox+12,oy+15-al,1,1,pal.skinD);
+    }
+    // efek baju limited (disamakan dengan gambar di spin)
+    if(fx==='night'){
+      const cy='#35e6ff', cyD='#1fa6c4', cyW='#e8ffff';
+      R(ctx,ox+5,oy+14,1,1,cyD); R(ctx,ox+10,oy+14,1,1,cyD);
+      R(ctx,ox+4,oy+15+lf,1,3,cyD); R(ctx,ox+11,oy+15+rf,1,3,cyD);          // garis cahaya di kaki
+      R(ctx,ox+4,oy+19+lf,4,1,cyD); R(ctx,ox+8,oy+19+rf,4,1,cyD);           // bibir sepatu menyala
+      if(!armsUp){ R(ctx,ox+2,oy+10+al,1,3,cyD); R(ctx,ox+13,oy+10-al,1,3,cyD); }
+      if(dir==='down'){ R(ctx,ox+7,oy+10,2,2,cy); R(ctx,ox+7,oy+10,1,1,cyW); R(ctx,ox+6,oy+10,1,2,cyD); R(ctx,ox+9,oy+10,1,2,cyD); R(ctx,ox+6,oy+12,4,1,'#1b5a70'); }
+      R(ctx,ox+2,oy+8,2,2,cy); R(ctx,ox+2,oy+8,1,1,cyW); R(ctx,ox+3,oy+9,1,1,cyD);      // bola cahaya di bahu
+      R(ctx,ox+12,oy+8,2,2,cy); R(ctx,ox+12,oy+8,1,1,cyW); R(ctx,ox+13,oy+9,1,1,cyD);
+    }
+    if(fx==='flame'){
+      const FR='#e8402a', FO='#ff8a2a', FY='#ffd23a';
+      const cl=(sx:number,sy:number,c:string)=>{ R(ctx,ox+sx,oy+sy,1,1,c); R(ctx,ox+15-sx,oy+sy,1,1,c); };
+      cl(4,16,FR);
+      cl(3,17,FR); cl(4,17,FO); cl(5,17,FR);
+      cl(2,18,FR); cl(3,18,FO); cl(4,18,FY); cl(5,18,FO); cl(6,18,FR);
+      cl(2,19,FR); cl(3,19,FR); cl(4,19,FO); cl(5,19,FY);
+      if(!armsUp){ R(ctx,ox+2,oy+12+al,2,1,FR); R(ctx,ox+12,oy+12-al,2,1,FR); R(ctx,ox+2,oy+13+al,2,1,FY); R(ctx,ox+12,oy+13-al,2,1,FY); }
     }
     // kepala
     if(dir==='down'){
@@ -1550,6 +1570,18 @@ export function drawPlayerRaw(ctx: CanvasRenderingContext2D, x: number, y: numbe
     R(ctx,ox+5,oy+14,6,1,belt); R(ctx,ox+5,oy+14,1,1,buckle);
     if(armsUp){ R(ctx,ox+5,oy-6,3,15,sh); R(ctx,ox+5,oy-6,1,15,shL); R(ctx,ox+5,oy+8,3,1,cuff); R(ctx,ox+5,oy-8,3,2,pal.skin); }
     else { R(ctx,ox+6,oy+9+al,3,5,sh); R(ctx,ox+6,oy+9+al,1,5,shL); R(ctx,ox+6,oy+13+al,3,1,cuff); R(ctx,ox+6,oy+14+al,3,2,pal.skin); R(ctx,ox+8,oy+15+al,1,1,pal.skinD); }
+    if(fx==='night'){
+      const cy='#35e6ff', cyD='#1fa6c4', cyW='#e8ffff';
+      R(ctx,ox+5+a,oy+15,1,3,cyD); R(ctx,ox+3+a,oy+19,5,1,cyD);
+      R(ctx,ox+6,oy+8,3,2,cy); R(ctx,ox+6,oy+8,1,1,cyW); R(ctx,ox+8,oy+9,1,1,cyD);
+      if(!armsUp) R(ctx,ox+6,oy+10+al,1,3,cyD);
+    }
+    if(fx==='flame'){
+      const FR='#e8402a', FO='#ff8a2a', FY='#ffd23a';
+      R(ctx,ox+8,oy+16,1,1,FR); R(ctx,ox+8,oy+17,2,1,FO); R(ctx,ox+8,oy+18,3,1,FR); R(ctx,ox+9,oy+18,1,1,FY); R(ctx,ox+8,oy+19,3,1,FO); R(ctx,ox+9,oy+19,1,1,FY);
+      R(ctx,ox+4+a,oy+18,2,1,FR); R(ctx,ox+4+a,oy+19,2,1,FO);
+      if(!armsUp){ R(ctx,ox+6,oy+12+al,3,1,FR); R(ctx,ox+6,oy+13+al,3,1,FY); }
+    }
     // kepala
     R(ctx,ox+4,oy+4,5,4,pal.skin);
     R(ctx,ox+3,oy+6,1,1,pal.skin);
