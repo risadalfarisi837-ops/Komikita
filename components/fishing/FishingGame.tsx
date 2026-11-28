@@ -23,7 +23,7 @@ import VerifiedBadge from '@/components/VerifiedBadge';
 import { cleanNameRole } from '@/lib/premium';
 import { MAIN_ROOM, islandName } from '@/lib/fishingIslands';
 import { getFirebase } from '@/lib/firebase-client';
-import ShopScreen from './Shop';
+import ShopScreen, { CrystalIcon } from './Shop';
 import SellFish from './SellFish';
 import LimitedSpin from './LimitedSpin';
 import type { LimitedDrop, LimitedRarity } from '@/lib/limitedGacha';
@@ -151,11 +151,6 @@ function XpIcon({ size }: { size: number }) {
 function SparkIcon({ size, fill = '#fff', glow = '#79b7ff' }: { size: number; fill?: string; glow?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24"><path d="M12 1.5C12.9 8.2 15.8 11.1 22.5 12 15.8 12.9 12.9 15.8 12 22.5 11.1 15.8 8.2 12.9 1.5 12 8.2 11.1 11.1 8.2 12 1.5Z" fill={fill} stroke={glow} strokeWidth="1.4" strokeLinejoin="round" /></svg>
-  );
-}
-function GemIcon({ size }: { size: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24"><path d="M6 4h12l4 6-10 11L2 10z" fill="#39e07f" stroke="#12803e" strokeWidth="1.6" strokeLinejoin="round" /><path d="M2 10h20M9 4l-2 6 5 11M15 4l2 6-5 11" stroke="#b8ffd2" strokeWidth="0.9" fill="none" opacity="0.7" /></svg>
   );
 }
 function PeopleIcon({ size }: { size: number }) {
@@ -957,9 +952,9 @@ export default function FishingGame(props: Props) {
             <SparkIcon size={hx(20)} />
             <span style={{ fontSize: hx(16), fontWeight: 800, color: '#7a3fd0' }}>{formatNum(xp)}</span>
           </div>
-          <div style={{ ...dockPill('#3fe08a'), padding: `0 ${hx(5)}px 0 ${hx(11)}px`, gap: hx(7), marginBottom: 0, height: hx(40), borderRadius: hx(20) }}>
-            <GemIcon size={hx(20)} />
-            <span style={{ fontSize: hx(16), fontWeight: 800, color: '#1f8a45' }}>{formatNum(crystal)}</span>
+          <div style={{ ...dockPill('#6bb6ff'), padding: `0 ${hx(5)}px 0 ${hx(11)}px`, gap: hx(7), marginBottom: 0, height: hx(40), borderRadius: hx(20) }}>
+            <CrystalIcon size={hx(22)} />
+            <span style={{ fontSize: hx(16), fontWeight: 800, color: '#1c6fe0' }}>{formatNum(crystal)}</span>
             <button onClick={() => setShopOpen(true)} aria-label="Tambah" style={{ width: hx(26), height: hx(26), borderRadius: '50%', background: 'radial-gradient(circle at 35% 30%,#58e89a,#1fa85a)', border: `${hx(2)}px solid #fff`, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}><Svg d="M12 5v14M5 12h14" size={hx(14)} w={3.4} /></button>
           </div>
           <button onClick={() => setMenuOpen(true)} aria-label="Pengaturan" style={sqBtn}><GearInk size={hx(22)} /></button>
