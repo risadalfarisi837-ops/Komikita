@@ -6,6 +6,8 @@ import { GACHA_ODDS, GACHA_PITY, GACHA_PRICE, GACHA_RODS, RARITY, RODS, formatNu
 import PixelRod from './RodArt';
 import ShopBajuLimited from './ShopBajuLimited';
 import { Sprite } from './ShopSprites';
+import ShopTopUp from './ShopTopUp';
+import type { TopUpCurrency } from './ShopTopUp';
 
 export type ShopTab = 'toko' | 'bajulimited' | 'gacha' | 'gachagaya' | 'gacharumah' | 'gaya' | 'pet' | 'aksesoris' | 'setaksesoris' | 'pass' | 'tas';
 
@@ -31,6 +33,8 @@ interface Props {
   onPack?: (id: 'monthly' | 'monsun' | 'kenalan' | 'buah' | 'perdana' | 'lanjut' | 'bekal') => void;
   /** Opsional: waktu berakhir Paket Lanjut (ms). Kosong = akhir bulan. */
   lanjutEndsAt?: number;
+  /** Dipanggil saat paket top up dibeli (Gems atau Crystal). */
+  onTopUp?: (currency: TopUpCurrency, packId: string, amount: number, bonus: number, rupiah: number) => void;
   freeBaitClaimed?: boolean;
   onClaimBait?: () => void;
   onOpenLimited?: (n: 1 | 10) => void;
@@ -280,6 +284,7 @@ export default function ShopScreen(p: Props) {
   const { px, font, crystal, rods, equippedRod, tab, onTab, buying, pulling } = p;
   const gems = p.gems ?? 0;
   const [odds, setOdds] = useState(false);
+  const [topup, setTopup] = useState<TopUpCurrency | null>(null);
   const sideRef = useRef<HTMLDivElement>(null);
 
   const chip: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: px(3), background: '#eaf1ff', color: '#2459c9', fontWeight: 800, fontSize: px(12), borderRadius: 99, padding: `${px(2)}px ${px(8)}px`, whiteSpace: 'nowrap' };
@@ -488,10 +493,14 @@ export default function ShopScreen(p: Props) {
         <div style={{ display: 'flex', alignItems: 'center', gap: px(12), background: 'linear-gradient(180deg,#1479ec,#0b62cc)', padding: `${px(8)}px ${px(14)}px`, boxShadow: '0 3px 0 #0a4fa8', position: 'relative', zIndex: 2, flex: 'none' }}>
           <span style={{ width: px(44), height: px(44), borderRadius: '50%', background: '#fff2d1', border: `${px(2.5)}px solid #fff`, boxShadow: '0 2px 0 rgba(0,0,60,.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: px(24), boxSizing: 'border-box' }}>🛍️</span>
           <span style={{ color: '#fff', fontWeight: 700, fontSize: px(26) }}>Toko</span>
-          <span style={{ marginLeft: 'auto', ...chipHdr }}><CrystalIcon size={px(34)} />{formatNum(crystal)}</span>
+          <span style={{ marginLeft: 'auto', ...chipHdr }}><CrystalIcon size={px(34)} />{formatNum(crystal)}
+            <button onClick={() => setTopup('crystal')} aria-label="Top up Crystal" style={{ width: px(26), height: px(26), borderRadius: '50%', border: 0, background: 'radial-gradient(circle at 35% 30%,#58e89a,#1fa85a)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
+              <svg width={px(14)} height={px(14)} viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="#fff" strokeWidth="4" strokeLinecap="round" /></svg>
+            </button>
+          </span>
           <span style={chipHdr}>
             <PermataIcon size={px(30)} />{formatNum(gems)}
-            <button onClick={p.onAddGems} aria-label="Tambah Permata" style={{ width: px(26), height: px(26), borderRadius: '50%', border: 0, background: 'radial-gradient(circle at 35% 30%,#58e89a,#1fa85a)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
+            <button onClick={() => (p.onAddGems ? p.onAddGems() : setTopup('gems'))} aria-label="Top up Gems" style={{ width: px(26), height: px(26), borderRadius: '50%', border: 0, background: 'radial-gradient(circle at 35% 30%,#58e89a,#1fa85a)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
               <svg width={px(14)} height={px(14)} viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="#fff" strokeWidth="4" strokeLinecap="round" /></svg>
             </button>
           </span>
@@ -545,6 +554,7 @@ export default function ShopScreen(p: Props) {
           </div>
         </div>
       )}
+      {topup && <ShopTopUp px={px} font={font} initial={topup} gems={gems} crystal={crystal} gemIcon={(z) => <PermataIcon size={z} />} crystalIcon={(z) => <CrystalIcon size={z} />} onClose={() => setTopup(null)} onBuy={p.onTopUp} />}
     </div>
   );
 }
