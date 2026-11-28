@@ -993,9 +993,9 @@ export default function FishingGame(props: Props) {
                 <button type="submit" style={{ border: 0, borderRadius: hx(8), background: '#f6c445', color: '#3b2a00', fontWeight: 700, fontSize: hx(12.8), padding: `0 ${hx(10)}px`, cursor: 'pointer' }}>Kirim</button>
               </form>
             )}
-            <div style={{ display: 'flex', gap: hx(5), marginTop: hx(5) }}>
-              <span style={{ background: CREAM_BG, color: CREAM_INK, borderRadius: 99, height: hx(32), boxSizing: 'border-box', display: 'inline-flex', alignItems: 'center', padding: `0 ${hx(18)}px`, fontWeight: 800, fontSize: hx(13.5), boxShadow: '0 2px 0 #d9c08a', textShadow: 'none' }}>Pulau</span>
-              <button onClick={() => say('Chat Global segera hadir')} style={{ background: 'rgba(20,32,40,0.62)', color: '#fff', border: 0, borderRadius: 99, height: hx(32), padding: `0 ${hx(18)}px`, fontWeight: 800, fontSize: hx(13.5), fontFamily: HUD, cursor: 'pointer' }}>Global</button>
+            <div style={{ display: 'inline-flex', alignItems: 'center', marginTop: hx(5), padding: hx(2.6), borderRadius: 99, background: 'rgba(20,32,40,0.62)' }}>
+              <span style={{ background: CREAM_BG, color: CREAM_INK, borderRadius: 99, height: hx(31), boxSizing: 'border-box', display: 'inline-flex', alignItems: 'center', padding: `0 ${hx(15)}px`, fontWeight: 800, fontSize: hx(13.5), boxShadow: '0 2px 0 #d9c08a', textShadow: 'none' }}>Pulau</span>
+              <button onClick={() => say('Chat Global segera hadir')} style={{ background: 'transparent', color: '#fff', border: 0, borderRadius: 99, height: hx(31), padding: `0 ${hx(15)}px`, fontWeight: 800, fontSize: hx(13.5), fontFamily: HUD, cursor: 'pointer' }}>Global</button>
             </div>
           </div>
         );
@@ -1119,7 +1119,7 @@ export default function FishingGame(props: Props) {
       })()}
 
       {/* penghitung ikan lepas (x0): dipindah ke tengah atas supaya tidak menabrak slot umpan/joran */}
-      {!fishing && (
+      {!fishing && fails > 0 && (
         <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: `calc(var(--sat, 0px) + ${hx(11.5)}px)`, display: 'flex', alignItems: 'center', gap: hx(5), height: hx(26), boxSizing: 'border-box', padding: `0 ${hx(12)}px 0 ${hx(8)}px`, borderRadius: 99, background: '#fbf1dc', border: `${hx(2)}px solid #d9c196`, boxShadow: '0 2px 0 rgba(120,90,40,0.45)', color: '#c2392b', fontWeight: 700, fontSize: hx(16) }}>
           <CrossRodIcon size={hx(20)} />×{fails}
         </div>
