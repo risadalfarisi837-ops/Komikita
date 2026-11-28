@@ -19,6 +19,7 @@ import { startFishingNet } from '@/lib/fishingNet';
 import { MAIN_ROOM, islandName } from '@/lib/fishingIslands';
 import { getFirebase } from '@/lib/firebase-client';
 import ShopScreen from './Shop';
+import SellFish from './SellFish';
 import LimitedSpin from './LimitedSpin';
 import type { LimitedDrop } from '@/lib/limitedGacha';
 import type { QrOrder, TopUpPoll } from '@/lib/topupPacks';
@@ -349,6 +350,8 @@ export default function FishingGame(props: Props) {
   const [held, setHeld] = useState<BagItem | null>(null);
   const [sel, setSel] = useState('');
   const [shopOpen, setShopOpen] = useState(false);
+  const [sellOpen, setSellOpen] = useState(false);
+  const [nearShop, setNearShop] = useState(false);
   const [rodOpen, setRodOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [upgrading, setUpgrading] = useState('');
@@ -473,6 +476,7 @@ export default function FishingGame(props: Props) {
       onPhase: (p) => { setPhase(p); if (p !== 'idle') setIntro(false); },
       onToast: (m) => { if (/kabur|lepas/i.test(m)) setFails((f) => f + 1); say(m); },
       onBite: () => { try { navigator.vibrate?.(60); } catch { /* abaikan */ } },
+      onNearShop: (n) => setNearShop(n),
       onAuto: (on) => { autoRef.current = on; setAuto(on); if (on) { setPopup(null); setDstats((d) => (d.since ? d : { ...d, since: Date.now() })); } },
       onCatch: (c: Catch) => {
         const item: BagItem = { id: newId(), s: c.species.id, w: c.weight };
@@ -1027,6 +1031,17 @@ export default function FishingGame(props: Props) {
         </div>
       )}
 
+      {/* Belanja: muncul saat dekat Toko Mancing (satu-satunya toko fungsional) */}
+      {nearShop && !fishing && !sellOpen && !shopOpen && !bagOpen && (
+        <button
+          onClick={() => setSellOpen(true)}
+          aria-label="Belanja"
+          style={{ position: 'absolute', zIndex: 20, right: `calc(env(safe-area-inset-right, 0px) + ${hx(14)}px)`, bottom: `calc(env(safe-area-inset-bottom, 0px) + ${hx(32 + btnSz + 14)}px)`, display: 'flex', alignItems: 'center', gap: hx(6), padding: `${hx(8)}px ${hx(18)}px`, borderRadius: 99, border: `${hx(3.5)}px solid #fff`, background: 'linear-gradient(180deg,#ffb23c,#f08a24)', color: '#fff', fontFamily: HUD, fontWeight: 800, fontSize: hx(17), textShadow: '0 2px 3px rgba(120,60,0,0.55)', boxShadow: '0 4px 0 rgba(150,80,10,0.65), 0 6px 16px rgba(0,0,0,0.35)', cursor: 'pointer' }}
+        >
+          <StoreInk size={hx(22)} />Belanja
+        </button>
+      )}
+
       {/* tombol aksi */}
       <div style={{ position: 'absolute', right: `calc(env(safe-area-inset-right, 0px) + ${hx(14)}px)`, bottom: `calc(env(safe-area-inset-bottom, 0px) + ${hx(32)}px)`, display: 'flex', alignItems: 'flex-end', gap: hx(10) }}>
         <button
@@ -1158,7 +1173,7 @@ export default function FishingGame(props: Props) {
                 <button onClick={async () => { if (!small.length) { say('Tidak ada ikan biasa'); return; } if (window.confirm('Buang (jual) ' + small.length + ' ikan biasa? Ikan XL/Epik/Legendary aman.')) await sell(small.map((x) => x.id)); }} style={cb()}>
                   <svg width={px(14)} height={px(15)} viewBox="0 0 24 24" fill="none" stroke="#6b4a2a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6" /></svg>Buang cepat
                 </button>
-                <button onClick={() => say('Nilai isi tas 💎' + formatNum(total) + ' · jual di Lapak Bang Jaka')} aria-label="Bantuan" style={cb({ width: px(34), padding: 0, justifyContent: 'center', fontSize: px(16), color: '#1478e8' })}>?</button>
+                <button onClick={() => say('Nilai isi tas 💎' + formatNum(total) + ' · jual di Toko Mancing')} aria-label="Bantuan" style={cb({ width: px(34), padding: 0, justifyContent: 'center', fontSize: px(16), color: '#1478e8' })}>?</button>
                 <button onClick={() => setBagOpen(false)} aria-label="Tutup" style={{ width: px(40), height: px(36), borderRadius: px(11), border: 0, background: 'linear-gradient(180deg,#e5533f,#cc3d2c)', boxShadow: '0 3px 0 #a62a1f', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0, flex: '0 0 auto' }}><Svg d="M6 6l12 12M18 6L6 18" size={px(20)} w={3} /></button>
               </div>
               {/* grid tas */}
@@ -1241,6 +1256,17 @@ export default function FishingGame(props: Props) {
           px={(n: number) => px(n * 0.64)} font={HUD} crystal={crystal} rods={rods} rodLv={props.rodLv ?? {}} equippedRod={equippedRod}
           buying={buying} upgrading={upgrading}
           onClose={() => setRodOpen(false)} onBuy={buyRod} onEquip={props.onEquipRod} onUpgrade={upgradeRod}
+        />
+      )}
+
+      {/* Jual Ikan (dibuka dari tombol Belanja di Toko Mancing) */}
+      {sellOpen && (
+        <SellFish
+          px={px} font={HUD} bag={bag} money={rod.money} crystal={crystal}
+          onSell={(ids) => sell(ids)}
+          onClose={() => setSellOpen(false)}
+          onOpenShop={() => { setSellOpen(false); setShopTab('toko'); setShopOpen(true); }}
+          renderFish={(id, sc) => <FishIcon id={id} scale={sc * u * 0.9} />}
         />
       )}
 

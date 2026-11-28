@@ -30,6 +30,7 @@ export interface EngineEvents {
   onToast?: (m: string) => void;
   onBite?: () => void;
   onAuto?: (on: boolean) => void; // Mode Developer: auto fishing menyala / mati
+  onNearShop?: (near: boolean) => void; // pemain dekat Toko Mancing (satu-satunya toko fungsional)
 }
 
 const DIRV: Record<Dir, { x: number; y: number }> = { down: { x: 0, y: 1 }, up: { x: 0, y: -1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 } };
@@ -101,6 +102,7 @@ export class FishingEngine {
   private reel: Reel = { fishPos: 50, fishTarget: 50, tNext: 0, zone: 30, zoneV: 0, zoneH: 28, prog: 30, time: 0, diff: 1 };
   private catchT = 0;
   private reelRip = 0;
+  private nearShopNow = false;
   private ripples: Ripple[] = [];
   private parts: Particle[] = [];
 
@@ -576,6 +578,18 @@ export class FishingEngine {
       this.stepT = 0;
     }
 
+    // dekat Toko Mancing? (hanya prop 'shop' yang fungsional, warung lain cuma dekorasi)
+    {
+      let near = false;
+      for (const p of this.world.props) {
+        if (p.kind !== 'shop') continue;
+        const cx = (p.x + (p.w || 4) / 2) * TILE;
+        const cy = (p.y + (p.h || 3)) * TILE;
+        if (Math.hypot(this.px - cx, this.py - cy) < TILE * 3.6) { near = true; break; }
+      }
+      if (near !== this.nearShopNow) { this.nearShopNow = near; this.ev.onNearShop?.(near); }
+    }
+
     // event Gerombolan Ikan
     if (this.shoal && this.shoalForced) {
       if (this.time >= this.shoal.until) { this.shoal = null; this.castInShoal = false; this.shoalForced = false; this.shoalId = -1; }
@@ -982,7 +996,7 @@ export class FishingEngine {
     }
     // label warung dan ikan raksasa
     for (const p of this.world.props) {
-      if (p.kind !== 'stall' && p.kind !== 'giantfish') continue;
+      if (p.kind !== 'giantfish') continue; // warung = dekorasi murni, tanpa label
       const lx = (p.x * TILE + ((p.w || 1) * TILE) / 2) * S - ox;
       const ly = (p.y * TILE + (p.kind === 'giantfish' ? 8 : -4)) * S - oy;
       if (lx < -300 || lx > this.canvas.width + 300 || ly < -100 || ly > this.canvas.height + 100) continue;
