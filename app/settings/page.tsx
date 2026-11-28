@@ -1,117 +1,39 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
+import type { CSSProperties, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  ArrowLeft, ChevronRight, Crown, Palette, Globe, Smartphone, Image as ImageIcon, Download,
-  Bookmark, Bell, Reply, Info, RefreshCw, Trash2, Share2, Bug, LogOut, Wrench, Hash, Upload,
-} from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useFavorites, useHistory } from '@/lib/store';
 import type { FavoriteItem, HistoryItem } from '@/lib/store';
 import { useSettings } from '@/lib/settings';
-import { numericId, formatShortId } from '@/lib/utils';
+import { formatShortId } from '@/lib/utils';
 import { ensureShortId } from '@/lib/shortid';
 import { getFirebase, loginWithGoogle } from '@/lib/firebase-client';
+import { LevelPill } from '@/components/LevelPill';
+import VerifiedBadge from '@/components/VerifiedBadge';
+import DevBadge from '@/components/DevBadge';
 import pkg from '@/package.json';
+import { BG, CARD, LINE, MUTED, HEAD, RED, FONT, UnitCtx, Row, Section, Pill } from './ui';
 
-const CARD = '#2A2931';
-const MUTED = '#8F8D9B';
-const ICON = '#C8C6D2';
-const ACCENT = '#FF6B6B';
-const DANGER = '#FF7A7A';
 const HOME_CACHE_KEY = 'komiku_home_v2';
 const MAX_IMPORT_BYTES = 5 * 1024 * 1024;
 
-// ─── Komponen kecil ───────────────────────────────────────────────────────────
-function Switch({ on }: { on: boolean }) {
-  return (
-    <span
-      aria-hidden
-      style={{
-        width: 50, height: 30, borderRadius: 15, flexShrink: 0, position: 'relative', boxSizing: 'border-box',
-        background: on ? ACCENT : '#442930',
-        border: on ? '2px solid transparent' : '2px solid #8F8D9B',
-        transition: 'background .2s',
-      }}
-    >
-      <span style={{
-        position: 'absolute', top: on ? 2 : 5, left: on ? 22 : 5,
-        width: on ? 22 : 16, height: on ? 22 : 16, borderRadius: '50%',
-        background: on ? '#fff' : '#B5B3C0', transition: 'all .2s',
-      }} />
-    </span>
-  );
-}
-
-interface RowProps {
-  icon?: React.ReactNode;
-  title: string;
-  sub?: string;
-  right?: React.ReactNode;
-  onClick?: () => void;
-  href?: string;
-  chevron?: boolean;
-  toggle?: { on: boolean; onChange: (v: boolean) => void };
-  danger?: boolean;
-  border?: boolean;
-}
-
-function Row({ icon, title, sub, right, onClick, href, chevron, toggle, danger, border }: RowProps) {
-  const inner = (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '10px 16px', minHeight: 57, borderTop: border ? '1px solid rgba(255,255,255,.08)' : 'none' }}>
-      <span style={{ width: 28, display: 'flex', justifyContent: 'center', flexShrink: 0 }}>{icon}</span>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: -0.8, lineHeight: 1.15, color: danger ? DANGER : '#fff' }}>{title}</div>
-        {sub && <div style={{ fontSize: 17, fontWeight: 700, color: MUTED, letterSpacing: -0.5, lineHeight: 1.25, marginTop: 1 }}>{sub}</div>}
-      </div>
-      {right != null && <span style={{ fontSize: 20, fontWeight: 800, color: MUTED, letterSpacing: -0.6, flexShrink: 0 }}>{right}</span>}
-      {toggle ? <Switch on={toggle.on} /> : chevron ? <ChevronRight size={20} color={MUTED} style={{ flexShrink: 0 }} /> : null}
-    </div>
-  );
-  if (href) return <Link href={href} style={{ display: 'block', color: 'inherit', textDecoration: 'none' }}>{inner}</Link>;
-  if (toggle) {
-    return (
-      <button role="switch" aria-checked={toggle.on} onClick={() => toggle.onChange(!toggle.on)}
-        style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 0, padding: 0, color: 'inherit', font: 'inherit', cursor: 'pointer' }}>
-        {inner}
-      </button>
-    );
-  }
-  if (onClick) {
-    return (
-      <button onClick={onClick}
-        style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 0, padding: 0, color: 'inherit', font: 'inherit', cursor: 'pointer' }}>
-        {inner}
-      </button>
-    );
-  }
-  return <div>{inner}</div>;
-}
-
-const Label = ({ children }: { children: React.ReactNode }) => (
-  <div style={{ fontSize: 16, fontWeight: 800, color: '#B5B3C0', letterSpacing: -0.3, margin: '26px 16px 10px', textTransform: 'uppercase' }}>{children}</div>
-);
-
-const Group = ({ children }: { children: React.ReactNode }) => (
-  <div style={{ margin: '0 16px', background: CARD, borderRadius: 22, overflow: 'hidden' }}>{children}</div>
-);
-
-function Dialog({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode }) {
+function Dialog({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: ReactNode }) {
   if (!open) return null;
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 80, background: 'rgba(0,0,0,.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <div role="dialog" aria-modal="true" onClick={e => e.stopPropagation()}
         style={{ background: CARD, borderRadius: 24, padding: '20px 18px 16px', width: '100%', maxWidth: 360, border: '1px solid rgba(255,255,255,.06)' }}>
-        <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: -0.6, marginBottom: 8 }}>{title}</div>
+        <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>{title}</div>
         {children}
       </div>
     </div>
   );
 }
 
-const dialogText: React.CSSProperties = { fontSize: 17, fontWeight: 700, color: MUTED, letterSpacing: -0.4, lineHeight: 1.4 };
-const dialogBtn: React.CSSProperties = { flex: 1, border: 0, borderRadius: 14, padding: '13px 0', fontSize: 17, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' };
+const dialogText: CSSProperties = { fontSize: 14, fontWeight: 500, color: MUTED, lineHeight: 1.5 };
+const dialogBtn: CSSProperties = { flex: 1, border: 0, borderRadius: 999, padding: '13px 0', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' };
 
 // ─── Halaman ──────────────────────────────────────────────────────────────────
 export default function SettingsPage() {
@@ -124,13 +46,21 @@ export default function SettingsPage() {
 
   const [mounted, setMounted] = useState(false);
   const [ready, setReady] = useState(false);
-  const [user, setUser] = useState<{ uid: string; name: string; photo: string; shortId?: number } | null>(null);
+  const [user, setUser] = useState<{ uid: string; name: string; photo: string; email: string; level: number; shortId?: number } | null>(null);
   const [role, setRole] = useState('Member');
   const [cacheKb, setCacheKb] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [loggingIn, setLoggingIn] = useState(false);
+  const [unit, setUnit] = useState(0.5); // px layar per 1 px video referensi (video 720 lebar)
+
+  useEffect(() => {
+    const fit = () => setUnit(Math.min(window.innerWidth, 448) / 720);
+    fit();
+    window.addEventListener('resize', fit);
+    return () => window.removeEventListener('resize', fit);
+  }, []);
 
   const say = useCallback((msg: string) => {
     setToast(msg);
@@ -157,13 +87,13 @@ export default function SettingsPage() {
         if (dead) return;
         setReady(true);
         if (!fu) { setUser(null); setRole('Member'); return; }
-        setUser({ uid: fu.uid, name: fu.displayName || 'User', photo: fu.photoURL || '' });
+        setUser({ uid: fu.uid, name: fu.displayName || 'User', photo: fu.photoURL || '', email: fu.email || '', level: 1 });
         try {
           const snap = await db.ref(`users/${fu.uid}`).get();
           if (dead) return;
           const d = snap.exists() ? snap.val() : {};
           setRole(d.role || 'Member');
-          setUser((prev) => prev && ({ ...prev, name: d.displayName || prev.name, shortId: d.shortId }));
+          setUser((prev) => prev && ({ ...prev, name: d.displayName || prev.name, email: prev.email || d.email || '', level: Number(d.level) || 1, shortId: d.shortId }));
           ensureShortId(db, fu.uid).then((id) => { if (id) setUser((prev) => prev && ({ ...prev, shortId: id })); });
         } catch { /* biarkan role default */ }
       });
@@ -293,138 +223,135 @@ export default function SettingsPage() {
   };
 
   const favCount = mounted ? favorites.length : 0;
+  const p = (n: number) => Math.round(n * unit * 100) / 100;
+  const headFont = `${p(20)}px`;
+
+  const avatar = user?.photo
+    ? <img src={user.photo} alt="" style={{ width: p(84), height: p(84), borderRadius: '50%', objectFit: 'cover', flexShrink: 0, display: 'block' }} />
+    : <span style={{ width: p(84), height: p(84), borderRadius: '50%', background: '#2A2B30', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: p(34), fontWeight: 700, color: HEAD, flexShrink: 0 }}>{user ? user.name.charAt(0).toUpperCase() : '?'}</span>;
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 60, background: '#1B1A20', color: '#fff', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
-      <div style={{ maxWidth: 448, margin: '0 auto', paddingBottom: 'calc(40px + env(safe-area-inset-bottom, 0px))' }}>
+    <UnitCtx.Provider value={unit}>
+      <div style={{ position: 'fixed', inset: 0, zIndex: 60, background: BG, color: '#fff', overflowY: 'auto', WebkitOverflowScrolling: 'touch', fontFamily: FONT }}>
+        <div style={{ maxWidth: 448, margin: '0 auto' }}>
 
-        {/* Header */}
-        <div style={{ position: 'sticky', top: 0, zIndex: 2, background: '#1B1A20', display: 'flex', alignItems: 'center', gap: 10, padding: 'max(env(safe-area-inset-top, 0px), 14px) 12px 10px' }}>
-          <button onClick={goBack} aria-label="Kembali" style={{ background: 'none', border: 0, padding: 8, display: 'flex', cursor: 'pointer', color: '#fff' }}>
-            <ArrowLeft size={26} strokeWidth={2} />
-          </button>
-          <h1 style={{ margin: 0, fontSize: 30, fontWeight: 800, letterSpacing: -1.2, lineHeight: 1.1 }}>Pengaturan</h1>
+          {/* Header: panah kiri + judul di tengah + garis tipis di bawah */}
+          <div style={{ position: 'sticky', top: 0, zIndex: 2, background: BG, paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+            <div style={{ position: 'relative', height: p(98), borderBottom: `1px solid ${LINE}` }}>
+              <button onClick={goBack} aria-label="Kembali" style={{ position: 'absolute', left: 0, top: 0, width: p(98), height: p(98), paddingBottom: p(13), boxSizing: 'border-box', background: 'none', border: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}>
+                <ArrowLeft size={p(40)} strokeWidth={2} />
+              </button>
+              <h1 style={{ margin: 0, height: p(98), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: p(34.5), fontWeight: 800, lineHeight: 1.2, paddingTop: p(4), boxSizing: 'border-box' }}>Pengaturan</h1>
+            </div>
+          </div>
+
+          <div style={{ padding: `0 ${p(28)}px calc(${p(52)}px + env(safe-area-inset-bottom, 0px))` }}>
+
+            {/* Profil singkat */}
+            <div onClick={user ? undefined : handleLogin} style={{ display: 'flex', alignItems: 'flex-start', gap: p(28), marginTop: p(17), paddingBottom: p(4), cursor: user ? 'default' : 'pointer' }}>
+              {avatar}
+              <div style={{ flex: 1, minWidth: 0, paddingTop: p(4) }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: p(11), height: p(30) }}>
+                  <span style={{ minWidth: 0, fontSize: p(24.6), fontWeight: 800, lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {user ? user.name : (ready ? 'Belum masuk' : 'Memuat...')}
+                  </span>
+                  {user && (
+                    <button onClick={copyUid} aria-label="Salin ID akun" style={{ flexShrink: 0, background: 'none', border: 0, padding: 0, fontFamily: 'inherit', fontSize: p(18.2), fontWeight: 500, lineHeight: 1.2, color: MUTED, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}>
+                      {formatShortId(user.shortId, user.uid)}
+                    </button>
+                  )}
+                </div>
+                {user && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: p(13), height: p(38), marginTop: p(6) }}>
+                    {isPremium && !isDev && <VerifiedBadge size={p(34)} />}
+                    {isDev && <DevBadge size={p(38)} />}
+                    <LevelPill level={user.level} label="Lvl." fontSize={headFont} iconSize={p(26)} style={{ height: p(38), padding: `0 ${p(14)}px 0 ${p(18)}px`, gap: p(8), lineHeight: 1 }} />
+                  </div>
+                )}
+                <div style={{ marginTop: user ? p(15) : p(25), fontFamily: "Roboto, system-ui, 'Segoe UI', sans-serif", fontSize: p(22.8), fontWeight: 400, lineHeight: `${p(28)}px`, color: MUTED, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {user ? user.email : (loggingIn ? 'Membuka Google...' : 'Masuk dengan Google')}
+                </div>
+              </div>
+            </div>
+
+            {user && !isPremium && (
+              <Section title="Akun">
+                <Row title="Jadi Premium" chevron onClick={() => say('Fitur Premium segera hadir.')} />
+              </Section>
+            )}
+
+            <Section title="Kualitas">
+              <Row title="Mode baca bawaan" value="Webtoon" />
+              <Row title="Gambar kualitas rendah" toggle={{ on: mounted && settings.lowQuality, onChange: (v) => settings.setSetting('lowQuality', v) }} />
+              <Row title="Unduh hanya lewat Wi-Fi" toggle={{ on: mounted && settings.wifiOnly, onChange: (v) => settings.setSetting('wifiOnly', v) }} />
+            </Section>
+
+            <Section title="Tampilan">
+              <Row title="Tema" value="Komikita · Gelap" />
+              <Row title="Bahasa" value="Indonesia" />
+            </Section>
+
+            <Section title="Notifikasi">
+              <Row title="Judul yang diikuti" value={String(favCount)} chevron href="/history" />
+              <Row title="Chapter baru" toggle={{ on: mounted && settings.notifChapter, onChange: (v) => settings.setSetting('notifChapter', v) }} />
+              <Row title="Balasan untuk komentarku" toggle={{ on: mounted && settings.notifReply, onChange: (v) => settings.setSetting('notifReply', v) }} />
+              <Row title="Berita dan info musim" toggle={{ on: mounted && settings.notifNews, onChange: (v) => settings.setSetting('notifNews', v) }} />
+            </Section>
+
+            <Section title="Data">
+              <Row title="Cadangkan dan ekspor" chevron onClick={exportData} />
+              <Row title="Impor cadangan" chevron onClick={() => fileRef.current?.click()} />
+              <Row title="Hapus cache" value={mounted ? `${cacheKb} KB` : ''} onClick={clearCache} />
+            </Section>
+            <input ref={fileRef} type="file" accept="application/json,.json" hidden
+              onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) importData(f); }} />
+
+            {isDev && (
+              <Section title="Developer">
+                <Row title="Panel Developer" chevron onClick={() => router.push('/profile?dev=1')} />
+                <Row title="Dev Tools" chevron onClick={() => router.push('/dev')} />
+              </Section>
+            )}
+
+            <Section title="Tentang">
+              <Row title="Versi Komikita" value={pkg.version} />
+              <Row title="Tentang Komikita" chevron onClick={() => setAboutOpen(true)} />
+            </Section>
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', columnGap: p(57), rowGap: p(14.5), marginTop: p(14.5) }}>
+              <Pill onClick={share}>Bagikan Komikita</Pill>
+              <Pill onClick={() => window.open('https://github.com/risadalfarisi837-ops/Komiku/issues/new', '_blank')}>Laporkan Bug</Pill>
+            </div>
+
+            {user && (
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: p(14.5) }}>
+                <button onClick={() => setLogoutOpen(true)} style={{ minWidth: p(210), height: p(68.5), padding: `0 ${p(28)}px`, borderRadius: 999, border: 0, background: RED, color: '#fff', fontFamily: 'inherit', fontSize: p(24), fontWeight: 700, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}>Keluar</button>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Akun */}
-        <Label>Akun</Label>
-        <Group>
-          {user ? (
-            <Row
-              href="/profile"
-              chevron
-              icon={user.photo
-                ? <img src={user.photo} alt="" style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover' }} />
-                : <span style={{ width: 34, height: 34, borderRadius: '50%', background: '#3A3940', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>{user.name.charAt(0).toUpperCase()}</span>}
-              title={user.name}
-              sub="Masuk dengan Google"
-            />
-          ) : (
-            <Row
-              onClick={handleLogin}
-              chevron
-              icon={<span style={{ width: 34, height: 34, borderRadius: '50%', background: '#3A3940', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>?</span>}
-              title={ready ? 'Belum masuk' : 'Memuat...'}
-              sub={loggingIn ? 'Membuka Google...' : 'Masuk dengan Google'}
-            />
-          )}
-          {user && <Row border icon={<Hash size={22} color={ICON} />} title="ID akun" right={<span style={{ fontFamily: 'monospace', letterSpacing: 2 }}>{formatShortId(user.shortId, user.uid)}</span>} onClick={copyUid} />}
-          {!isPremium && <Row border icon={<Crown size={22} color={ICON} />} title="Jadi Premium" sub="Bebas iklan, unduh massal" chevron onClick={() => say('Fitur Premium segera hadir.')} />}
-        </Group>
+        <Dialog open={logoutOpen} onClose={() => setLogoutOpen(false)} title="Keluar dari akun?">
+          <div style={dialogText}>Favorit dan riwayat bacamu di perangkat ini tetap tersimpan.</div>
+          <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+            <button onClick={() => setLogoutOpen(false)} style={{ ...dialogBtn, background: BG, color: '#fff' }}>Batal</button>
+            <button onClick={handleLogout} style={{ ...dialogBtn, background: RED, color: '#fff' }}>Keluar</button>
+          </div>
+        </Dialog>
 
-        {/* Tampilan */}
-        <Label>Tampilan</Label>
-        <Group>
-          <Row icon={<Palette size={22} color={ICON} />} title="Tema" sub="Komikita · Gelap" />
-          <Row border icon={<Globe size={22} color={ICON} />} title="Bahasa" right="Indonesia" />
-        </Group>
+        <Dialog open={aboutOpen} onClose={() => setAboutOpen(false)} title="Tentang Komikita">
+          <div style={dialogText}>
+            Komikita adalah aplikasi web untuk membaca komik manga, manhwa, dan manhua gratis dalam bahasa Indonesia. Data dan gambar komik berasal dari MangaDex.
+          </div>
+          <button onClick={() => setAboutOpen(false)} style={{ ...dialogBtn, width: '100%', marginTop: 16, background: BG, color: '#fff' }}>Tutup</button>
+        </Dialog>
 
-        {/* Baca */}
-        <Label>Baca</Label>
-        <Group>
-          <Row icon={<Smartphone size={22} color={ICON} />} title="Mode baca bawaan" right="Webtoon" />
-          <Row border icon={<ImageIcon size={22} color={ICON} />} title="Gambar kualitas rendah" sub="Hemat kuota di jaringan seluler"
-            toggle={{ on: mounted && settings.lowQuality, onChange: (v) => settings.setSetting('lowQuality', v) }} />
-          <Row border icon={<Download size={22} color={ICON} />} title="Unduh hanya lewat Wi-Fi"
-            toggle={{ on: mounted && settings.wifiOnly, onChange: (v) => settings.setSetting('wifiOnly', v) }} />
-        </Group>
-
-        {/* Notifikasi */}
-        <Label>Notifikasi</Label>
-        <Group>
-          <Row href="/history" chevron icon={<Bookmark size={22} color={ICON} />} title="Judul yang diikuti" sub="Favorit di Koleksi kamu" right={String(favCount)} />
-          <Row border icon={<Bell size={22} color={ICON} />} title="Chapter baru" sub="Untuk judul yang kamu ikuti"
-            toggle={{ on: mounted && settings.notifChapter, onChange: (v) => settings.setSetting('notifChapter', v) }} />
-          <Row border icon={<Reply size={22} color={ICON} />} title="Balasan untuk komentarku"
-            toggle={{ on: mounted && settings.notifReply, onChange: (v) => settings.setSetting('notifReply', v) }} />
-          <Row border icon={<Info size={22} color={ICON} />} title="Berita dan info musim"
-            toggle={{ on: mounted && settings.notifNews, onChange: (v) => settings.setSetting('notifNews', v) }} />
-        </Group>
-
-        {/* Data */}
-        <Label>Data</Label>
-        <Group>
-          <Row icon={<RefreshCw size={22} color={ICON} />} title="Cadangkan dan ekspor" sub="Simpan favorit dan riwayat ke file" chevron onClick={exportData} />
-          <Row border icon={<Upload size={22} color={ICON} />} title="Impor cadangan" sub="Gabungkan dari file cadangan Komikita" chevron onClick={() => fileRef.current?.click()} />
-          <Row border icon={<Trash2 size={22} color={ICON} />} title="Hapus cache" right={mounted ? `${cacheKb} KB` : ''} onClick={clearCache} />
-        </Group>
-        <input ref={fileRef} type="file" accept="application/json,.json" hidden
-          onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) importData(f); }} />
-
-        {/* Developer */}
-        {isDev && (
-          <>
-            <Label>Developer</Label>
-            <Group>
-              <Row icon={<Wrench size={22} color={ICON} />} title="Panel Developer" sub="Kelola user, item, dan hadiah" chevron onClick={() => router.push('/profile?dev=1')} />
-              <Row border icon={<Bug size={22} color={ICON} />} title="Dev Tools" sub="API tester, storage, Firebase, cache. Auto fishing ada di menu game Mancing" chevron onClick={() => router.push('/dev')} />
-            </Group>
-          </>
-        )}
-
-        {/* Dukung */}
-        <Label>Dukung Komikita</Label>
-        <Group>
-          <Row icon={<Share2 size={22} color={ICON} />} title="Bagikan Komikita" chevron onClick={share} />
-          <Row border icon={<Bug size={22} color={ICON} />} title="Laporkan bug" chevron onClick={() => window.open('https://github.com/risadalfarisi837-ops/Komiku/issues/new', '_blank')} />
-        </Group>
-
-        {/* Tentang */}
-        <Label>Tentang</Label>
-        <Group>
-          <Row icon={<img src="/icon-192.png" alt="" style={{ width: 30, height: 30, borderRadius: 8 }} />} title="Versi Komikita" right={pkg.version} />
-          <Row border icon={<Info size={22} color={ICON} />} title="Tentang Komikita" chevron onClick={() => setAboutOpen(true)} />
-        </Group>
-
-        {user && (
-          <div style={{ marginTop: 26 }}>
-            <Group>
-              <Row danger icon={<LogOut size={22} color={DANGER} />} title="Keluar" onClick={() => setLogoutOpen(true)} />
-            </Group>
+        {toast && (
+          <div role="status" style={{ position: 'fixed', left: 16, right: 16, bottom: 'calc(24px + env(safe-area-inset-bottom, 0px))', zIndex: 90, display: 'flex', justifyContent: 'center', pointerEvents: 'none' }}>
+            <div style={{ background: '#3A3B3F', color: '#fff', padding: '12px 18px', borderRadius: 999, fontSize: 14, fontWeight: 700, maxWidth: 400, textAlign: 'center', boxShadow: '0 8px 24px rgba(0,0,0,.4)' }}>{toast}</div>
           </div>
         )}
       </div>
-
-      <Dialog open={logoutOpen} onClose={() => setLogoutOpen(false)} title="Keluar dari akun?">
-        <div style={dialogText}>Favorit dan riwayat bacamu di perangkat ini tetap tersimpan.</div>
-        <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
-          <button onClick={() => setLogoutOpen(false)} style={{ ...dialogBtn, background: '#1F1E24', color: '#fff' }}>Batal</button>
-          <button onClick={handleLogout} style={{ ...dialogBtn, background: 'rgba(255,92,92,.16)', color: DANGER }}>Keluar</button>
-        </div>
-      </Dialog>
-
-      <Dialog open={aboutOpen} onClose={() => setAboutOpen(false)} title="Tentang Komikita">
-        <div style={dialogText}>
-          Komikita adalah aplikasi web untuk membaca komik manga, manhwa, dan manhua gratis dalam bahasa Indonesia. Data dan gambar komik berasal dari MangaDex.
-        </div>
-        <button onClick={() => setAboutOpen(false)} style={{ ...dialogBtn, width: '100%', marginTop: 16, background: '#1F1E24', color: '#fff' }}>Tutup</button>
-      </Dialog>
-
-      {toast && (
-        <div role="status" style={{ position: 'fixed', left: 16, right: 16, bottom: 'calc(24px + env(safe-area-inset-bottom, 0px))', zIndex: 90, display: 'flex', justifyContent: 'center', pointerEvents: 'none' }}>
-          <div style={{ background: '#3A3940', color: '#fff', padding: '12px 18px', borderRadius: 16, fontSize: 16, fontWeight: 800, letterSpacing: -0.3, maxWidth: 400, textAlign: 'center', boxShadow: '0 8px 24px rgba(0,0,0,.4)' }}>{toast}</div>
-        </div>
-      )}
-    </div>
+    </UnitCtx.Provider>
   );
 }
