@@ -335,7 +335,7 @@ function MangaDetailContent() {
 
   useEffect(() => {
     setMounted(true);
-    const onScroll = () => setScrolled(window.scrollY > 300);
+    const onScroll = () => setScrolled(window.scrollY > 170);
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
@@ -400,32 +400,34 @@ function MangaDetailContent() {
     } catch {}
   };
 
-  const circleBtn = 'w-12 h-12 rounded-full bg-black/45 backdrop-blur-md flex items-center justify-center border border-white/10 active:scale-95 transition-transform';
+  const MUTE = 'rgba(255,255,255,.45)';
+  const circleBtn = 'w-11 h-11 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center active:scale-95 transition-transform';
+  const chipBg = 'rgba(255,107,107,.19)';
 
   return (
-    <div className="bg-[#1B1A20] min-h-screen text-white max-w-md mx-auto relative pb-16">
+    <div className="bg-[#1B1A20] min-h-screen text-white max-w-md mx-auto relative pb-16" style={{ fontFamily: 'inherit' }}>
       {/* Hero background */}
-      <div className="absolute top-0 inset-x-0 h-[470px] overflow-hidden z-0">
+      <div className="absolute top-0 inset-x-0 overflow-hidden z-0" style={{ height: 340 }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={detail.thumb} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover scale-125 blur-[3px] opacity-80" />
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(27,26,32,.15) 0%, rgba(27,26,32,.55) 55%, #1B1A20 100%)' }} />
+        <img src={detail.thumb} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" style={{ transform: 'scale(1.3)', filter: 'blur(2px)', opacity: 0.9 }} />
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(27,26,32,.45) 0%, rgba(27,26,32,.72) 55%, #1B1A20 100%)' }} />
       </div>
 
-      {/* Floating buttons (di atas hero) */}
-      <div className={'absolute top-4 inset-x-4 z-20 flex items-center justify-between transition-opacity ' + (scrolled ? 'opacity-0 pointer-events-none' : 'opacity-100')}>
-        <button onClick={() => router.back()} aria-label="Kembali" className={circleBtn}><ArrowLeft className="w-6 h-6" /></button>
-        <div className="flex gap-2">
-          <button onClick={share} aria-label="Bagikan" className={circleBtn}><Share2 className="w-5 h-5" /></button>
-          <button onClick={() => setMenuOpen(v => !v)} aria-label="Menu" className={circleBtn}><MoreVertical className="w-5 h-5" /></button>
+      {/* Tombol melayang di atas hero */}
+      <div className={'absolute inset-x-1.5 z-20 flex items-center justify-between transition-opacity ' + (scrolled ? 'opacity-0 pointer-events-none' : 'opacity-100')} style={{ top: 8 }}>
+        <button onClick={() => router.back()} aria-label="Kembali" className={circleBtn}><ArrowLeft style={{ width: 20, height: 20 }} /></button>
+        <div className="flex" style={{ gap: 7 }}>
+          <button onClick={share} aria-label="Bagikan" className={circleBtn}><Share2 style={{ width: 20, height: 20 }} /></button>
+          <button onClick={() => setMenuOpen(v => !v)} aria-label="Menu" className={circleBtn}><MoreVertical style={{ width: 20, height: 20 }} /></button>
         </div>
       </div>
 
       {/* Bar atas saat di-scroll */}
-      <div className={'fixed top-0 inset-x-0 z-30 max-w-md mx-auto flex items-center gap-3 px-4 py-3 bg-[#1B1A20]/95 backdrop-blur-md transition-opacity ' + (scrolled ? 'opacity-100' : 'opacity-0 pointer-events-none')}>
-        <button onClick={() => router.back()} aria-label="Kembali" className="p-2"><ArrowLeft className="w-6 h-6" /></button>
-        <h2 className="flex-1 text-2xl font-extrabold tracking-tight truncate">{detail.title}</h2>
-        <button onClick={share} aria-label="Bagikan" className="p-2"><Share2 className="w-5 h-5" /></button>
-        <button onClick={() => setMenuOpen(v => !v)} aria-label="Menu" className="p-2"><MoreVertical className="w-5 h-5" /></button>
+      <div className={'fixed top-0 inset-x-0 z-30 max-w-md mx-auto flex items-center bg-[#1B1A20] transition-opacity ' + (scrolled ? 'opacity-100' : 'opacity-0 pointer-events-none')} style={{ height: 46, padding: '0 6px', gap: 4 }}>
+        <button onClick={() => router.back()} aria-label="Kembali" className="flex items-center justify-center" style={{ width: 40, height: 40 }}><ArrowLeft style={{ width: 21, height: 21 }} /></button>
+        <h2 className="flex-1 truncate" style={{ fontSize: 16, fontWeight: 700, letterSpacing: -0.2 }}>{detail.title}</h2>
+        <button onClick={share} aria-label="Bagikan" className="flex items-center justify-center" style={{ width: 40, height: 40 }}><Share2 style={{ width: 19, height: 19 }} /></button>
+        <button onClick={() => setMenuOpen(v => !v)} aria-label="Menu" className="flex items-center justify-center" style={{ width: 40, height: 40 }}><MoreVertical style={{ width: 19, height: 19 }} /></button>
       </div>
 
       {menuOpen && (
@@ -436,116 +438,118 @@ function MangaDetailContent() {
         </div>
       )}
 
-      <div className="relative z-10 px-5 pt-[120px]">
+      <div className="relative z-10" style={{ padding: '76px 15px 0' }}>
         {/* Cover + judul */}
-        <div className="flex gap-4 items-end">
+        <div className="flex items-center" style={{ gap: 16 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={detail.thumb} alt={detail.title} referrerPolicy="no-referrer" className="w-[148px] h-[220px] rounded-2xl object-cover shrink-0 shadow-2xl bg-[#2A2931]" />
-          <div className="min-w-0 pb-1">
-            <div className="flex flex-wrap gap-2 mb-3">
-              <span className="px-3 py-1 rounded-lg bg-black text-white text-base font-extrabold">{detail.type || 'Manga'}</span>
+          <img src={detail.thumb} alt={detail.title} referrerPolicy="no-referrer" className="shrink-0 object-cover bg-[#2A2931]" style={{ width: 107, height: 161, borderRadius: 10 }} />
+          <div className="min-w-0">
+            <div className="flex flex-wrap" style={{ gap: 7, marginBottom: 9 }}>
+              <span style={{ height: 20, padding: '0 8px', borderRadius: 6, background: '#000', fontSize: 12.5, fontWeight: 600, display: 'inline-flex', alignItems: 'center' }}>{detail.type || 'Manga'}</span>
               {status && (
-                <span className="px-3 py-1 rounded-lg text-base font-extrabold flex items-center gap-1.5" style={{ background: 'rgba(120,60,50,.55)', color: status.color }}>
-                  <span className="w-2 h-2 rounded-full" style={{ background: status.color }} />{status.label}
+                <span style={{ height: 20, padding: '0 8px', borderRadius: 6, background: chipBg, fontSize: 12.5, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: status.color }} />{status.label}
                 </span>
               )}
             </div>
-            <h1 className="text-[32px] leading-[1.05] font-extrabold tracking-tight line-clamp-4">{detail.title}</h1>
-            {detail.nativeTitle && <p className="mt-2 text-lg font-bold text-white/50 truncate">{detail.nativeTitle}</p>}
+            <h1 className="line-clamp-2" style={{ fontSize: 23, lineHeight: 1.18, fontWeight: 800, letterSpacing: -0.5 }}>{detail.title}</h1>
+            {detail.nativeTitle && <p className="truncate" style={{ marginTop: 7, fontSize: 13, fontWeight: 500, color: MUTE }}>{detail.nativeTitle}</p>}
           </div>
         </div>
 
         {/* Statistik */}
-        <div className="mt-6 flex items-stretch rounded-3xl bg-[#2A2931] py-4">
+        <div className="flex items-center" style={{ marginTop: 15, height: 58, borderRadius: 16, background: '#2A272D' }}>
           <div className="flex-1 text-center">
-            <p className="text-3xl font-extrabold flex items-center justify-center gap-1.5"><Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />{detail.rating != null ? String(detail.rating).replace('.', ',') : '-'}</p>
-            <p className="text-lg font-bold text-white/50">Rating</p>
+            <p className="flex items-center justify-center" style={{ gap: 5, fontSize: 16, fontWeight: 800, lineHeight: 1.2 }}><Star style={{ width: 14, height: 14 }} className="fill-yellow-400 text-yellow-400" />{detail.rating != null ? String(detail.rating).replace('.', ',') : '-'}</p>
+            <p style={{ fontSize: 11.5, fontWeight: 500, color: MUTE }}>Rating</p>
           </div>
-          <div className="w-px bg-white/10" />
+          <div style={{ width: 1, height: 30, background: 'rgba(255,255,255,.12)' }} />
           <div className="flex-1 text-center">
-            <p className="text-3xl font-extrabold">{fmtCount(detail.follows)}</p>
-            <p className="text-lg font-bold text-white/50">Disimpan</p>
+            <p style={{ fontSize: 16, fontWeight: 800, lineHeight: 1.2 }}>{chapters.length}</p>
+            <p style={{ fontSize: 11.5, fontWeight: 500, color: MUTE }}>Chapter</p>
           </div>
-          <div className="w-px bg-white/10" />
+          <div style={{ width: 1, height: 30, background: 'rgba(255,255,255,.12)' }} />
           <div className="flex-1 text-center">
-            <p className="text-3xl font-extrabold">{chapters.length}</p>
-            <p className="text-lg font-bold text-white/50">Chapter</p>
+            <p style={{ fontSize: 16, fontWeight: 800, lineHeight: 1.2 }}>{fmtCount(detail.follows)}</p>
+            <p style={{ fontSize: 11.5, fontWeight: 500, color: MUTE }}>Disimpan</p>
           </div>
         </div>
 
         {/* Aksi */}
-        <div className="mt-5 flex items-center gap-3">
+        <div className="flex items-center" style={{ marginTop: 15 }}>
           {target ? (
-            <Link href={mangaHref(target.link)} className="flex-1 h-16 rounded-full flex items-center justify-center gap-3 text-xl font-extrabold text-white active:scale-95 transition-transform" style={{ background: CORAL }}>
-              <BookOpen className="w-6 h-6" />{resumeChapter ? `Lanjutkan Ch. ${targetNum}` : `Mulai Ch. ${targetNum || 1}`}
+            <Link href={mangaHref(target.link)} className="flex items-center justify-center active:scale-95 transition-transform" style={{ flex: '0 0 220px', height: 46, borderRadius: 99, gap: 9, fontSize: 14.5, fontWeight: 600, color: '#fff', background: CORAL }}>
+              <BookOpen style={{ width: 17, height: 17 }} />{resumeChapter ? `Lanjutkan Ch. ${targetNum}` : 'Mulai baca'}
             </Link>
-          ) : <div className="flex-1" />}
-          <button
-            onClick={() => toggleFavorite({ title: detail.title, link: url as string, thumb: detail.thumb, desc: detail.synopsis?.slice(0, 50) })}
-            aria-label="Simpan" className="w-12 h-12 flex items-center justify-center"
-          ><Bookmark className="w-7 h-7" style={{ color: CORAL, fill: isFav ? CORAL : 'transparent' }} /></button>
-          <button onClick={() => setCommentsOpen(true)} aria-label="Komentar" className="w-12 h-12 flex items-center justify-center"><MessageSquare className="w-7 h-7" /></button>
-          <button onClick={() => setToast('Fitur unduh segera hadir')} aria-label="Unduh" className="w-12 h-12 flex items-center justify-center"><Download className="w-7 h-7" /></button>
+          ) : <div style={{ flex: '0 0 220px' }} />}
+          <div className="flex flex-1" style={{ marginLeft: 2, marginRight: -8 }}>
+            <button
+              onClick={() => toggleFavorite({ title: detail.title, link: url as string, thumb: detail.thumb, desc: detail.synopsis?.slice(0, 50) })}
+              aria-label="Simpan" className="flex-1 flex items-center justify-center" style={{ height: 46 }}
+            ><Bookmark style={{ width: 20, height: 20, color: isFav ? CORAL : '#fff', fill: isFav ? CORAL : 'transparent' }} /></button>
+            <button onClick={() => setCommentsOpen(true)} aria-label="Komentar" className="flex-1 flex items-center justify-center" style={{ height: 46 }}><MessageSquare style={{ width: 20, height: 20 }} /></button>
+            <button onClick={() => setToast('Fitur unduh segera hadir')} aria-label="Unduh" className="flex-1 flex items-center justify-center" style={{ height: 46 }}><Download style={{ width: 20, height: 20 }} /></button>
+          </div>
         </div>
 
         {/* Sinopsis */}
-        <p className={'mt-6 text-[22px] leading-snug font-extrabold tracking-tight ' + (isDescExpanded ? '' : 'line-clamp-3')}>{detail.synopsis}</p>
+        <p className={isDescExpanded ? '' : 'line-clamp-3'} style={{ marginTop: 16, fontSize: 15, lineHeight: '21px', fontWeight: 500, whiteSpace: 'pre-line' }}>{detail.synopsis}</p>
         {detail.synopsis && detail.synopsis.length > 120 && (
-          <button onClick={() => setIsDescExpanded(v => !v)} className="mt-1 text-xl font-extrabold" style={{ color: CORAL }}>{isDescExpanded ? 'Sembunyikan' : 'Selengkapnya'}</button>
+          <button onClick={() => setIsDescExpanded(v => !v)} style={{ marginTop: 2, fontSize: 15, lineHeight: '20px', fontWeight: 700, color: CORAL }}>{isDescExpanded ? 'Sembunyikan' : 'Selengkapnya'}</button>
         )}
 
         {/* Genre */}
         {detail.genres?.length > 0 && (
-          <div className="mt-5 -mx-5 px-5 flex gap-3 overflow-x-auto no-scrollbar">
+          <div className="flex overflow-x-auto no-scrollbar" style={{ marginTop: 14, marginLeft: -15, marginRight: -15, padding: '0 15px', gap: 8 }}>
             {detail.genres.map((g: string) => (
-              <span key={g} className="shrink-0 px-5 py-2.5 rounded-full text-xl font-extrabold" style={{ background: 'rgba(255,107,107,.16)' }}>{g}</span>
+              <span key={g} className="shrink-0" style={{ height: 31, padding: '0 13px', borderRadius: 99, fontSize: 13.5, fontWeight: 500, background: chipBg, display: 'inline-flex', alignItems: 'center' }}>{g}</span>
             ))}
           </div>
         )}
 
         {/* Info */}
-        <div className="mt-7 grid grid-cols-[auto_1fr] gap-x-8 gap-y-3 text-xl">
-          {detail.author && (<><span className="font-bold text-white/45">Penulis</span><span className="font-extrabold">{detail.author}</span></>)}
-          {detail.artist && (<><span className="font-bold text-white/45">Ilustrator</span><span className="font-extrabold">{detail.artist}</span></>)}
-          <span className="font-bold text-white/45">Format</span><span className="font-extrabold">{detail.type || 'Manga'}</span>
+        <div style={{ marginTop: 22, display: 'grid', gridTemplateColumns: '84px 1fr', rowGap: 6, fontSize: 13, lineHeight: '20px' }}>
+          {detail.author && (<><span style={{ color: MUTE, fontWeight: 400 }}>Penulis</span><span style={{ fontWeight: 700 }}>{detail.author}</span></>)}
+          {detail.artist && (<><span style={{ color: MUTE, fontWeight: 400 }}>Ilustrator</span><span style={{ fontWeight: 700 }}>{detail.artist}</span></>)}
+          <span style={{ color: MUTE, fontWeight: 400 }}>Format</span><span style={{ fontWeight: 700 }}>{detail.type || 'Manga'}</span>
         </div>
 
         {/* Header chapter (sticky) */}
-        <div className="sticky top-[60px] z-20 bg-[#1B1A20] -mx-5 px-5 pt-8 pb-3 mt-6">
+        <div className="sticky z-20 bg-[#1B1A20]" style={{ top: 46, marginLeft: -15, marginRight: -15, padding: '34px 15px 8px', marginTop: 6 }}>
           <div className="flex items-center justify-between">
-            <h3 className="text-[34px] font-extrabold tracking-tight">Chapter <span className="text-white/45 text-3xl">· {chapters.length}</span></h3>
-            <div className="flex items-center gap-2">
-              <button onClick={() => { setSearchOpen(v => !v); setChQuery(''); }} aria-label="Cari chapter" className="w-11 h-11 flex items-center justify-center"><Search className="w-6 h-6" /></button>
-              <button onClick={() => setNewestFirst(v => !v)} aria-label="Urutkan" className="w-11 h-11 flex items-center justify-center"><ArrowUpDown className="w-6 h-6" /></button>
+            <h3 style={{ fontSize: 20, fontWeight: 800, letterSpacing: -0.4, lineHeight: 1.2 }}>Chapter <span style={{ color: MUTE, fontSize: 13, fontWeight: 600 }}>· {chapters.length}</span></h3>
+            <div className="flex items-center" style={{ marginRight: -6 }}>
+              <button onClick={() => { setSearchOpen(v => !v); setChQuery(''); }} aria-label="Cari chapter" className="flex items-center justify-center" style={{ width: 46, height: 36 }}><Search style={{ width: 19, height: 19 }} /></button>
+              <button onClick={() => setNewestFirst(v => !v)} aria-label="Urutkan" className="flex items-center justify-center" style={{ width: 46, height: 36 }}><ArrowUpDown style={{ width: 19, height: 19 }} /></button>
             </div>
           </div>
           {searchOpen ? (
-            <input autoFocus value={chQuery} onChange={e => setChQuery(e.target.value)} placeholder="Cari nomor chapter..." className="mt-2 w-full rounded-full bg-[#2A2931] px-5 py-3 text-lg font-bold outline-none placeholder-white/30" />
+            <input autoFocus value={chQuery} onChange={e => setChQuery(e.target.value)} placeholder="Cari nomor chapter..." className="w-full outline-none placeholder-white/30" style={{ marginTop: 8, borderRadius: 99, background: '#2A2931', padding: '10px 16px', fontSize: 14, fontWeight: 600 }} />
           ) : (
-            <p className="mt-1 text-xl font-bold text-white/45">{newestFirst ? 'Terbaru dulu' : 'Terlama dulu'}{youAt ? ` · kamu di Ch. ${youAt}` : ''}</p>
+            <p style={{ marginTop: 3, fontSize: 12.5, fontWeight: 400, color: MUTE }}>{newestFirst ? 'Terbaru dulu' : 'Terlama dulu'}{youAt ? ` · kamu di Ch. ${youAt}` : ''}</p>
           )}
         </div>
 
         {/* Daftar chapter */}
-        <div className="pt-2">
+        <div style={{ paddingTop: 4 }}>
           {list.length === 0 ? (
-            <p className="text-white/40 text-lg font-bold py-8 text-center">Chapter tidak ditemukan.</p>
+            <p className="text-center" style={{ color: MUTE, fontSize: 15, fontWeight: 600, padding: '32px 0' }}>Chapter tidak ditemukan.</p>
           ) : list.map((ch, i) => {
             const isRead = history.some(h => h.chapterLink === ch.link);
             const num = chNumOf(ch.title) || ch.num;
             const pos = ['top', 'center', 'bottom'][i % 3];
             return (
-              <Link key={ch.link} href={mangaHref(ch.link)} className={'flex items-center gap-4 py-2.5 ' + (isRead ? 'opacity-55' : '')}>
+              <Link key={ch.link} href={mangaHref(ch.link)} className="flex items-center" style={{ gap: 12, padding: '7px 0', opacity: isRead ? 0.55 : 1 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={detail.thumb} alt="" referrerPolicy="no-referrer" loading="lazy" className="w-[68px] h-[68px] rounded-2xl object-cover shrink-0 bg-[#2A2931]" style={{ objectPosition: pos }} />
+                <img src={detail.thumb} alt="" referrerPolicy="no-referrer" loading="lazy" className="shrink-0 object-cover bg-[#2A2931]" style={{ width: 50, height: 50, borderRadius: 10, objectPosition: pos }} />
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-[28px] leading-tight font-extrabold tracking-tight truncate">{num ? `Ch. ${num}` : ch.title}</p>
-                    {isNewChapter(ch.at) && <span className="shrink-0 px-2.5 py-0.5 rounded-md text-base font-extrabold text-white" style={{ background: CORAL }}>BARU</span>}
+                  <div className="flex items-center" style={{ gap: 6 }}>
+                    <p className="truncate" style={{ fontSize: 15, lineHeight: '19px', fontWeight: 700 }}>{num ? `Ch. ${num}` : ch.title}</p>
+                    {isNewChapter(ch.at) && <span className="shrink-0" style={{ padding: '1px 6px', borderRadius: 4, fontSize: 10, fontWeight: 800, color: '#fff', background: CORAL }}>BARU</span>}
                   </div>
-                  <p className="text-xl font-bold text-white/45 truncate">{fmtDate(ch.at) || ch.date}{ch.pages ? ` · ${ch.pages} hlm` : ''}</p>
+                  <p className="truncate" style={{ marginTop: 1, fontSize: 12, lineHeight: '17px', fontWeight: 400, color: MUTE }}>{fmtDate(ch.at) || ch.date}{ch.pages ? ` · ${ch.pages} hlm` : ''}</p>
                 </div>
-                <span onClick={(e) => { e.preventDefault(); e.stopPropagation(); setToast('Fitur unduh segera hadir'); }} className="p-2 text-white/50"><Download className="w-6 h-6" /></span>
+                <span onClick={(e) => { e.preventDefault(); e.stopPropagation(); setToast('Fitur unduh segera hadir'); }} className="flex items-center justify-center" style={{ width: 36, height: 36, color: 'rgba(255,255,255,.5)' }}><Download style={{ width: 18, height: 18 }} /></span>
               </Link>
             );
           })}
