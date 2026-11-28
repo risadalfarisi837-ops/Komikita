@@ -38,7 +38,7 @@ export function LevelPill({ level, label = 'Lv.', fontSize, iconSize, style }: {
     <span role="button" tabIndex={0} aria-label={`Level ${nf(level)}, tier ${t.name}. Lihat semua tier`} onClick={open}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') open(e); }}
       style={{ display: 'inline-flex', cursor: 'pointer', WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation' }}>
-      <TierPill tier={t} text={`${label} ${nf(level)}`} fontSize={fontSize} iconSize={iconSize} style={style} />
+      <TierPill tier={t} text={`${label} ${nf(level)}`} fontSize={fontSize} iconSize={iconSize} style={style} shine delay={(Math.floor(Number(level) || 0) % 5) * 0.4} />
     </span>
   );
 }
