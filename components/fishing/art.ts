@@ -1454,98 +1454,79 @@ export function drawPlayerRaw(ctx: CanvasRenderingContext2D, x: number, y: numbe
     ctx.scale(-1, 1);
     ctx.translate(-Math.round(x), 0);
   }
-  const legA = moving ? (fr === 1 ? -1 : fr === 3 ? 1 : 0) : 0;
-  const top = pal.top || '#f3e8d0';
-  const topD = darken(top, 0.14);
-  const hairL = lighten(pal.hair, 0.28);
-  const hairD = darken(pal.hair, 0.22);
-  if (dir === 'down' || dir === 'up') {
-    // kaki + sepatu cokelat
-    R(ctx, ox + 5, oy + 16 + (legA < 0 ? -1 : 0), 2, 3, pal.pants);
-    R(ctx, ox + 9, oy + 16 + (legA > 0 ? -1 : 0), 2, 3, pal.pants);
-    R(ctx, ox + 4, oy + 19 + (legA < 0 ? -1 : 0), 3, 2, pal.boot);
-    R(ctx, ox + 9, oy + 19 + (legA > 0 ? -1 : 0), 3, 2, pal.boot);
-    // badan: kemeja krem + rompi berwarna di kedua sisi
-    R(ctx, ox + 4, oy + 10, 8, 7, top);
-    R(ctx, ox + 4, oy + 15, 8, 2, topD);
-    // overall hijau: dada + tali bahu
-    R(ctx, ox + 4, oy + 12, 8, 5, pal.shirt);
-    R(ctx, ox + 4, oy + 16, 8, 1, pal.shirtD);
-    R(ctx, ox + 5, oy + 10, 2, 3, pal.shirt);
-    R(ctx, ox + 9, oy + 10, 2, 3, pal.shirt);
-    if (dir === 'down') {
-      R(ctx, ox + 7, oy + 10, 2, 1, pal.skinD);
-      R(ctx, ox + 6, oy + 13, 4, 2, pal.shirtD);
-    }
-    if (armsUp) {
-      R(ctx, ox + 2, oy - 6, 2, 17, top);
-      R(ctx, ox + 12, oy - 6, 2, 17, top);
-      R(ctx, ox + 2, oy - 8, 2, 2, pal.skin);
-      R(ctx, ox + 12, oy - 8, 2, 2, pal.skin);
+  // karakter berproporsi manusia (kepala ~1/3 tinggi badan, lengan & kaki terpisah, lengan mengayun saat jalan)
+  const legA=moving?(fr===1?-1:fr===3?1:0):0;
+  const top=pal.top||'#f3e8d0', topD=darken(top,0.14);
+  const hairL=lighten(pal.hair,0.28), hairD=darken(pal.hair,0.22);
+  const pantsD=darken(pal.pants,0.18), bootD=darken(pal.boot,0.2);
+  const eye = '#1d1d2b', blush='rgba(240,110,120,0.55)', mouth='#b5543f';
+  const al=moving?(fr===1?1:fr===3?-1:0):0; // ayun lengan
+  if(dir==='down'||dir==='up'){
+    const lf=legA<0?-1:0, rf=legA>0?-1:0;
+    // kaki (celana) + sepatu bot
+    R(ctx,ox+4,oy+14,4,5+lf,pal.pants); R(ctx,ox+8,oy+14,4,5+rf,pal.pants);
+    R(ctx,ox+7,oy+14,1,5+lf,pantsD); R(ctx,ox+8,oy+14,1,5+rf,pantsD);
+    R(ctx,ox+4,oy+19+lf,4,2,pal.boot); R(ctx,ox+8,oy+19+rf,4,2,pal.boot);
+    R(ctx,ox+4,oy+20+lf,4,1,bootD); R(ctx,ox+8,oy+20+rf,4,1,bootD);
+    // badan: kemeja + overall
+    R(ctx,ox+4,oy+8,8,6,top);
+    R(ctx,ox+4,oy+13,8,1,topD);
+    R(ctx,ox+5,oy+10,6,4,pal.shirt);
+    R(ctx,ox+4,oy+12,8,2,pal.shirt);
+    R(ctx,ox+5,oy+8,1,3,pal.shirt); R(ctx,ox+10,oy+8,1,3,pal.shirt);
+    R(ctx,ox+4,oy+13,8,1,pal.shirtD);
+    if(dir==='down'){ R(ctx,ox+7,oy+8,2,1,pal.skinD); R(ctx,ox+7,oy+11,2,1,pal.shirtD); R(ctx,ox+5,oy+10,1,1,pal.band||'#f0c75a'); R(ctx,ox+10,oy+10,1,1,pal.band||'#f0c75a'); }
+    if(armsUp){
+      R(ctx,ox+2,oy-6,2,16,top); R(ctx,ox+12,oy-6,2,16,top);
+      R(ctx,ox+2,oy-8,2,2,pal.skin); R(ctx,ox+12,oy-8,2,2,pal.skin);
     } else {
-      // lengan sedikit terbuka ke samping, tangan kulit
-      R(ctx, ox + 2, oy + 11, 2, 4, top);
-      R(ctx, ox + 12, oy + 11, 2, 4, top);
-      R(ctx, ox + 1, oy + 14, 2, 2, pal.skin);
-      R(ctx, ox + 13, oy + 14, 2, 2, pal.skin);
+      R(ctx,ox+2,oy+9+al,2,5,top); R(ctx,ox+12,oy+9-al,2,5,top);
+      R(ctx,ox+2,oy+13+al,2,1,topD); R(ctx,ox+12,oy+13-al,2,1,topD);
+      R(ctx,ox+2,oy+14+al,2,2,pal.skin); R(ctx,ox+12,oy+14-al,2,2,pal.skin);
     }
-    // kepala besar + rambut tebal
-    R(ctx, ox + 4, oy + 4, 8, 7, dir === 'up' ? pal.hair : pal.skin);
-    if (dir === 'down') {
-      R(ctx, ox + 4, oy + 1, 8, 1, pal.hair);
-      R(ctx, ox + 3, oy + 2, 10, 3, pal.hair);
-      R(ctx, ox + 5, oy + 5, 6, 1, pal.hair);
-      R(ctx, ox + 3, oy + 5, 2, 5, pal.hair);
-      R(ctx, ox + 11, oy + 5, 2, 5, pal.hair);
-      R(ctx, ox + 5, oy + 2, 3, 1, hairL);
-      R(ctx, ox + 5, oy + 6, 2, 3, '#1d1d2b');
-      R(ctx, ox + 9, oy + 6, 2, 3, '#1d1d2b');
-      R(ctx, ox + 5, oy + 6, 1, 1, '#ffffff');
-      R(ctx, ox + 9, oy + 6, 1, 1, '#ffffff');
-      R(ctx, ox + 5, oy + 10, 1, 1, 'rgba(240,110,120,0.55)');
-      R(ctx, ox + 10, oy + 10, 1, 1, 'rgba(240,110,120,0.55)');
-      R(ctx, ox + 7, oy + 10, 2, 1, '#b5543f');
+    // kepala
+    if(dir==='down'){
+      R(ctx,ox+5,oy+4,6,4,pal.skin);
+      R(ctx,ox+5,oy+1,6,1,pal.hair);
+      R(ctx,ox+4,oy+2,8,2,pal.hair);
+      R(ctx,ox+4,oy+4,1,3,pal.hair); R(ctx,ox+11,oy+4,1,3,pal.hair);
+      R(ctx,ox+5,oy+4,2,1,pal.hair); R(ctx,ox+9,oy+4,2,1,pal.hair);
+      R(ctx,ox+5,oy+2,2,1,hairL);
+      R(ctx,ox+6,oy+5,1,2,eye); R(ctx,ox+9,oy+5,1,2,eye);
+      R(ctx,ox+5,oy+7,1,1,blush); R(ctx,ox+10,oy+7,1,1,blush);
+      R(ctx,ox+7,oy+7,2,1,mouth);
     } else {
-      R(ctx, ox + 3, oy + 1, 10, 10, pal.hair);
-      R(ctx, ox + 4, oy + 0, 8, 1, pal.hair);
-      R(ctx, ox + 5, oy + 2, 4, 1, hairL);
-      R(ctx, ox + 4, oy + 9, 8, 2, hairD);
+      R(ctx,ox+5,oy+1,6,1,pal.hair);
+      R(ctx,ox+4,oy+2,8,6,pal.hair);
+      R(ctx,ox+5,oy+2,3,1,hairL);
+      R(ctx,ox+4,oy+6,8,2,hairD);
+      R(ctx,ox+6,oy+8,4,1,pal.skinD);
     }
-    // dua gelungan rambut di atas kepala
-    R(ctx, ox + 2, oy - 1, 3, 3, pal.hair);
-    R(ctx, ox + 11, oy - 1, 3, 3, pal.hair);
-    R(ctx, ox + 3, oy - 1, 1, 1, hairL);
-    R(ctx, ox + 12, oy - 1, 1, 1, hairL);
   } else {
     // samping (menghadap kiri; kanan = cermin)
-    R(ctx, ox + 6 + (legA < 0 ? -1 : 0), oy + 16, 2, 3, pal.pants);
-    R(ctx, ox + 8 + (legA > 0 ? 1 : 0), oy + 16, 2, 3, darken(pal.pants, 0.15));
-    R(ctx, ox + 4 + (legA < 0 ? -1 : 0), oy + 19, 4, 2, pal.boot);
-    R(ctx, ox + 8 + (legA > 0 ? 1 : 0), oy + 19, 4, 2, darken(pal.boot, 0.15));
-    R(ctx, ox + 5, oy + 10, 6, 7, top);
-    R(ctx, ox + 5, oy + 15, 6, 2, topD);
-    R(ctx, ox + 5, oy + 12, 6, 5, pal.shirt);
-    R(ctx, ox + 5, oy + 16, 6, 1, pal.shirtD);
-    R(ctx, ox + 6, oy + 10, 2, 3, pal.shirt);
-    R(ctx, ox + 4, oy + 4, 8, 7, pal.skin);
-    R(ctx, ox + 8, oy + 1, 5, 10, pal.hair);
-    R(ctx, ox + 3, oy + 2, 9, 3, pal.hair);
-    R(ctx, ox + 4, oy + 1, 7, 1, pal.hair);
-    R(ctx, ox + 8, oy - 1, 4, 3, pal.hair);
-    R(ctx, ox + 9, oy - 1, 1, 1, hairL);
-    R(ctx, ox + 5, oy + 2, 3, 1, hairL);
-    R(ctx, ox + 4, oy + 5, 2, 1, pal.hair);
-    R(ctx, ox + 5, oy + 7, 2, 2, '#1d1d2b');
-    R(ctx, ox + 5, oy + 7, 1, 1, '#ffffff');
-    R(ctx, ox + 3, oy + 8, 1, 1, pal.skinD);
-    R(ctx, ox + 4, oy + 10, 2, 1, '#b5543f');
-    if (armsUp) {
-      R(ctx, ox + 5, oy - 6, 3, 17, lighten(top, 0.05));
-      R(ctx, ox + 5, oy - 8, 3, 2, pal.skin);
-    } else {
-      R(ctx, ox + 5, oy + 11, 3, 4, lighten(top, 0.05));
-      R(ctx, ox + 5, oy + 15, 3, 2, pal.skin);
-    }
+    const a=legA<0?-1:0, b=legA>0?1:0;
+    R(ctx,ox+8+b,oy+14,3,5,pantsD); R(ctx,ox+7+b,oy+19,4,2,bootD);
+    R(ctx,ox+5+a,oy+14,3,5,pal.pants); R(ctx,ox+3+a,oy+19,5,2,pal.boot);
+    R(ctx,ox+3+a,oy+20,5,1,bootD);
+    R(ctx,ox+5,oy+8,6,6,top);
+    R(ctx,ox+5,oy+10,6,4,pal.shirt);
+    R(ctx,ox+6,oy+8,2,2,pal.shirt);
+    R(ctx,ox+5,oy+13,6,1,pal.shirtD);
+    // kepala
+    R(ctx,ox+4,oy+4,5,4,pal.skin);
+    R(ctx,ox+3,oy+6,1,1,pal.skin);
+    R(ctx,ox+5,oy+1,6,1,pal.hair);
+    R(ctx,ox+4,oy+2,8,2,pal.hair);
+    R(ctx,ox+4,oy+4,3,1,pal.hair);
+    R(ctx,ox+8,oy+4,4,4,pal.hair);
+    R(ctx,ox+9,oy+6,3,2,hairD);
+    R(ctx,ox+5,oy+2,3,1,hairL);
+    R(ctx,ox+8,oy+5,1,2,pal.skinD);
+    R(ctx,ox+5,oy+5,1,2,eye);
+    R(ctx,ox+4,oy+7,2,1,mouth);
+    R(ctx,ox+4,oy+7,0,0,mouth);
+    if(armsUp){ R(ctx,ox+5,oy-6,3,15,lighten(top,0.05)); R(ctx,ox+5,oy-8,3,2,pal.skin); }
+    else { R(ctx,ox+6,oy+9+al,3,5,lighten(top,0.05)); R(ctx,ox+6,oy+13+al,3,1,topD); R(ctx,ox+6,oy+14+al,3,2,pal.skin); }
   }
   if (pal.nohat) {
     // tanpa topi: rambut sudah digambar di atas
